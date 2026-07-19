@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Sparkles, TrendingUp } from 'lucide-react'
+import { ArrowRight, Sparkles, TrendingUp, Eye } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useData } from '@/context/DataContext.jsx'
 import { Logo } from '@/components/Logo.jsx'
@@ -106,38 +106,70 @@ export default function Login() {
 
       {/* Правая колонка — витрина */}
       <div className="relative hidden overflow-hidden bg-ink lg:block">
-        <div className="absolute inset-0 bg-aurora opacity-90" />
-        <div className="absolute inset-0 bg-grid-fade [background-size:26px_26px] opacity-40" />
+        {/* Фоновая глубина: брендовое свечение и мягкие блики */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(115% 80% at 12% -5%, rgba(79,70,229,0.34), transparent 55%), radial-gradient(90% 75% at 106% 108%, rgba(194,232,52,0.15), transparent 55%)',
+          }}
+        />
+        <div className="absolute -left-24 top-24 h-80 w-80 rounded-full bg-indigo-500/25 blur-[120px]" />
+        <div className="absolute -right-16 bottom-4 h-72 w-72 rounded-full bg-lime-400/10 blur-[120px]" />
+        <div className="absolute inset-0 bg-grid-fade [background-size:22px_22px] opacity-[0.35] [mask-image:radial-gradient(130%_100%_at_20%_10%,black,transparent_70%)]" />
 
         <div className="relative flex h-full flex-col justify-between p-12">
-          <div className="flex items-center gap-2 text-white/70">
-            <Sparkles size={18} className="text-lime-300" />
-            <span className="text-sm font-medium">Платформа медиабаинга</span>
+          {/* Верх: подпись и тезис */}
+          <div>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 ring-1 ring-inset ring-white/15">
+                <Sparkles size={16} className="text-lime-300" />
+              </span>
+              <span className="text-sm font-medium text-white/75">
+                Платформа медиабаинга
+              </span>
+            </div>
+
+            <motion.h2
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-9 max-w-md font-display text-[2.1rem] font-semibold leading-[1.14] text-white"
+            >
+              Кампании, площадки и бюджеты{' '}
+              <span className="text-lime-300">в одном месте</span>
+            </motion.h2>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/55">
+              Планируйте медиабаинг, следите за расходом и эффективностью по всем
+              каналам в реальном времени.
+            </p>
           </div>
 
-          <div className="space-y-8">
-            {/* Плавающие превью-карточки */}
+          {/* Центр: превью метрик */}
+          <div className="space-y-4">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.6 }}
-              className="max-w-sm rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur-xl"
+              className="relative max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white/[0.05] p-6 backdrop-blur-xl shadow-[0_28px_70px_-30px_rgba(0,0,0,0.75)]"
             >
+              <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white/70">Расход за месяц</span>
-                <span className="rounded-full bg-lime-300/90 px-2 py-0.5 text-[11px] font-semibold text-ink">
-                  +18,4%
+                <span className="text-sm text-white/60">Расход за месяц</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-lime-300 px-2.5 py-1 text-[11px] font-semibold text-ink">
+                  <TrendingUp size={12} strokeWidth={2.5} />
+                  18,4%
                 </span>
               </div>
-              <div className="mt-2 font-display text-4xl font-semibold text-white tnum">
+              <div className="mt-3 font-display text-[2.75rem] font-semibold leading-none text-white tnum">
                 24,8 млн
               </div>
-              <div className="mt-4">
+              <div className="mt-5">
                 <Sparkline
                   data={[40, 52, 48, 61, 58, 72, 69, 84, 92]}
                   color="#C2E834"
-                  width={280}
-                  height={56}
+                  width={400}
+                  height={64}
                 />
               </div>
             </motion.div>
@@ -145,25 +177,45 @@ export default function Login() {
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35, duration: 0.6 }}
-              className="ml-10 flex max-w-xs items-center gap-4 rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-xl"
+              transition={{ delay: 0.32, duration: 0.6 }}
+              className="grid max-w-md grid-cols-2 gap-4"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 text-lime-300">
-                <TrendingUp size={22} />
-              </span>
-              <div>
-                <div className="font-display text-2xl font-semibold text-white tnum">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-lime-300/15 text-lime-300">
+                  <TrendingUp size={18} />
+                </span>
+                <div className="mt-3 font-display text-2xl font-semibold text-white tnum">
                   3,42%
                 </div>
-                <div className="text-xs text-white/60">Средний CTR портфеля</div>
+                <div className="mt-0.5 text-xs text-white/55">Средний CTR</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/25 text-indigo-200">
+                  <Eye size={18} />
+                </span>
+                <div className="mt-3 font-display text-2xl font-semibold text-white tnum">
+                  61 млн
+                </div>
+                <div className="mt-0.5 text-xs text-white/55">Показов за месяц</div>
               </div>
             </motion.div>
           </div>
 
-          <div className="max-w-md">
-            <h2 className="font-display text-2xl font-semibold leading-tight text-white">
-              Управляйте кампаниями, площадками и бюджетами в одном месте.
-            </h2>
+          {/* Низ: каналы */}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+              Все каналы в одном окне
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {['CTV', 'ТВ', 'Web', 'Mobile', 'Social', 'Audio'].map((t) => (
+                <span
+                  key={t}
+                  className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/70"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
