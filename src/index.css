@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --ring: 79 70 229;
+  }
+
+  * {
+    border-color: theme('colors.line');
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    background-color: theme('colors.paper');
+    color: theme('colors.ink.DEFAULT');
+    font-family: theme('fontFamily.sans');
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Крупная выразительная типографика заголовков */
+  h1, h2, h3, h4 {
+    font-family: theme('fontFamily.display');
+    font-weight: 600;
+  }
+
+  ::selection {
+    background: theme('colors.indigo.500');
+    color: white;
+  }
+
+  /* Тонкий скроллбар в стиле платформы */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(23, 22, 28, 0.14);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(23, 22, 28, 0.26);
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  /* Стеклянная поверхность */
+  .glass {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  }
+
+  /* Фокус-кольцо в фирменном индиго */
+  .focus-ring {
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    box-shadow: 0 0 0 2px theme('colors.paper'), 0 0 0 4px theme('colors.indigo.500');
+  }
+
+  /* Градиентный текст-акцент */
+  .text-gradient {
+    background: linear-gradient(100deg, theme('colors.ink.DEFAULT') 30%, theme('colors.indigo.600') 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+@layer utilities {
+  /* Скрытие скроллбара там, где нужен чистый вид */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Числовые таблицы — моноширинные цифры для ровных колонок */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
