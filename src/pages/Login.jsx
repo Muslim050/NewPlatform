@@ -1,13 +1,103 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Sparkles, TrendingUp, Eye } from 'lucide-react'
+import { ArrowRight, Sparkles, VolumeX } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useData } from '@/context/DataContext.jsx'
 import { Logo } from '@/components/Logo.jsx'
 import { Button } from '@/components/ui/Button.jsx'
 import { Field, Input } from '@/components/ui/Field.jsx'
-import { Sparkline } from '@/components/charts/Sparkline.jsx'
+
+const TV_SPOTS = [
+  '/creatives/bloom-reach.mp4',
+  '/creatives/bloom-channels.mp4',
+  '/creatives/bloom-results.mp4',
+]
+
+function TvShowcase() {
+  const [activeSpot, setActiveSpot] = useState(0)
+
+  const playNextSpot = () => {
+    setActiveSpot((current) => (current + 1) % TV_SPOTS.length)
+  }
+
+  return (
+    <aside className="relative hidden min-h-screen overflow-hidden bg-[#f7eadf] lg:block">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_9%,rgba(255,255,255,0.92),transparent_29%),radial-gradient(circle_at_7%_52%,rgba(79,70,229,0.10),transparent_31%)]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-white/80" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12, duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-40 px-10 pt-10 xl:px-14 xl:pt-12"
+      >
+        <div className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white/55 px-3 py-1.5 text-xs font-semibold text-ink-soft shadow-soft backdrop-blur-md">
+          <Sparkles size={14} className="text-indigo-600" />
+          Bloom CTV
+        </div>
+        <h2 className="mt-5 max-w-xl font-display text-[clamp(2rem,3vw,3.35rem)] font-semibold leading-[0.98] tracking-[-0.035em] text-ink">
+          Реклама, которую{' '}
+          <span className="text-indigo-600">видят вместе.</span>
+        </h2>
+        <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-soft/80 xl:text-[15px]">
+          Управляйте размещениями на ТВ и digital-площадках из одного кабинета.
+        </p>
+      </motion.div>
+
+      <div className="absolute bottom-0 left-1/2 z-20 aspect-[1672/941] w-[112%] max-w-[1120px] -translate-x-1/2">
+        <motion.div
+          initial={{ opacity: 0, scale: 1.025, y: 18 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ delay: 0.18, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+          className="relative h-full w-full"
+        >
+          <img
+            src="/family-tv-console.png"
+            alt="Семья смотрит телевизор"
+            className="absolute inset-0 h-full w-full select-none object-contain"
+            draggable="false"
+          />
+
+          <div
+            className="absolute z-10 overflow-hidden bg-[#111214] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+            style={{ left: '32.05%', top: '13.2%', width: '36.13%', height: '34.22%' }}
+          >
+            <motion.video
+              key={TV_SPOTS[activeSpot]}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.45 }}
+              src={TV_SPOTS[activeSpot]}
+              className="h-full w-full object-cover"
+              autoPlay
+              muted
+              playsInline
+              preload="auto"
+              onEnded={playNextSpot}
+            />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(118deg,rgba(255,255,255,0.12),transparent_25%,transparent_72%,rgba(0,0,0,0.16))]" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/45 to-transparent px-[3.5%] pb-[3%] pt-[9%] text-white">
+              <span className="flex items-center gap-1.5 text-[clamp(5px,0.62vw,10px)] font-semibold uppercase tracking-[0.16em]">
+                <i className="h-1.5 w-1.5 animate-pulse rounded-full bg-lime-300" />
+                В эфире
+              </span>
+              <span className="flex items-center gap-1 text-white/70">
+                <VolumeX className="h-[clamp(7px,0.8vw,12px)] w-[clamp(7px,0.8vw,12px)]" />
+                <span className="text-[clamp(5px,0.58vw,9px)] tabular-nums">
+                  {String(activeSpot + 1).padStart(2, '0')} / {String(TV_SPOTS.length).padStart(2, '0')}
+                </span>
+              </span>
+            </div>
+          </div>
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-[16%] bg-gradient-to-b from-[#f7eadf] to-transparent opacity-35" />
+        </motion.div>
+      </div>
+
+      <div className="absolute inset-x-0 bottom-0 z-30 h-20 bg-gradient-to-t from-[#b98868]/20 to-transparent" />
+    </aside>
+  )
+}
 
 export default function Login() {
   const { login } = useAuth()
@@ -43,9 +133,8 @@ export default function Login() {
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Левая колонка — вход */}
-      <div className="flex items-center justify-center px-6 py-12 sm:px-10">
+    <main className="grid min-h-screen bg-paper lg:grid-cols-[minmax(420px,0.84fr)_minmax(0,1.16fr)]">
+      <section className="relative z-50 flex items-center justify-center px-6 py-12 shadow-[18px_0_55px_rgba(45,30,20,0.06)] sm:px-10 lg:bg-paper">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -102,123 +191,9 @@ export default function Login() {
             или <span className="font-medium text-ink-soft">adv / adv</span>
           </p>
         </motion.div>
-      </div>
+      </section>
 
-      {/* Правая колонка — витрина */}
-      <div className="relative hidden overflow-hidden bg-ink lg:block">
-        {/* Фоновая глубина: брендовое свечение и мягкие блики */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(115% 80% at 12% -5%, rgba(79,70,229,0.34), transparent 55%), radial-gradient(90% 75% at 106% 108%, rgba(194,232,52,0.15), transparent 55%)',
-          }}
-        />
-        <div className="absolute -left-24 top-24 h-80 w-80 rounded-full bg-indigo-500/25 blur-[120px]" />
-        <div className="absolute -right-16 bottom-4 h-72 w-72 rounded-full bg-lime-400/10 blur-[120px]" />
-        <div className="absolute inset-0 bg-grid-fade [background-size:22px_22px] opacity-[0.35] [mask-image:radial-gradient(130%_100%_at_20%_10%,black,transparent_70%)]" />
-
-        <div className="relative flex h-full flex-col justify-between p-12">
-          {/* Верх: подпись и тезис */}
-          <div>
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 ring-1 ring-inset ring-white/15">
-                <Sparkles size={16} className="text-lime-300" />
-              </span>
-              <span className="text-sm font-medium text-white/75">
-                Платформа медиабаинга
-              </span>
-            </div>
-
-            <motion.h2
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-9 max-w-md font-display text-[2.1rem] font-semibold leading-[1.14] text-white"
-            >
-              Кампании, площадки и бюджеты{' '}
-              <span className="text-lime-300">в одном месте</span>
-            </motion.h2>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/55">
-              Планируйте медиабаинг, следите за расходом и эффективностью по всем
-              каналам в реальном времени.
-            </p>
-          </div>
-
-          {/* Центр: превью метрик */}
-          <div className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="relative max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white/[0.05] p-6 backdrop-blur-xl shadow-[0_28px_70px_-30px_rgba(0,0,0,0.75)]"
-            >
-              <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-white/60">Расход за месяц</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-lime-300 px-2.5 py-1 text-[11px] font-semibold text-ink">
-                  <TrendingUp size={12} strokeWidth={2.5} />
-                  18,4%
-                </span>
-              </div>
-              <div className="mt-3 font-display text-[2.75rem] font-semibold leading-none text-white tnum">
-                24,8 млн
-              </div>
-              <div className="mt-5">
-                <Sparkline
-                  data={[40, 52, 48, 61, 58, 72, 69, 84, 92]}
-                  color="#C2E834"
-                  width={400}
-                  height={64}
-                />
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.32, duration: 0.6 }}
-              className="grid max-w-md grid-cols-2 gap-4"
-            >
-              <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-lime-300/15 text-lime-300">
-                  <TrendingUp size={18} />
-                </span>
-                <div className="mt-3 font-display text-2xl font-semibold text-white tnum">
-                  3,42%
-                </div>
-                <div className="mt-0.5 text-xs text-white/55">Средний CTR</div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-5 backdrop-blur-xl">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/25 text-indigo-200">
-                  <Eye size={18} />
-                </span>
-                <div className="mt-3 font-display text-2xl font-semibold text-white tnum">
-                  61 млн
-                </div>
-                <div className="mt-0.5 text-xs text-white/55">Показов за месяц</div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Низ: каналы */}
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
-              Все каналы в одном окне
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {['CTV', 'ТВ', 'Web', 'Mobile', 'Social', 'Audio'].map((t) => (
-                <span
-                  key={t}
-                  className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/70"
-                >
-                  {t}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      <TvShowcase />
+    </main>
   )
 }
