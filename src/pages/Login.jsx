@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Sparkles, VolumeX } from 'lucide-react'
+import { ArrowRight, Eye, Radio, Sparkles, TrendingUp, VolumeX } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useData } from '@/context/DataContext.jsx'
 import { Logo } from '@/components/Logo.jsx'
@@ -22,9 +22,12 @@ function TvShowcase() {
   }
 
   return (
-    <aside className="relative hidden min-h-screen overflow-hidden bg-[#f7eadf] lg:block">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_9%,rgba(255,255,255,0.92),transparent_29%),radial-gradient(circle_at_7%_52%,rgba(79,70,229,0.10),transparent_31%)]" />
-      <div className="absolute inset-x-0 top-0 h-px bg-white/80" />
+    <aside className="relative hidden min-h-screen overflow-hidden bg-[#090b13] lg:block">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_64%,rgba(79,70,229,0.42),transparent_27%),radial-gradient(circle_at_93%_12%,rgba(194,232,52,0.12),transparent_24%),radial-gradient(circle_at_5%_88%,rgba(79,70,229,0.20),transparent_30%)]" />
+      <div className="absolute inset-0 bg-grid-fade [background-size:24px_24px] opacity-[0.22] [mask-image:linear-gradient(to_bottom,black,transparent_70%)]" />
+      <div className="absolute left-1/2 top-[48%] h-[46vw] max-h-[720px] w-[46vw] max-w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-indigo-400/10" />
+      <div className="absolute left-1/2 top-[48%] h-[34vw] max-h-[530px] w-[34vw] max-w-[530px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-indigo-300/[0.07]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-white/10" />
 
       <motion.div
         initial={{ opacity: 0, y: 14 }}
@@ -32,20 +35,58 @@ function TvShowcase() {
         transition={{ delay: 0.12, duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         className="relative z-40 px-10 pt-10 xl:px-14 xl:pt-12"
       >
-        <div className="inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white/55 px-3 py-1.5 text-xs font-semibold text-ink-soft shadow-soft backdrop-blur-md">
-          <Sparkles size={14} className="text-indigo-600" />
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 shadow-soft backdrop-blur-md">
+          <Sparkles size={14} className="text-lime-300" />
           Bloom CTV
         </div>
-        <h2 className="mt-5 max-w-xl font-display text-[clamp(2rem,3vw,3.35rem)] font-semibold leading-[0.98] tracking-[-0.035em] text-ink">
+        <h2 className="mt-5 max-w-xl font-display text-[clamp(2rem,3vw,3.35rem)] font-semibold leading-[0.98] tracking-[-0.035em] text-white">
           Реклама, которую{' '}
-          <span className="text-indigo-600">видят вместе.</span>
+          <span className="text-lime-300">видят вместе.</span>
         </h2>
-        <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-soft/80 xl:text-[15px]">
+        <p className="mt-4 max-w-md text-sm leading-relaxed text-white/50 xl:text-[15px]">
           Управляйте размещениями на ТВ и digital-площадках из одного кабинета.
         </p>
+        <div className="mt-5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-white/35">
+          <Radio size={14} className="text-indigo-300" />
+          <span>CTV</span>
+          <i className="h-1 w-1 rounded-full bg-white/20" />
+          <span>YouTube</span>
+          <i className="h-1 w-1 rounded-full bg-white/20" />
+          <span>Digital</span>
+        </div>
       </motion.div>
 
-      <div className="absolute bottom-0 left-1/2 z-20 aspect-[1672/941] w-[112%] max-w-[1120px] -translate-x-1/2">
+      <motion.div
+        initial={{ opacity: 0, x: -14 }}
+        animate={{ opacity: 1, x: 0, y: [0, -5, 0] }}
+        transition={{ opacity: { delay: 0.7, duration: 0.5 }, x: { delay: 0.7, duration: 0.5 }, y: { delay: 1.2, duration: 5, repeat: Infinity, ease: 'easeInOut' } }}
+        className="absolute left-[5%] top-[39%] z-40 hidden items-center gap-3 rounded-2xl border border-white/10 bg-[#111522]/75 px-4 py-3 shadow-[0_20px_55px_rgba(0,0,0,0.35)] backdrop-blur-xl 2xl:flex"
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-200">
+          <Eye size={17} />
+        </span>
+        <div>
+          <div className="font-display text-lg font-semibold leading-none text-white tnum">61 млн</div>
+          <div className="mt-1 text-[10px] text-white/40">показов за месяц</div>
+        </div>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, x: 14 }}
+        animate={{ opacity: 1, x: 0, y: [0, 5, 0] }}
+        transition={{ opacity: { delay: 0.8, duration: 0.5 }, x: { delay: 0.8, duration: 0.5 }, y: { delay: 1.5, duration: 5.5, repeat: Infinity, ease: 'easeInOut' } }}
+        className="absolute right-[5%] top-[46%] z-40 hidden items-center gap-3 rounded-2xl border border-white/10 bg-[#111522]/75 px-4 py-3 shadow-[0_20px_55px_rgba(0,0,0,0.35)] backdrop-blur-xl 2xl:flex"
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-lime-300/15 text-lime-300">
+          <TrendingUp size={17} />
+        </span>
+        <div>
+          <div className="font-display text-lg font-semibold leading-none text-white tnum">3,42%</div>
+          <div className="mt-1 text-[10px] text-white/40">средний CTR</div>
+        </div>
+      </motion.div>
+
+      <div className="absolute bottom-0 left-1/2 z-20 aspect-[1672/941] w-[132%] -translate-x-1/2">
         <motion.div
           initial={{ opacity: 0, scale: 1.025, y: 18 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -53,15 +94,16 @@ function TvShowcase() {
           className="relative h-full w-full"
         >
           <img
-            src="/family-tv-console.png"
-            alt="Семья смотрит телевизор"
-            className="absolute inset-0 h-full w-full select-none object-contain"
+            src="/family-tv-cutout.png"
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 z-10 h-full w-full select-none object-contain"
             draggable="false"
           />
 
           <div
-            className="absolute z-10 overflow-hidden bg-[#111214] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-            style={{ left: '32.05%', top: '13.2%', width: '36.13%', height: '34.22%' }}
+            className="absolute z-20 overflow-hidden bg-[#050607] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+            style={{ left: '33.5%', top: '20.2%', width: '32.5%', height: '31.25%' }}
           >
             <motion.video
               key={TV_SPOTS[activeSpot]}
@@ -90,11 +132,16 @@ function TvShowcase() {
               </span>
             </div>
           </div>
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-[16%] bg-gradient-to-b from-[#f7eadf] to-transparent opacity-35" />
+          <img
+            src="/family-sofa-cutout.png"
+            alt="Семья смотрит телевизор"
+            className="pointer-events-none absolute inset-0 z-30 h-full w-full select-none object-contain"
+            draggable="false"
+          />
         </motion.div>
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 z-30 h-20 bg-gradient-to-t from-[#b98868]/20 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 z-30 h-16 bg-gradient-to-t from-black/30 to-transparent" />
     </aside>
   )
 }
@@ -134,12 +181,14 @@ export default function Login() {
 
   return (
     <main className="grid min-h-screen bg-paper lg:grid-cols-[minmax(420px,0.84fr)_minmax(0,1.16fr)]">
-      <section className="relative z-50 flex items-center justify-center px-6 py-12 shadow-[18px_0_55px_rgba(45,30,20,0.06)] sm:px-10 lg:bg-paper">
+      <section className="relative z-50 flex items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_15%_18%,rgba(79,70,229,0.09),transparent_31%),linear-gradient(145deg,#faf9f6,#f3f1ec)] px-6 py-12 shadow-[18px_0_55px_rgba(0,0,0,0.18)] sm:px-10">
+        <div className="pointer-events-none absolute -left-28 top-[18%] h-64 w-64 rounded-full border border-indigo-500/[0.06]" />
+        <div className="pointer-events-none absolute -left-16 top-[23%] h-40 w-40 rounded-full border border-indigo-500/[0.08]" />
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-md"
+          className="w-full max-w-[520px] lg:rounded-[32px] lg:border lg:border-white/90 lg:bg-white/65 lg:p-10 lg:shadow-[0_32px_90px_-48px_rgba(34,27,80,0.42)] lg:backdrop-blur-xl"
         >
           <Logo size={40} />
 
