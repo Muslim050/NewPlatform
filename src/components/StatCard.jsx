@@ -9,7 +9,7 @@ export function StatCard({
   delta,
   deltaTone = 'success',
   spark,
-  sparkColor = '#4F46E5',
+  sparkColor = '#FFD106',
   icon: Icon,
   index = 0,
 }) {

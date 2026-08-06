@@ -19,10 +19,10 @@ const CATEGORIES = [
 ]
 
 const PALETTE = [
-  '#4F46E5',
+  '#FFD106',
   '#0EA5E9',
   '#12A150',
-  '#C2E834',
+  '#F7C900',
   '#E5484D',
   '#8B5CF6',
   '#F59E0B',

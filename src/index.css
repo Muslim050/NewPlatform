@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --ring: 79 70 229;
+    --ring: 255 209 6;
   }
 
   * {
@@ -32,7 +32,7 @@
 
   ::selection {
     background: theme('colors.indigo.500');
-    color: white;
+    color: theme('colors.ink.DEFAULT');
   }
 
   /* Тонкий скроллбар в стиле платформы */
@@ -60,7 +60,7 @@
     -webkit-backdrop-filter: blur(18px) saturate(1.2);
   }
 
-  /* Фокус-кольцо в фирменном индиго */
+  /* Фокус-кольцо в фирменном жёлтом Setanta Sports */
   .focus-ring {
     outline: none;
   }

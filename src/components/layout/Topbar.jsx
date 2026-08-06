@@ -57,7 +57,7 @@ export function Topbar({ onBurger }) {
           >
             <Avatar
               name={adv ? adv.name : user.name}
-              color={adv ? adv.color : '#4F46E5'}
+              color={adv ? adv.color : '#FFD106'}
               size="sm"
             />
             <ChevronDown size={15} className="text-ink-muted" />

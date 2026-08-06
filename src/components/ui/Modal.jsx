@@ -59,7 +59,7 @@ export function Modal({
           >
             <div className="flex items-start gap-3 border-b border-line px-6 py-5">
               {Icon && (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-900">
                   <Icon size={20} strokeWidth={2} />
                 </div>
               )}

@@ -8,21 +8,30 @@ const sizes = {
 }
 
 /** Аватар с инициалами на цветной подложке. */
-export function Avatar({ name = '', color = '#4F46E5', size = 'md', className }) {
+export function Avatar({ name = '', color = '#FFD106', size = 'md', className }) {
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center justify-center font-semibold text-white ring-1 ring-black/5',
+        'inline-flex shrink-0 items-center justify-center font-semibold ring-1 ring-black/5',
         sizes[size],
         className,
       )}
       style={{
         background: `linear-gradient(140deg, ${color}, ${shade(color, -18)})`,
+        color: contrastColor(color),
       }}
     >
       {toInitials(name)}
     </span>
   )
+}
+
+function contrastColor(hex) {
+  const n = parseInt(hex.replace('#', ''), 16)
+  const r = n >> 16
+  const g = (n >> 8) & 0xff
+  const b = n & 0xff
+  return r * 0.299 + g * 0.587 + b * 0.114 > 165 ? '#17161C' : '#FFFFFF'
 }
 
 // Простое затемнение hex-цвета для градиента.

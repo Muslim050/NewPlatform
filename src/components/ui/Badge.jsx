@@ -4,7 +4,7 @@ const tones = {
   success: 'bg-success/10 text-success',
   warning: 'bg-warning/12 text-warning',
   danger: 'bg-danger/10 text-danger',
-  indigo: 'bg-indigo-50 text-indigo-600',
+  indigo: 'bg-indigo-100 text-indigo-900',
   muted: 'bg-ink/[0.06] text-ink-soft',
   lime: 'bg-lime-100 text-lime-600',
 }

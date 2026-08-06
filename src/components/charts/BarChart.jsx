@@ -30,7 +30,7 @@ export function BarChart({ data = [], formatValue = (v) => v, className }) {
                 className="w-full rounded-t-lg transition-all duration-300"
                 style={{
                   height: `${h}%`,
-                  background: d.color || '#4F46E5',
+                  background: d.color || '#FFD106',
                   opacity: hover == null || active ? 1 : 0.4,
                 }}
               />

@@ -20,7 +20,7 @@ const icons = {
 const accents = {
   success: 'bg-success text-white',
   error: 'bg-danger text-white',
-  info: 'bg-indigo-600 text-white',
+  info: 'bg-indigo-500 text-ink',
 }
 
 export function ToastProvider({ children }) {

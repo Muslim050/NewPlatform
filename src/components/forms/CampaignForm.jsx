@@ -214,7 +214,7 @@ export function CampaignForm({ open, onClose, initial }) {
                     className={cn(
                       'flex items-center gap-2 rounded-xl border px-3 py-2 text-[13px] font-medium transition-all',
                       on
-                        ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+                        ? 'border-indigo-300 bg-indigo-50 text-indigo-900'
                         : 'border-line bg-surface text-ink-soft hover:border-ink/20',
                     )}
                   >

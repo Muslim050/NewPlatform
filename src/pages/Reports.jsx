@@ -20,7 +20,7 @@ import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { AreaChart } from '@/components/charts/AreaChart.jsx'
 
-const METRIC_COLOR = { spent: '#4F46E5', impressions: '#0EA5E9', clicks: '#12A150' }
+const METRIC_COLOR = { spent: '#FFD106', impressions: '#0EA5E9', clicks: '#12A150' }
 
 export default function Reports() {
   const { user } = useAuth()
@@ -75,7 +75,7 @@ export default function Reports() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'bloom-report.csv'
+    a.download = 'setanta-sports-platform-report.csv'
     a.click()
     URL.revokeObjectURL(url)
     toast.success('Отчёт выгружен в CSV')

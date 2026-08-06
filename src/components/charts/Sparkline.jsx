@@ -6,7 +6,7 @@ export function Sparkline({
   data = [],
   width = 116,
   height = 40,
-  color = '#4F46E5',
+  color = '#FFD106',
 }) {
   const gid = useId().replace(/:/g, '')
   const { line, area } = buildArea(data, width, height, 3)

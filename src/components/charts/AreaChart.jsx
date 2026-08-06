@@ -11,7 +11,7 @@ export function AreaChart({
   data = [],
   labels = [],
   height = 240,
-  color = '#4F46E5',
+  color = '#FFD106',
   formatValue = (v) => v,
   className,
 }) {

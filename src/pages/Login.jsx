@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/Button.jsx'
 import { Field, Input } from '@/components/ui/Field.jsx'
 
 const TV_SPOTS = [
-  '/creatives/bloom-reach.mp4',
-  '/creatives/bloom-channels.mp4',
-  '/creatives/bloom-results.mp4',
+  '/creatives/setanta-reach.mp4',
+  '/creatives/setanta-channels.mp4',
+  '/creatives/setanta-results.mp4',
 ]
 
 function TvShowcase() {
@@ -23,7 +23,7 @@ function TvShowcase() {
 
   return (
     <aside className="relative hidden min-h-screen overflow-hidden bg-[#090b13] lg:block">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_64%,rgba(79,70,229,0.42),transparent_27%),radial-gradient(circle_at_93%_12%,rgba(194,232,52,0.12),transparent_24%),radial-gradient(circle_at_5%_88%,rgba(79,70,229,0.20),transparent_30%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_64%,rgba(255,209,6,0.28),transparent_28%),radial-gradient(circle_at_93%_12%,rgba(255,209,6,0.12),transparent_24%),radial-gradient(circle_at_5%_88%,rgba(255,209,6,0.14),transparent_30%)]" />
       <div className="absolute inset-0 bg-grid-fade [background-size:24px_24px] opacity-[0.22] [mask-image:linear-gradient(to_bottom,black,transparent_70%)]" />
       <div className="absolute left-1/2 top-[48%] h-[46vw] max-h-[720px] w-[46vw] max-w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-indigo-400/10" />
       <div className="absolute left-1/2 top-[48%] h-[34vw] max-h-[530px] w-[34vw] max-w-[530px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-indigo-300/[0.07]" />
@@ -37,7 +37,7 @@ function TvShowcase() {
       >
         <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 shadow-soft backdrop-blur-md">
           <Sparkles size={14} className="text-lime-300" />
-          Bloom CTV
+          Setanta Sports CTV
         </div>
         <h2 className="mt-5 max-w-xl font-display text-[clamp(2rem,3vw,3.35rem)] font-semibold leading-[0.98] tracking-[-0.035em] text-white">
           Реклама, которую{' '}
@@ -159,7 +159,7 @@ export default function Login() {
     const login_ = username.trim().toLowerCase()
 
     if (login_ === 'admin' && password === 'admin') {
-      login({ role: 'admin', name: 'admin', email: 'admin@bloom.io' })
+      login({ role: 'admin', name: 'admin', email: 'admin@setantasports.com' })
       navigate('/app')
       return
     }
@@ -181,7 +181,7 @@ export default function Login() {
 
   return (
     <main className="grid min-h-screen bg-paper lg:grid-cols-[minmax(420px,0.84fr)_minmax(0,1.16fr)]">
-      <section className="relative z-50 flex items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_15%_18%,rgba(79,70,229,0.09),transparent_31%),linear-gradient(145deg,#faf9f6,#f3f1ec)] px-6 py-12 shadow-[18px_0_55px_rgba(0,0,0,0.18)] sm:px-10">
+      <section className="relative z-50 flex items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_15%_18%,rgba(255,209,6,0.11),transparent_31%),linear-gradient(145deg,#faf9f6,#f3f1ec)] px-6 py-12 shadow-[18px_0_55px_rgba(0,0,0,0.18)] sm:px-10">
         <div className="pointer-events-none absolute -left-28 top-[18%] h-64 w-64 rounded-full border border-indigo-500/[0.06]" />
         <div className="pointer-events-none absolute -left-16 top-[23%] h-40 w-40 rounded-full border border-indigo-500/[0.08]" />
         <motion.div

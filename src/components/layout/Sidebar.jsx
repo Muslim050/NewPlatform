@@ -35,7 +35,7 @@ export function Sidebar({ onNavigate }) {
               cn(
                 'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
                 isActive
-                  ? 'bg-indigo-600 text-white shadow-[0_10px_24px_-10px_rgba(67,56,202,0.6)]'
+                  ? 'bg-indigo-500 text-ink shadow-[0_10px_24px_-10px_rgba(255,209,6,0.72)]'
                   : 'text-ink-soft hover:bg-paper hover:text-ink',
               )
             }
@@ -48,13 +48,13 @@ export function Sidebar({ onNavigate }) {
                   className={cn(
                     'transition-colors',
                     isActive
-                      ? 'text-white'
+                      ? 'text-ink'
                       : 'text-ink-muted group-hover:text-ink-soft',
                   )}
                 />
                 <span className="flex-1">{it.label}</span>
                 {isActive && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-lime-300" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-ink" />
                 )}
               </>
             )}
@@ -66,7 +66,7 @@ export function Sidebar({ onNavigate }) {
       <div className="mt-4 flex items-center gap-3 rounded-2xl border border-line bg-paper p-3">
         <Avatar
           name={adv ? adv.name : user.name}
-          color={adv ? adv.color : '#4F46E5'}
+          color={adv ? adv.color : '#FFD106'}
           size="md"
         />
         <div className="min-w-0 flex-1">

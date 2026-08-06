@@ -15,28 +15,28 @@ export default {
           muted: '#8E8B98',
         },
         line: 'rgba(23, 22, 28, 0.08)',
-        // Индиго — основной акцент
+        // Фирменный жёлтый Setanta Sports — основной акцент
         indigo: {
-          50: '#EEF0FF',
-          100: '#E0E3FF',
-          200: '#C6CBFF',
-          300: '#A5ABFB',
-          400: '#8188F5',
-          500: '#4F46E5',
-          600: '#4338CA',
-          700: '#372FA8',
-          800: '#2C2685',
-          900: '#221E68',
+          50: '#FFFBE5',
+          100: '#FFF3B0',
+          200: '#FFE36A',
+          300: '#FFD82B',
+          400: '#FFD106',
+          500: '#FFD106',
+          600: '#F0C300',
+          700: '#C39D00',
+          800: '#806600',
+          900: '#4D3D00',
         },
-        // Лайм — «поп» акцент для подсветок и графиков
+        // Дополнительные оттенки того же жёлтого для подсветок и графиков
         lime: {
-          50: '#F7FCE3',
-          100: '#ECF9BD',
-          200: '#DEF48C',
-          300: '#CFF04E',
-          400: '#C2E834',
-          500: '#A6CF1E',
-          600: '#82A614',
+          50: '#FFFCEB',
+          100: '#FFF6C8',
+          200: '#FFE977',
+          300: '#FFD106',
+          400: '#F7C900',
+          500: '#D9AF00',
+          600: '#8A6F00',
         },
         // Семантика
         success: '#12A150',
@@ -63,14 +63,14 @@ export default {
       boxShadow: {
         soft: '0 1px 2px rgba(16, 15, 25, 0.04), 0 4px 14px rgba(16, 15, 25, 0.05)',
         lift: '0 10px 34px rgba(16, 15, 25, 0.10), 0 2px 6px rgba(16, 15, 25, 0.04)',
-        pop: '0 18px 50px rgba(67, 56, 202, 0.18)',
+        pop: '0 18px 50px rgba(255, 209, 6, 0.24)',
         inset: 'inset 0 1px 0 rgba(255,255,255,0.7)',
       },
       backgroundImage: {
         'grid-fade':
           'radial-gradient(circle at 1px 1px, rgba(23,22,28,0.05) 1px, transparent 0)',
         aurora:
-          'radial-gradient(60% 60% at 20% 10%, rgba(79,70,229,0.16) 0%, transparent 60%), radial-gradient(50% 50% at 90% 20%, rgba(194,232,52,0.18) 0%, transparent 55%), radial-gradient(60% 60% at 70% 90%, rgba(79,70,229,0.10) 0%, transparent 60%)',
+          'radial-gradient(60% 60% at 20% 10%, rgba(255,209,6,0.16) 0%, transparent 60%), radial-gradient(50% 50% at 90% 20%, rgba(255,209,6,0.20) 0%, transparent 55%), radial-gradient(60% 60% at 70% 90%, rgba(255,209,6,0.10) 0%, transparent 60%)',
       },
       keyframes: {
         'fade-up': {

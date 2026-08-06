@@ -31,12 +31,12 @@ import { DonutChart } from '@/components/charts/DonutChart.jsx'
 import { BarChart } from '@/components/charts/BarChart.jsx'
 
 const OBJ_COLORS = {
-  awareness: '#4F46E5',
+  awareness: '#FFD106',
   reach: '#0EA5E9',
-  traffic: '#C2E834',
+  traffic: '#F59E0B',
   conversions: '#12A150',
 }
-const METRIC_COLOR = { spent: '#4F46E5', impressions: '#0EA5E9', clicks: '#12A150' }
+const METRIC_COLOR = { spent: '#FFD106', impressions: '#0EA5E9', clicks: '#12A150' }
 
 function delta(arr) {
   const a = arr[0] || 1
@@ -235,7 +235,7 @@ export default function Dashboard() {
             </h3>
             <Link
               to="/app/campaigns"
-              className="flex items-center gap-1 text-[13px] font-medium text-indigo-600 hover:text-indigo-700"
+              className="flex items-center gap-1 text-[13px] font-medium text-indigo-800 hover:text-indigo-900"
             >
               Все <ArrowUpRight size={14} />
             </Link>

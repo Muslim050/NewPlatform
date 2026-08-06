@@ -10,7 +10,7 @@ export const ADVERTISERS = [
     category: 'Финансы',
     status: 'active',
     balance: 4820000,
-    color: '#4F46E5',
+    color: '#FFD106',
     createdAt: '2025-11-04',
   },
   {
@@ -43,7 +43,7 @@ export const ADVERTISERS = [
     category: 'Авто',
     status: 'paused',
     balance: 730000,
-    color: '#C2E834',
+    color: '#F7C900',
     createdAt: '2026-02-11',
   },
   {
@@ -69,7 +69,7 @@ export const CHANNELS = [
     cpm: 420,
     fillRate: 92,
     status: 'active',
-    color: '#4F46E5',
+    color: '#FFD106',
   },
   {
     id: 'ch_potok',
@@ -102,7 +102,7 @@ export const CHANNELS = [
     cpm: 180,
     fillRate: 97,
     status: 'active',
-    color: '#C2E834',
+    color: '#F7C900',
   },
   {
     id: 'ch_social',

@@ -3,8 +3,8 @@ import { cn } from '@/lib/cn.js'
 
 const variants = {
   primary:
-    'bg-indigo-600 text-white shadow-soft hover:bg-indigo-700 hover:shadow-pop active:scale-[0.98]',
-  lime: 'bg-lime-300 text-ink shadow-soft hover:bg-lime-400 hover:shadow-[0_16px_40px_rgba(194,232,52,0.45)] active:scale-[0.98]',
+    'bg-indigo-500 text-ink shadow-soft hover:bg-indigo-400 hover:shadow-pop active:scale-[0.98]',
+  lime: 'bg-lime-300 text-ink shadow-soft hover:bg-lime-400 hover:shadow-[0_16px_40px_rgba(255,209,6,0.42)] active:scale-[0.98]',
   secondary:
     'bg-surface text-ink border border-line hover:border-ink/25 hover:bg-white active:scale-[0.98]',
   ghost: 'text-ink-soft hover:text-ink hover:bg-ink/[0.05]',
