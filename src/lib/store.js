@@ -1,7 +1,7 @@
 import { buildSeed } from './seed.js'
 import { uid } from './id.js'
 
-const DB_KEY = 'bloom.db.v7'
+const DB_KEY = 'bloom.db.v8'
 const CAMPAIGN_STATUS_LAYOUT_VERSION = 3
 const DEMO_CAMPAIGN_STATUSES = {
   cmp_1001: 'active',

@@ -445,7 +445,7 @@ export default function Campaigns() {
                     </div>
 
                     {showActions && (
-                      <div className="flex items-center justify-start gap-1.5">
+                      <div className="flex items-center justify-center gap-1.5">
                         <Button
                           variant="secondary"
                           size="sm"
@@ -456,7 +456,8 @@ export default function Campaigns() {
                         >
                           <FolderOpen size={16} />
                         </Button>
-                        {/* Запущенную и завершённую кампанию править нельзя. */}
+                        {/* Редактирование кампании временно скрыто.
+                            Запущенную и завершённую кампанию править нельзя.
                         {c.status !== 'active' && c.status !== 'completed' && (
                           <Button
                             variant="secondary"
@@ -469,7 +470,9 @@ export default function Campaigns() {
                             <Pencil size={16} />
                           </Button>
                         )}
-                        {/* Запущенную и завершённую кампанию удалять нельзя. */}
+                        */}
+                        {/* Удаление кампании временно скрыто.
+                            Запущенную и завершённую кампанию удалять нельзя.
                         {c.status !== 'active' && c.status !== 'completed' && (
                           <Button
                             variant="danger"
@@ -482,6 +485,7 @@ export default function Campaigns() {
                             <Trash2 size={16} />
                           </Button>
                         )}
+                        */}
                       </div>
                     )}
                   </div>
