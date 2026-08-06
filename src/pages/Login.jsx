@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Eye, Radio, Sparkles, TrendingUp, VolumeX } from 'lucide-react'
+import { ArrowRight, VolumeX } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useData } from '@/context/DataContext.jsx'
 import { Logo } from '@/components/Logo.jsx'
@@ -9,10 +9,77 @@ import { Button } from '@/components/ui/Button.jsx'
 import { Field, Input } from '@/components/ui/Field.jsx'
 
 const TV_SPOTS = [
-  '/creatives/setanta-reach.mp4',
-  '/creatives/setanta-channels.mp4',
-  '/creatives/setanta-results.mp4',
+  '/creatives/setanta-2.mp4',
 ]
+
+const AUDIENCE_STATS = [
+  {
+    value: '9 800 000+',
+    label: 'Пользователей всего',
+    position: 'left-1/2 top-[20.5%] -translate-x-1/2',
+    primary: true,
+  },
+  { value: '93M', label: 'Зрителей', position: 'right-[2%] top-[27.5%]' },
+  { value: '23M', label: 'ТВ-аудитория', position: 'right-[0.5%] top-[38%]' },
+  {
+    value: '285 000+',
+    label: 'Активных зрителей у партнёров',
+    position: 'right-[0.5%] top-[48.5%]',
+  },
+  { value: '35', label: 'Платформ', position: 'left-[0.5%] top-[48.5%]' },
+  { value: '15', label: 'Стран', position: 'left-[0.5%] top-[38%]' },
+  { value: '5', label: 'Языков', position: 'left-[2%] top-[27.5%]' },
+]
+
+function AudienceStatsOrbit({ stats }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-40 hidden 2xl:block">
+      <div className="absolute left-1/2 top-[42%] h-[36%] w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-dashed border-lime-300/10" />
+
+      {stats.map((stat, index) => (
+        <div
+          key={stat.label}
+          className={`absolute ${stat.position} ${stat.primary ? 'w-[220px]' : 'w-[168px]'}`}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: [0, index % 2 === 0 ? -4 : 4, 0] }}
+            transition={{
+              opacity: { delay: 0.58 + index * 0.07, duration: 0.45 },
+              scale: { delay: 0.58 + index * 0.07, duration: 0.45 },
+              y: {
+                delay: 1.1 + index * 0.06,
+                duration: 4.8 + index * 0.18,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              },
+            }}
+            className={`relative overflow-hidden rounded-xl border px-3.5 py-2.5 shadow-[0_16px_42px_rgba(0,0,0,0.34)] backdrop-blur-xl ${
+              stat.primary
+                ? 'border-lime-300/25 bg-[#151923]/90'
+                : 'border-white/10 bg-[#111522]/82'
+            }`}
+          >
+            <div className="absolute inset-y-2.5 left-0 w-0.5 rounded-full bg-lime-300/80" />
+            <span className="absolute right-3 top-2.5 text-[8px] font-semibold tracking-[0.16em] text-white/25">
+              {String(index + 1).padStart(2, '0')}
+            </span>
+            <div
+              className={`font-display font-semibold leading-none text-lime-300 tnum ${
+                stat.primary ? 'text-xl' : 'text-lg'
+              }`}
+            >
+              {stat.value}
+            </div>
+            <div className="mt-1.5 pr-4 text-[9px] font-semibold uppercase leading-[1.3] tracking-[0.1em] text-white">
+              {stat.label}
+            </div>
+          </motion.div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function TvShowcase() {
   const [activeSpot, setActiveSpot] = useState(0)
@@ -35,56 +102,16 @@ function TvShowcase() {
         transition={{ delay: 0.12, duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         className="relative z-40 px-10 pt-10 xl:px-14 xl:pt-12"
       >
-        <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/70 shadow-soft backdrop-blur-md">
-          <Sparkles size={14} className="text-lime-300" />
-          Setanta Sports CTV
-        </div>
-        <h2 className="mt-5 max-w-xl font-display text-[clamp(2rem,3vw,3.35rem)] font-semibold leading-[0.98] tracking-[-0.035em] text-white">
-          Реклама, которую{' '}
-          <span className="text-lime-300">видят вместе.</span>
+        <h2 className="mt-5 max-w-xl font-display text-[55px] font-semibold leading-[0.98] tracking-[-0.035em] text-lime-300">
+          STAY IN THE GAME.
         </h2>
-        <p className="mt-4 max-w-md text-sm leading-relaxed text-white/50 xl:text-[15px]">
-          Управляйте размещениями на ТВ и digital-площадках из одного кабинета.
+        <p className="mt-4 max-w-md text-[20px] leading-relaxed text-white/70">
+         В УЗБЕКИСТАНЕ ВЕДЕТСЯ ТРАНСЛЯЦИЯ 2Х ТЕЛЕКАНАЛОВ
         </p>
-        <div className="mt-5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.13em] text-white/35">
-          <Radio size={14} className="text-indigo-300" />
-          <span>CTV</span>
-          <i className="h-1 w-1 rounded-full bg-white/20" />
-          <span>YouTube</span>
-          <i className="h-1 w-1 rounded-full bg-white/20" />
-          <span>Digital</span>
-        </div>
+
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, x: -14 }}
-        animate={{ opacity: 1, x: 0, y: [0, -5, 0] }}
-        transition={{ opacity: { delay: 0.7, duration: 0.5 }, x: { delay: 0.7, duration: 0.5 }, y: { delay: 1.2, duration: 5, repeat: Infinity, ease: 'easeInOut' } }}
-        className="absolute left-[5%] top-[39%] z-40 hidden items-center gap-3 rounded-2xl border border-white/10 bg-[#111522]/75 px-4 py-3 shadow-[0_20px_55px_rgba(0,0,0,0.35)] backdrop-blur-xl 2xl:flex"
-      >
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-200">
-          <Eye size={17} />
-        </span>
-        <div>
-          <div className="font-display text-lg font-semibold leading-none text-white tnum">61 млн</div>
-          <div className="mt-1 text-[10px] text-white/40">показов за месяц</div>
-        </div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, x: 14 }}
-        animate={{ opacity: 1, x: 0, y: [0, 5, 0] }}
-        transition={{ opacity: { delay: 0.8, duration: 0.5 }, x: { delay: 0.8, duration: 0.5 }, y: { delay: 1.5, duration: 5.5, repeat: Infinity, ease: 'easeInOut' } }}
-        className="absolute right-[5%] top-[46%] z-40 hidden items-center gap-3 rounded-2xl border border-white/10 bg-[#111522]/75 px-4 py-3 shadow-[0_20px_55px_rgba(0,0,0,0.35)] backdrop-blur-xl 2xl:flex"
-      >
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-lime-300/15 text-lime-300">
-          <TrendingUp size={17} />
-        </span>
-        <div>
-          <div className="font-display text-lg font-semibold leading-none text-white tnum">3,42%</div>
-          <div className="mt-1 text-[10px] text-white/40">средний CTR</div>
-        </div>
-      </motion.div>
+      <AudienceStatsOrbit stats={AUDIENCE_STATS} />
 
       <div className="absolute bottom-0 left-1/2 z-20 aspect-[1672/941] w-[132%] -translate-x-1/2">
         <motion.div
@@ -94,18 +121,19 @@ function TvShowcase() {
           className="relative h-full w-full"
         >
           <img
-            src="/family-tv-cutout.png"
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 z-10 h-full w-full select-none object-contain"
+            src="/family-tv-video-frame.png"
+            alt="Семья смотрит телевизор"
+            className="pointer-events-none absolute inset-0 z-20 h-full w-full select-none object-contain"
             draggable="false"
           />
 
           <div
-            className="absolute z-20 overflow-hidden bg-[#050607] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-            style={{ left: '33.5%', top: '20.2%', width: '32.5%', height: '31.25%' }}
+            data-testid="tv-video-frame"
+            className="absolute z-10 overflow-hidden bg-[#050607]"
+            style={{ left: '24.22%', top: '12.11%', width: '51.91%', height: '40.28%' }}
           >
             <motion.video
+              data-testid="tv-video"
               key={TV_SPOTS[activeSpot]}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -132,12 +160,6 @@ function TvShowcase() {
               </span>
             </div>
           </div>
-          <img
-            src="/family-sofa-cutout.png"
-            alt="Семья смотрит телевизор"
-            className="pointer-events-none absolute inset-0 z-30 h-full w-full select-none object-contain"
-            draggable="false"
-          />
         </motion.div>
       </div>
 
@@ -193,13 +215,10 @@ export default function Login() {
           <Logo size={40} />
 
           <div className="mt-10">
-            <h1 className="text-display-md text-ink sm:text-display-lg">
+            <h1 className="text-display-md text-ink text-base">
               С возвращением
             </h1>
-            <p className="mt-2 text-sm text-ink-muted">
-              Войдите в платформу. Это демо — данные хранятся локально в вашем
-              браузере.
-            </p>
+
           </div>
 
           <form onSubmit={submit} className="mt-8 space-y-4">
@@ -235,10 +254,7 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="mt-5 text-center text-xs text-ink-muted">
-            Демо-доступы: <span className="font-medium text-ink-soft">admin / admin</span>{' '}
-            или <span className="font-medium text-ink-soft">adv / adv</span>
-          </p>
+
         </motion.div>
       </section>
 

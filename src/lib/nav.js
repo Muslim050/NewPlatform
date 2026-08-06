@@ -8,17 +8,16 @@ import {
 
 export const NAV = [
   {
-    to: '/app',
-    end: true,
-    label: 'Обзор',
-    icon: LayoutDashboard,
-    roles: ['admin', 'advertiser'],
-  },
-  {
     to: '/app/campaigns',
     label: 'Кампании',
     icon: Megaphone,
     roles: ['admin', 'advertiser'],
+  },
+  {
+    to: '/app/overview',
+    label: 'Обзор',
+    icon: LayoutDashboard,
+    roles: ['admin'],
   },
   {
     to: '/app/advertisers',
@@ -31,11 +30,12 @@ export const NAV = [
     label: 'Площадки',
     icon: Radio,
     roles: ['admin', 'advertiser'],
+    hidden: true,
   },
   {
     to: '/app/reports',
-    label: 'Отчёты',
+    label: 'Отчёт',
     icon: LineChart,
-    roles: ['admin', 'advertiser'],
+    roles: ['advertiser'],
   },
 ]

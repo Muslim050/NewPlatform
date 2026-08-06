@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Search, Pencil, Trash2, Building2, Mail } from 'lucide-react'
+import { Search, Pencil, Trash2, Building2, Mail } from 'lucide-react'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
@@ -9,7 +9,6 @@ import { formatMoneyCompact } from '@/lib/format.js'
 import { PageHeader } from '@/components/PageHeader.jsx'
 import { Card } from '@/components/ui/Card.jsx'
 import { Badge } from '@/components/ui/Badge.jsx'
-import { Button } from '@/components/ui/Button.jsx'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { DropdownMenu } from '@/components/ui/DropdownMenu.jsx'
@@ -53,18 +52,7 @@ export default function Advertisers() {
 
   return (
     <div>
-      <PageHeader
-        title="Рекламодатели"
-        subtitle="Бренды и агентства, размещающие кампании на платформе."
-      >
-        <Button
-          variant="primary"
-          onClick={() => setModal({ open: true, initial: null })}
-        >
-          <Plus size={18} />
-          Добавить
-        </Button>
-      </PageHeader>
+      <PageHeader/>
 
       <div className="relative mb-4 w-full sm:max-w-xs">
         <Search
@@ -84,7 +72,7 @@ export default function Advertisers() {
           <EmptyState
             icon={Building2}
             title="Рекламодателей нет"
-            description="Добавьте первый бренд, чтобы запускать кампании."
+            description="Список рекламодателей пока пуст."
           />
         </Card>
       ) : (

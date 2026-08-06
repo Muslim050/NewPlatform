@@ -4,7 +4,7 @@ export function Card({ className, hover = false, ...props }) {
   return (
     <div
       className={cn(
-        'rounded-2xl border border-line bg-surface shadow-soft',
+        'rounded-2xl border border-line bg-surface shadow-soft overflow-auto',
         hover &&
           'transition-all duration-300 hover:shadow-lift hover:-translate-y-0.5',
         className,

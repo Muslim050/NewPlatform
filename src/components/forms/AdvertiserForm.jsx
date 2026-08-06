@@ -118,7 +118,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
           <Input
             value={form.name}
             onChange={(e) => set('name', e.target.value)}
-            placeholder="Например, Северный Банк"
+            placeholder="Например, Artel"
           />
         </Field>
 

@@ -18,13 +18,13 @@ export function Logo({ size = 32, withWord = true, className }) {
         <span className="flex min-w-0 flex-col font-display uppercase text-ink">
           <span
             className="whitespace-nowrap font-bold leading-[0.95] tracking-[-0.02em]"
-            style={{ fontSize: Math.max(11, size * 0.34) }}
+            style={{ fontSize: Math.max(20, size * 0.34) }}
           >
             Setanta Sports
           </span>
           <span
             className="mt-1 whitespace-nowrap font-medium leading-none tracking-[0.2em] text-ink-muted"
-            style={{ fontSize: Math.max(8, size * 0.2) }}
+            style={{ fontSize: Math.max(14, size * 0.2) }}
           >
             Platform
           </span>

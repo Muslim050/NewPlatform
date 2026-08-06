@@ -6,18 +6,34 @@ import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button.jsx'
 import { Field, Input, Select } from '@/components/ui/Field.jsx'
-import { OBJECTIVES, STATUS } from '@/lib/metrics.js'
+import { CreativeLink } from '@/components/campaigns/CreativePlayer.jsx'
+import { STATUS } from '@/lib/metrics.js'
 import { cn } from '@/lib/cn.js'
+
+const DEFAULT_CREATIVE_URL = '/creatives/setanta-2.mp4'
 
 const emptyForm = {
   name: '',
   advertiserId: '',
   objective: 'awareness',
-  status: 'draft',
+  status: 'received',
   budget: '',
   startDate: '',
   endDate: '',
   channelIds: [],
+  creativeUrl: DEFAULT_CREATIVE_URL,
+}
+
+/** Принимаем и внешние ссылки, и файлы из /public. */
+function isValidUrl(value) {
+  if (!value) return false
+  if (value.startsWith('/')) return true
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
 }
 
 export function CampaignForm({ open, onClose, initial }) {
@@ -40,6 +56,7 @@ export function CampaignForm({ open, onClose, initial }) {
         startDate: initial.startDate,
         endDate: initial.endDate,
         channelIds: [...initial.channelIds],
+        creativeUrl: initial.creativeUrl || DEFAULT_CREATIVE_URL,
       })
     } else {
       setForm({
@@ -64,7 +81,17 @@ export function CampaignForm({ open, onClose, initial }) {
     const err = {}
     if (!form.name.trim()) err.name = 'Укажите название'
     if (isAdmin && !form.advertiserId) err.advertiserId = 'Выберите рекламодателя'
-    if (!form.budget || Number(form.budget) <= 0) err.budget = 'Бюджет больше нуля'
+    if (isAdmin && (!form.budget || Number(form.budget) <= 0)) {
+      err.budget = 'Бюджет больше нуля'
+    }
+    if (!form.startDate) err.startDate = 'Укажите начало периода'
+    if (!form.endDate) err.endDate = 'Укажите окончание периода'
+    if (form.startDate && form.endDate && form.endDate < form.startDate) {
+      err.endDate = 'Окончание должно быть позже начала'
+    }
+    if (form.creativeUrl.trim() && !isValidUrl(form.creativeUrl.trim())) {
+      err.creativeUrl = 'Укажите ссылку на видео'
+    }
     setErrors(err)
     if (Object.keys(err).length) return
 
@@ -72,11 +99,13 @@ export function CampaignForm({ open, onClose, initial }) {
       name: form.name.trim(),
       advertiserId: form.advertiserId,
       objective: form.objective,
-      status: form.status,
-      budget: Number(form.budget),
+      status: isAdmin && editing ? form.status : initial?.status || 'received',
+      // Бюджет проставляет админ — рекламодатель его не видит и не задаёт.
+      budget: isAdmin ? Number(form.budget) : initial?.budget || 0,
       startDate: form.startDate,
       endDate: form.endDate,
       channelIds: form.channelIds,
+      creativeUrl: form.creativeUrl.trim(),
     }
 
     if (editing) {
@@ -143,89 +172,83 @@ export function CampaignForm({ open, onClose, initial }) {
               </Select>
             </Field>
           )}
+          {isAdmin && editing && (
+            <Field label="Статус">
+              <Select
+                value={form.status}
+                onChange={(e) => set('status', e.target.value)}
+              >
+                {Object.entries(STATUS)
+                  .filter(([k]) => k !== 'archived')
+                  .map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v.label}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
+          )}
 
-          <Field label="Цель">
-            <Select
-              value={form.objective}
-              onChange={(e) => set('objective', e.target.value)}
-            >
-              {Object.entries(OBJECTIVES).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="Статус">
-            <Select
-              value={form.status}
-              onChange={(e) => set('status', e.target.value)}
-            >
-              {Object.entries(STATUS)
-                .filter(([k]) => k !== 'archived')
-                .map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v.label}
-                  </option>
-                ))}
-            </Select>
-          </Field>
-
-          <Field label="Бюджет" required error={errors.budget}>
-            <Input
-              type="number"
-              min="0"
-              value={form.budget}
-              onChange={(e) => set('budget', e.target.value)}
-              placeholder="1000000"
-            />
-          </Field>
+          {isAdmin && (
+            <Field label="Бюджет" required error={errors.budget}>
+              <Input
+                type="number"
+                min="0"
+                value={form.budget}
+                onChange={(e) => set('budget', e.target.value)}
+                placeholder="1000000"
+              />
+            </Field>
+          )}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Дата начала">
-            <Input
-              type="date"
-              value={form.startDate}
-              onChange={(e) => set('startDate', e.target.value)}
-            />
-          </Field>
-          <Field label="Дата окончания">
-            <Input
-              type="date"
-              value={form.endDate}
-              onChange={(e) => set('endDate', e.target.value)}
-            />
-          </Field>
+        <div>
+          <p className="mb-2 text-[13px] font-medium text-ink-soft">
+            Период кампании <span className="text-danger">*</span>
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Начало периода" required error={errors.startDate}>
+              <Input
+                type="date"
+                value={form.startDate}
+                max={form.endDate || undefined}
+                onChange={(e) => set('startDate', e.target.value)}
+              />
+            </Field>
+            <Field
+              label="Окончание периода"
+              required
+              error={errors.endDate}
+            >
+              <Input
+                type="date"
+                value={form.endDate}
+                min={form.startDate || undefined}
+                onChange={(e) => set('endDate', e.target.value)}
+              />
+            </Field>
+          </div>
         </div>
 
-        <Field label="Площадки" hint="Выберите одну или несколько площадок">
-          <div className="flex flex-wrap gap-2 pt-1">
-            {channels
-              .filter((c) => c.status === 'active')
-              .map((c) => {
-                const on = form.channelIds.includes(c.id)
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => toggleChannel(c.id)}
-                    className={cn(
-                      'flex items-center gap-2 rounded-xl border px-3 py-2 text-[13px] font-medium transition-all',
-                      on
-                        ? 'border-indigo-300 bg-indigo-50 text-indigo-900'
-                        : 'border-line bg-surface text-ink-soft hover:border-ink/20',
-                    )}
-                  >
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ background: c.color }}
-                    />
-                    {c.name}
-                  </button>
-                )
-              })}
+        <Field
+          label="Рекламный ролик"
+          error={errors.creativeUrl}
+          hint="Ссылка на видеофайл — можно заменить на другой ролик."
+        >
+          <div className="flex items-center gap-2">
+            <Input
+              inputMode="url"
+              value={form.creativeUrl}
+              onChange={(e) => set('creativeUrl', e.target.value)}
+              placeholder={DEFAULT_CREATIVE_URL}
+            />
+            <CreativeLink
+              url={
+                isValidUrl(form.creativeUrl.trim())
+                  ? form.creativeUrl.trim()
+                  : ''
+              }
+            />
           </div>
         </Field>
       </div>

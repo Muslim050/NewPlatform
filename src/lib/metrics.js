@@ -33,18 +33,15 @@ export function aggregate(campaigns) {
   return t
 }
 
-export const OBJECTIVES = {
-  awareness: 'Узнаваемость',
-  reach: 'Охват',
-  traffic: 'Трафик',
-  conversions: 'Конверсии',
-}
+
+
+
 
 export const STATUS = {
-  active: { label: 'Активна', tone: 'success' },
-  paused: { label: 'На паузе', tone: 'warning' },
-  draft: { label: 'Черновик', tone: 'muted' },
-  completed: { label: 'Завершена', tone: 'indigo' },
+  received: { label: 'Получен', tone: 'warning' },
+  reviewing: { label: 'Рассматривается', tone: 'warning' },
+  active: { label: 'Активен', tone: 'success' },
+  completed: { label: 'Завершен', tone: 'danger' },
   archived: { label: 'В архиве', tone: 'muted' },
 }
 

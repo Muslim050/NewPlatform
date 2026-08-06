@@ -4,6 +4,7 @@ import { AppShell } from '@/components/layout/AppShell.jsx'
 import Login from '@/pages/Login.jsx'
 import Dashboard from '@/pages/Dashboard.jsx'
 import Campaigns from '@/pages/Campaigns.jsx'
+import CampaignStats from '@/pages/CampaignStats.jsx'
 import Advertisers from '@/pages/Advertisers.jsx'
 import Channels from '@/pages/Channels.jsx'
 import Reports from '@/pages/Reports.jsx'
@@ -34,8 +35,10 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={<Dashboard />} />
+        {/* Стартовая страница обеих ролей — список кампаний. */}
+        <Route index element={<Navigate to="campaigns" replace />} />
         <Route path="campaigns" element={<Campaigns />} />
+        <Route path="campaigns/:campaignId" element={<CampaignStats />} />
         <Route
           path="advertisers"
           element={
@@ -44,8 +47,23 @@ export default function App() {
             </Protected>
           }
         />
+        <Route
+          path="overview"
+          element={
+            <Protected roles={['admin']}>
+              <Dashboard />
+            </Protected>
+          }
+        />
         <Route path="channels" element={<Channels />} />
-        <Route path="reports" element={<Reports />} />
+        <Route
+          path="reports"
+          element={
+            <Protected roles={['advertiser']}>
+              <Reports />
+            </Protected>
+          }
+        />
       </Route>
 
       <Route

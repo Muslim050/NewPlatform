@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn.js'
 export function Sidebar({ onNavigate }) {
   const { user } = useAuth()
   const { advertiserById } = useData()
-  const items = NAV.filter((n) => n.roles.includes(user.role))
+  const items = NAV.filter((n) => !n.hidden && n.roles.includes(user.role))
   const adv = user.advertiserId ? advertiserById(user.advertiserId) : null
 
   return (
