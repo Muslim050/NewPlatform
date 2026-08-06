@@ -8,6 +8,8 @@ import {
   Megaphone,
   BarChart3,
   FolderOpen,
+  Check,
+  X,
   CalendarPlus,
   CalendarCheck,
 } from 'lucide-react'
@@ -54,7 +56,7 @@ const STATUS_ORDER = {
 export default function Campaigns() {
   const { isAdmin, isAdvertiser } = useAuth()
   const navigate = useNavigate()
-  const { advertiserById, channelById, remove } = useData()
+  const { advertiserById, channelById, remove, update } = useData()
   const campaigns = useScopedCampaigns()
   const toast = useToast()
   const confirm = useConfirm()
@@ -63,6 +65,8 @@ export default function Campaigns() {
   const [status, setStatus] = useState('all')
   const [modal, setModal] = useState({ open: false, initial: null })
   const [preview, setPreview] = useState(null)
+  // Инлайн-правка бюджета и прибыли прямо в таблице (только админ).
+  const [money, setMoney] = useState(null)
 
   // Рекламодатель не видит бюджет и не управляет кампаниями из таблицы.
   const showBudget = !isAdvertiser
@@ -97,6 +101,23 @@ export default function Campaigns() {
         return channel ? [channel] : []
       })
     : []
+
+  const saveMoney = () => {
+    const budget = Number(money.budget)
+    const spent = Number(money.spent)
+    if (!Number.isFinite(budget) || !Number.isFinite(spent) || budget < 0 || spent < 0) {
+      toast.error('Суммы должны быть неотрицательными числами')
+      return
+    }
+    update('campaigns', money.id, { budget, spent })
+    setMoney(null)
+    toast.success('Суммы обновлены')
+  }
+
+  const onMoneyKeyDown = (e) => {
+    if (e.key === 'Enter') saveMoney()
+    if (e.key === 'Escape') setMoney(null)
+  }
 
   const del = async (c) => {
     const ok = await confirm({
@@ -300,15 +321,97 @@ export default function Campaigns() {
 
                     {showBudget && (
                       <div className="hidden md:block">
-                        <div className="flex items-center justify-between text-[12px]">
-                          <span className="text-ink-muted tnum">
-                            {formatMoneyCompact(c.budget)}
-                          </span>
-                          <span className="font-medium text-ink tnum">
-                            {formatMoneyCompact(c.spent)}
-                          </span>
-                        </div>
-                        <Progress value={pacing} className="mt-1.5" />
+                        {money?.id === c.id ? (
+                          <div className="space-y-1">
+                            <input
+                              type="number"
+                              min="0"
+                              autoFocus
+                              value={money.budget}
+                              onChange={(e) =>
+                                setMoney((m) => ({
+                                  ...m,
+                                  budget: e.target.value,
+                                }))
+                              }
+                              onKeyDown={onMoneyKeyDown}
+                              aria-label={`Бюджет кампании ${c.name}`}
+                              placeholder="Бюджет"
+                              className="h-7 w-full rounded-lg border border-line bg-surface px-1.5 text-[12px] text-ink tnum focus-ring"
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              value={money.spent}
+                              onChange={(e) =>
+                                setMoney((m) => ({
+                                  ...m,
+                                  spent: e.target.value,
+                                }))
+                              }
+                              onKeyDown={onMoneyKeyDown}
+                              aria-label={`Прибыль кампании ${c.name}`}
+                              placeholder="Прибыль"
+                              className="h-7 w-full rounded-lg border border-line bg-surface px-1.5 text-[12px] text-ink tnum focus-ring"
+                            />
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                className="h-7 flex-1 px-0"
+                                onClick={saveMoney}
+                                title="Сохранить"
+                                aria-label="Сохранить суммы"
+                              >
+                                <Check size={14} />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="h-7 flex-1 px-0"
+                                onClick={() => setMoney(null)}
+                                title="Отменить"
+                                aria-label="Отменить редактирование"
+                              >
+                                <X size={14} />
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={c.status === 'completed'}
+                            onClick={() =>
+                              setMoney({
+                                id: c.id,
+                                budget: String(c.budget),
+                                spent: String(c.spent),
+                              })
+                            }
+                            title={
+                              c.status === 'completed'
+                                ? 'Завершённую кампанию менять нельзя'
+                                : 'Изменить бюджет и прибыль'
+                            }
+                            className="group w-full rounded-lg px-1 py-0.5 text-left transition-colors enabled:hover:bg-ink/[0.04] disabled:cursor-default focus-ring"
+                          >
+                            <span className="flex items-center gap-1.5 text-[12px]">
+                              <span className="text-ink-muted tnum">
+                                {formatMoneyCompact(c.budget)}
+                              </span>
+                              <span className="ml-auto font-medium text-ink tnum">
+                                {formatMoneyCompact(c.spent)}
+                              </span>
+                              {c.status !== 'completed' && (
+                                <Pencil
+                                  size={12}
+                                  aria-hidden="true"
+                                  className="shrink-0 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100"
+                                />
+                              )}
+                            </span>
+                            <Progress value={pacing} className="mt-1.5" />
+                          </button>
+                        )}
                       </div>
                     )}
 
