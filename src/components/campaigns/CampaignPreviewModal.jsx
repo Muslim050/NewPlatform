@@ -149,7 +149,9 @@ export function CampaignPreviewModal({
           <Button variant="ghost" onClick={onClose}>
             Закрыть
           </Button>
-          {campaign && (
+          {/* Статистика есть только у запущенных и завершённых кампаний. */}
+          {(campaign?.status === 'active' ||
+            campaign?.status === 'completed') && (
             <Button variant="primary" onClick={onOpenStats}>
               <BarChart3 size={16} />
               Открыть статистику

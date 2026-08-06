@@ -84,7 +84,8 @@ export default function CampaignStats() {
   if (!campaign) return <Navigate to="/app/campaigns" replace />;
 
   const advertiser = advertiserById(campaign.advertiserId);
-  const hasMediaTables = campaign.id === "cmp_1001";
+  // Медиаплан и отчётные вкладки доступны у всех запущенных кампаний.
+  const hasMediaTables = campaign.status === "active";
   const channels = campaign.channelIds.flatMap((id) => {
     const channel = channelById(id);
     return channel ? [channel] : [];

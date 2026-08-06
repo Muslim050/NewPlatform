@@ -4,15 +4,33 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Sidebar } from './Sidebar.jsx'
 import { Topbar } from './Topbar.jsx'
 
+const SIDEBAR_KEY = 'bloom.sidebar.collapsed'
+
 export function AppShell() {
   const [mobileNav, setMobileNav] = useState(false)
+  // Состояние сайдбара переживает перезагрузку страницы.
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem(SIDEBAR_KEY) === '1',
+  )
   const loc = useLocation()
+
+  const toggleSidebar = () => {
+    setCollapsed((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0')
+      } catch {
+        /* приватный режим — просто не сохраняем */
+      }
+      return next
+    })
+  }
 
   return (
     <div className="flex min-h-screen bg-paper">
       {/* Десктопный сайдбар */}
       <div className="sticky top-0 hidden h-screen shrink-0 lg:block">
-        <Sidebar />
+        <Sidebar collapsed={collapsed} />
       </div>
 
       {/* Мобильный выезжающий сайдбар */}
@@ -42,7 +60,11 @@ export function AppShell() {
       </AnimatePresence>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar onBurger={() => setMobileNav(true)} />
+        <Topbar
+          onBurger={() => setMobileNav(true)}
+          sidebarCollapsed={collapsed}
+          onToggleSidebar={toggleSidebar}
+        />
         <main className="flex-1 px-5 py-6 sm:px-8 sm:py-8">
           <motion.div
             key={loc.pathname}

@@ -243,7 +243,7 @@ export const CAMPAIGNS = [
   },
   {
     id: 'cmp_1005',
-    name: 'Кщ',
+    name: 'Доставка за 15 минут',
     advertiserId: 'adv_makro',
     status: 'received',
     objective: 'conversions',

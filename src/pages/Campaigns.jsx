@@ -456,8 +456,7 @@ export default function Campaigns() {
                         >
                           <FolderOpen size={16} />
                         </Button>
-                        {/* Редактирование кампании временно скрыто.
-                            Запущенную и завершённую кампанию править нельзя.
+                        {/* Запущенную и завершённую кампанию править нельзя. */}
                         {c.status !== 'active' && c.status !== 'completed' && (
                           <Button
                             variant="secondary"
@@ -470,7 +469,6 @@ export default function Campaigns() {
                             <Pencil size={16} />
                           </Button>
                         )}
-                        */}
                         {/* Удаление кампании временно скрыто.
                             Запущенную и завершённую кампанию удалять нельзя.
                         {c.status !== 'active' && c.status !== 'completed' && (

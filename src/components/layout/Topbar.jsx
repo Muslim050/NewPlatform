@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Menu, Bell, LogOut, ChevronDown } from 'lucide-react'
+import {
+  Menu,
+  Bell,
+  LogOut,
+  ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from 'lucide-react'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useData } from '@/context/DataContext.jsx'
 import { NAV } from '@/lib/nav.js'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 
-export function Topbar({ onBurger }) {
+export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
   const { user, logout } = useAuth()
   const { advertiserById } = useData()
   const loc = useLocation()
@@ -33,10 +40,28 @@ export function Topbar({ onBurger }) {
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line glass px-5 sm:px-8">
       <button
         onClick={onBurger}
+        aria-label="Открыть меню"
         className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-ink/[0.05] lg:hidden focus-ring"
       >
         <Menu size={20} />
       </button>
+
+      {/* Сворачивание десктопного сайдбара */}
+      {onToggleSidebar && (
+        <button
+          onClick={onToggleSidebar}
+          title={sidebarCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
+          aria-label={sidebarCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
+          aria-expanded={!sidebarCollapsed}
+          className="hidden h-9 w-9 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-ink/[0.05] lg:flex focus-ring"
+        >
+          {sidebarCollapsed ? (
+            <PanelLeftOpen size={19} />
+          ) : (
+            <PanelLeftClose size={19} />
+          )}
+        </button>
+      )}
 
       <div className="min-w-0">
         <h2 className="truncate font-display text-base font-semibold text-ink">
