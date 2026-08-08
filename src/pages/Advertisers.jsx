@@ -52,7 +52,7 @@ export default function Advertisers() {
 
   return (
     <div>
-      <PageHeader/>
+      <PageHeader />
 
       <div className="relative mb-4 w-full sm:max-w-xs">
         <Search

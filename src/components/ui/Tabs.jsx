@@ -9,7 +9,7 @@ export function SegmentTabs({ items, value, onChange, className }) {
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-1 rounded-xl border border-line bg-surface p-1',
+        'inline-flex items-center gap-1 rounded-xl border border-line bg-surface p-[4.5px]',
         className,
       )}
     >

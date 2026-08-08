@@ -10,22 +10,29 @@ import {
   MousePointerClick,
   Target,
 } from 'lucide-react'
-import { PACKAGES, STATUS, ctr, leagueLabel } from '@/lib/metrics.js'
+import { PACKAGES, STATUS, ctr, leagueLabel, statusLabel } from '@/lib/metrics.js'
 import {
   formatCompact,
   formatDate,
+  formatDateTime,
   formatMoneyCompact,
   formatPct,
 } from '@/lib/format.js'
 import { Modal } from '@/components/ui/Modal.jsx'
+import { Tooltip } from '@/components/ui/Tooltip.jsx'
 import { Button } from '@/components/ui/Button.jsx'
 import { Progress } from '@/components/ui/Progress.jsx'
 
 const STATUS_UI = {
-  received: {
+  sent: {
     shell: 'border-sky-200 bg-sky-50/80 text-sky-700',
     dot: 'bg-sky-500',
     value: 'border-sky-200 bg-surface text-sky-700',
+  },
+  received: {
+    shell: 'border-violet-200 bg-violet-50/80 text-violet-700',
+    dot: 'bg-violet-500',
+    value: 'border-violet-200 bg-surface text-violet-700',
   },
   reviewing: {
     shell: 'border-yellow-200 bg-yellow-50 text-yellow-700',
@@ -44,25 +51,33 @@ const STATUS_UI = {
   },
 }
 
-export function CampaignStatusPill({ status, pacing }) {
-  const meta = STATUS[status] || STATUS.active
+export function CampaignStatusPill({ status, pacing, createdAt }) {
   const ui = STATUS_UI[status] || STATUS_UI.completed
   const percent = Math.min(100, Math.max(0, Math.round(pacing)))
+  const label = STATUS[status] ? statusLabel(status) : STATUS.active.label
+
+  // Пока заявку не взяли в работу — по наведению показываем время отправки.
+  const sentAt =
+    (status === 'sent' || status === 'received') && createdAt
+      ? `Отправлено: ${formatDateTime(createdAt)}`
+      : null
 
   return (
-    <span
-      className={`inline-flex max-w-full items-center gap-2 rounded-xl border px-2.5 py-1.5 text-[12px] font-semibold ${ui.shell}`}
-    >
-      <span className={`h-2 w-2 shrink-0 rounded-full ${ui.dot}`} />
-      <span className="truncate">{meta.label}</span>
-      {status === 'active' && (
-        <span
-          className={`shrink-0 rounded-lg border px-1.5 py-0.5 text-[11px] font-bold leading-none tnum ${ui.value}`}
-        >
-          {percent}%
-        </span>
-      )}
-    </span>
+    <Tooltip label={sentAt} className="max-w-full">
+      <span
+        className={`inline-flex max-w-full items-center gap-2 rounded-xl border px-2.5 py-1.5 text-[12px] font-semibold ${ui.shell}`}
+      >
+        <span className={`h-2 w-2 shrink-0 rounded-full ${ui.dot}`} />
+        <span className="truncate">{label}</span>
+        {status === 'active' && (
+          <span
+            className={`shrink-0 rounded-lg border px-1.5 py-0.5 text-[11px] font-bold leading-none tnum ${ui.value}`}
+          >
+            {percent}%
+          </span>
+        )}
+      </span>
+    </Tooltip>
   )
 }
 
@@ -120,7 +135,7 @@ function ContractBlock({ campaign }) {
     ['Срок договора', campaign.contractStart && campaign.contractEnd
       ? `${formatDate(campaign.contractStart)} — ${formatDate(campaign.contractEnd)}`
       : null],
-    ['Сроки оплаты', campaign.paymentTerms],
+    ['Сроки оплаты', campaign.paymentDate ? formatDate(campaign.paymentDate) : null],
   ].filter(([, value]) => value)
 
   if (!rows.length && !campaign.contractFile) return null
@@ -224,7 +239,11 @@ export function CampaignPreviewModal({
                   {formatDate(campaign.endDate)}
                 </div>
               </div>
-              <CampaignStatusPill status={campaign.status} pacing={pacing} />
+              <CampaignStatusPill
+                status={campaign.status}
+                pacing={pacing}
+                createdAt={campaign.createdAt}
+              />
             </div>
           </div>
 

@@ -1,25 +1,49 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Plus, Save, Settings2, Trash2, X } from "lucide-react";
+import {
+  Check,
+  Download,
+  FileSpreadsheet,
+  Plus,
+  Save,
+  Settings2,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { LIVE_SPOT_SEED } from "@/lib/liveSpotSeed.js";
 import { uid } from "@/lib/id.js";
 import { cn } from "@/lib/cn.js";
 import { Button } from "@/components/ui/Button.jsx";
 import { Card } from "@/components/ui/Card.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
+import { useToast } from "@/components/ui/Toast.jsx";
 
-const STORAGE_KEY = "setanta.campaign.live-spots.v3";
+const STORAGE_KEY = "setanta.campaign.live-spots.v4";
 const LEGACY_STORAGE_KEY = "setanta.campaign.live-spots.v1";
 
+// Две таблицы Live Spot отличаются только каналом — выносим общее в подпись
+// группы, чтобы не повторять «LIVE SPOT —» в каждой вкладке.
 const CAMPAIGN_TABS = [
-  { value: "spot1", label: "LIVE SPOT — SETANTA SPORTS 1" },
-  { value: "spot2", label: "LIVE SPOT — SETANTA SPORTS 2" },
-  {
-    value: "channels",
-    label: "SETANTA SPORTS 1 | SETANTA SPORTS 2",
-  },
-  { value: "social", label: "SOCIAL MEDIA" },
-  { value: "stats", label: "TOTAL STATISTICS" },
+  { value: "spot1", label: "Setanta Sports 1", group: "Live spot" },
+  { value: "spot2", label: "Setanta Sports 2", group: "Live spot" },
+  { value: "ss1uzb", label: "SS1", group: "UZB TV" },
+  { value: "ss2uzb", label: "SS2", group: "UZB TV" },
+  { value: "promo1", label: "SS1", group: "Event promo" },
+  { value: "promo2", label: "SS2", group: "Event promo" },
+  { value: "channels", label: "Total Spot statistic" },
+  { value: "social", label: "Social media" },
+  { value: "stats", label: "Total statistics" },
 ];
+
+/** Соседние вкладки с одинаковым group собираем в одну секцию. */
+function groupTabs(tabs) {
+  return tabs.reduce((groups, tab) => {
+    const last = groups[groups.length - 1];
+    if (tab.group && last?.name === tab.group) last.items.push(tab);
+    else groups.push({ name: tab.group ?? null, items: [tab] });
+    return groups;
+  }, []);
+}
 
 const TABLE_META = {
   spot1: {
@@ -52,6 +76,81 @@ const COLUMNS = [
   { key: "post", label: "Post", className: "min-w-[62px]", live: true },
   { key: "views", label: "Просмотры", className: "min-w-[112px]", live: true },
 ];
+
+// Заголовки, которые узнаём в загружаемом файле.
+const HEADER_ALIASES = {
+  date: ["дата", "date"],
+  time: ["время", "время gmt+4", "time"],
+  tournament: ["турнир", "лига", "tournament", "league"],
+  event: ["событие", "матч", "event", "match"],
+  channel: ["канал", "channel"],
+  pre: ["pre", "пре"],
+  mid1: ["mid 1", "mid1"],
+  mid2: ["mid 2", "mid2"],
+  post: ["post", "пост"],
+  views: ["просмотры", "views"],
+};
+
+const pad = (n) => String(n).padStart(2, "0");
+
+/** Ячейку приводим к строке: даты и время Excel отдаёт объектами Date. */
+function cellText(value, key) {
+  if (value === null || value === undefined) return "";
+  if (value instanceof Date) {
+    return key === "time"
+      ? `${pad(value.getHours())}:${pad(value.getMinutes())}`
+      : `${pad(value.getDate())}.${pad(value.getMonth() + 1)}.${value.getFullYear()}`;
+  }
+  return String(value).trim();
+}
+
+/** Ищем строку заголовков; если её нет — читаем колонки по порядку. */
+function columnMap(sheet) {
+  for (const [index, row] of sheet.slice(0, 5).entries()) {
+    const map = {};
+    row.forEach((cell, column) => {
+      const text = String(cell ?? "").trim().toLowerCase();
+      if (!text) return;
+      const found = Object.entries(HEADER_ALIASES).find(([, aliases]) =>
+        aliases.includes(text),
+      );
+      if (found && map[found[0]] === undefined) map[found[0]] = column;
+    });
+    if (Object.keys(map).length >= 2) return { map, headerIndex: index };
+  }
+  const map = {};
+  COLUMNS.forEach((column, index) => {
+    map[column.key] = index;
+  });
+  return { map, headerIndex: -1 };
+}
+
+/** Строки таблицы из листа Excel. */
+function rowsFromSheet(sheet, tableKey) {
+  const { map, headerIndex } = columnMap(sheet);
+  const fallbackChannel = tableKey === "spot2" ? "S2" : "S1";
+
+  return sheet
+    .slice(headerIndex + 1)
+    .map((row) => {
+      const value = (key) =>
+        map[key] === undefined ? "" : cellText(row[map[key]], key);
+      return {
+        id: uid("spot"),
+        date: value("date"),
+        time: value("time"),
+        tournament: value("tournament"),
+        event: value("event"),
+        channel: value("channel") || fallbackChannel,
+        pre: value("pre") || "30",
+        mid1: value("mid1") || "15",
+        mid2: value("mid2") || "15",
+        post: value("post") || "30",
+        views: value("views"),
+      };
+    })
+    .filter((row) => row.date || row.time || row.tournament || row.event);
+}
 
 function cloneSeed(tableKey) {
   return LIVE_SPOT_SEED[tableKey].map((row) => ({ ...row }));
@@ -103,24 +202,40 @@ function persistRows(tableKey, rows) {
 }
 
 export function CampaignTabs({ value, onChange }) {
+  const renderTab = (tab) => (
+    <button
+      key={tab.value}
+      type="button"
+      onClick={() => onChange(tab.value)}
+      className={cn(
+        "rounded-xl px-4 py-2.5 text-[13px] font-medium transition-colors focus-ring",
+        value === tab.value
+          ? "bg-indigo-500 text-ink shadow-soft"
+          : "text-ink-muted hover:bg-paper hover:text-ink",
+      )}
+    >
+      {tab.label}
+    </button>
+  );
+
   return (
     <div className="mb-4 overflow-x-auto rounded-2xl border border-line bg-surface p-1.5 shadow-soft">
-      <div className="flex min-w-max gap-1.5">
-        {CAMPAIGN_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => onChange(tab.value)}
-            className={cn(
-              "rounded-xl px-4 py-2.5 text-[13px] font-medium transition-colors focus-ring",
-              value === tab.value
-                ? "bg-indigo-500 text-ink shadow-soft"
-                : "text-ink-muted hover:bg-paper hover:text-ink",
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex min-w-max items-center gap-1.5">
+        {groupTabs(CAMPAIGN_TABS).map((group) =>
+          group.name ? (
+            <div
+              key={group.name}
+              className="flex items-center gap-1.5 rounded-xl bg-paper/80 py-1 pl-3 pr-1"
+            >
+              <span className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                {group.name}
+              </span>
+              {group.items.map(renderTab)}
+            </div>
+          ) : (
+            group.items.map(renderTab)
+          ),
+        )}
       </div>
     </div>
   );
@@ -128,12 +243,16 @@ export function CampaignTabs({ value, onChange }) {
 
 export function EditableSpotTable({ tableKey }) {
   const { isAdvertiser } = useAuth();
+  const toast = useToast();
   const [rows, setRows] = useState(() => loadRows(tableKey));
   const [pendingScrollRowId, setPendingScrollRowId] = useState(null);
   const [highlightedRowId, setHighlightedRowId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [saveState, setSaveState] = useState("idle");
+  const [isDragging, setIsDragging] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef(null);
   const rowRefs = useRef(new Map());
   const originalRowsRef = useRef(null);
   const saveFeedbackTimeoutRef = useRef(null);
@@ -244,8 +363,90 @@ export function EditableSpotTable({ tableKey }) {
     commit(rows.filter((row) => row.id !== rowId));
   };
 
+  /** Excel из проводника: читаем лист и подставляем строки в таблицу. */
+  const importFile = async (file) => {
+    if (!file) return;
+    if (!/\.xlsx$/i.test(file.name)) {
+      toast.error("Нужен файл .xlsx");
+      return;
+    }
+    setIsImporting(true);
+    try {
+      // Парсер тянем только когда он реально нужен.
+      const { parseXlsx } = await import("@/lib/xlsx.js");
+      const sheet = await parseXlsx(file);
+      const imported = rowsFromSheet(sheet, tableKey);
+      if (!imported.length) {
+        toast.error("В файле не нашлось строк с данными");
+        return;
+      }
+      if (!isEditing) originalRowsRef.current = rows.map((row) => ({ ...row }));
+      setRows(imported);
+      setIsEditing(true);
+      setIsDirty(true);
+      setSaveState("idle");
+      toast.success(`Загружено строк: ${imported.length}`);
+    } catch {
+      toast.error("Не удалось прочитать файл");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (isAdvertiser) return;
+    importFile(e.dataTransfer.files?.[0]);
+  };
+
+  /** Выгрузка текущего медиаплана в .xlsx. */
+  const download = async () => {
+    const { buildXlsx, downloadBlob } = await import("@/lib/xlsx.js");
+    const blob = buildXlsx({
+      sheetName: tableKey === "spot2" ? "Live spot S2" : "Live spot S1",
+      rows: [
+        COLUMNS.map((column) => column.label),
+        ...rows.map((row) => COLUMNS.map((column) => row[column.key])),
+      ],
+    });
+    downloadBlob(blob, `${meta.title}.xlsx`);
+  };
+
+  const onDragOver = (e) => {
+    if (isAdvertiser) return;
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
   return (
-    <Card className="overflow-hidden">
+    <Card
+      className="relative overflow-hidden"
+      onDragOver={onDragOver}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setIsDragging(false);
+      }}
+      onDrop={onDrop}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          importFile(file);
+        }}
+      />
+      {isDragging && !isAdvertiser && (
+        <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-2xl border-2 border-dashed border-indigo-400 bg-indigo-50/85 backdrop-blur-[1px]">
+          <p className="flex items-center gap-2 text-sm font-medium text-indigo-900">
+            <FileSpreadsheet size={18} />
+            Отпустите файл — заполним таблицу
+          </p>
+        </div>
+      )}
       <div className="flex flex-col gap-4 border-b border-line bg-gradient-to-br from-surface via-indigo-50 to-indigo-100 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-800">
@@ -266,6 +467,24 @@ export function EditableSpotTable({ tableKey }) {
             >
               {isEditing ? <X size={15} /> : <Settings2 size={15} />}
               {isEditing ? "Отменить" : "Редактировать"}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+            >
+              <Upload size={15} />
+              {isImporting ? "Загружаем…" : "Импорт Excel"}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={download}
+              disabled={!rows.length}
+            >
+              <Download size={15} />
+              Скачать
             </Button>
             <Button
               size="sm"
@@ -320,6 +539,27 @@ export function EditableSpotTable({ tableKey }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
+            {!rows.length && (
+              <tr>
+                <td
+                  colSpan={COLUMNS.length + (isEditing ? 2 : 1)}
+                  className="px-4 py-12 text-center"
+                >
+                  <FileSpreadsheet
+                    size={26}
+                    className="mx-auto text-ink-muted"
+                  />
+                  <p className="mt-3 text-sm font-medium text-ink-soft">
+                    Таблица пустая
+                  </p>
+                  <p className="mt-1 text-[13px] text-ink-muted">
+                    {isAdvertiser
+                      ? "Размещения появятся после загрузки медиаплана."
+                      : "Перетащите сюда файл .xlsx — строки подставятся автоматически."}
+                  </p>
+                </td>
+              </tr>
+            )}
             {rows.map((row, rowIndex) => (
               <tr
                 key={row.id}

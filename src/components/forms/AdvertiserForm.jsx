@@ -36,6 +36,7 @@ const emptyForm = {
   category: 'Финансы',
   status: 'active',
   balance: '',
+  legalName: '',
   color: PALETTE[0],
 }
 
@@ -57,6 +58,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
             category: initial.category,
             status: initial.status,
             balance: String(initial.balance),
+            legalName: initial.legalName || '',
             color: initial.color,
           }
         : emptyForm,
@@ -81,6 +83,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
       category: form.category,
       status: form.status,
       balance: Number(form.balance) || 0,
+      legalName: form.legalName.trim(),
       color: form.color,
     }
 
@@ -161,15 +164,25 @@ export function AdvertiserForm({ open, onClose, initial }) {
           </Field>
         </div>
 
-        <Field label="Баланс">
-          <Input
-            type="number"
-            min="0"
-            value={form.balance}
-            onChange={(e) => set('balance', e.target.value)}
-            placeholder="1000000"
-          />
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Баланс">
+            <Input
+              type="number"
+              min="0"
+              value={form.balance}
+              onChange={(e) => set('balance', e.target.value)}
+              placeholder="1000000"
+            />
+          </Field>
+          {/* Подставляется в договор кампании как наименование юр. лица. */}
+          <Field label="Юр. лицо">
+            <Input
+              value={form.legalName}
+              onChange={(e) => set('legalName', e.target.value)}
+              placeholder='ООО «Пример»'
+            />
+          </Field>
+        </div>
 
         <Field label="Цвет бренда">
           <div className="flex flex-wrap gap-2 pt-1">

@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { ExternalLink, FileText, Megaphone, Paperclip, X } from 'lucide-react'
+import {
+  ExternalLink,
+  FileText,
+  Film,
+  Megaphone,
+  Paperclip,
+  X,
+} from 'lucide-react'
 import { useData } from '@/context/DataContext.jsx'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button.jsx'
 import { Field, Input, Select } from '@/components/ui/Field.jsx'
+import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { CreativeLink } from '@/components/campaigns/CreativePlayer.jsx'
 import { LEAGUES, PACKAGES, STATUS } from '@/lib/metrics.js'
 import { cn } from '@/lib/cn.js'
@@ -18,32 +26,39 @@ const emptyForm = {
   name: '',
   advertiserId: '',
   objective: 'awareness',
-  status: 'received',
-  budget: '',
+  status: 'sent',
   startDate: '',
   endDate: '',
   channelIds: [],
   creativeUrl: DEFAULT_CREATIVE_URL,
+  creativeName: '',
   contractNumber: '',
   package: '',
   leagues: [],
   legalName: '',
   contractStart: '',
   contractEnd: '',
-  paymentTerms: '',
+  paymentDate: '',
   contractFile: null,
 }
 
-/** Принимаем и внешние ссылки, и файлы из /public. */
+/** Принимаем файлы из /public, внешние ссылки и выбранные с компьютера файлы. */
 function isValidUrl(value) {
   if (!value) return false
   if (value.startsWith('/')) return true
+  if (value.startsWith('data:') || value.startsWith('blob:')) return true
   try {
     const url = new URL(value)
     return url.protocol === 'http:' || url.protocol === 'https:'
   } catch {
     return false
   }
+}
+
+/** Имя файла из пути — для роликов, залитых в /public. */
+function fileNameFromUrl(url) {
+  if (!url || url.startsWith('data:') || url.startsWith('blob:')) return ''
+  return url.split('/').pop() || ''
 }
 
 export function CampaignForm({ open, onClose, initial }) {
@@ -54,6 +69,9 @@ export function CampaignForm({ open, onClose, initial }) {
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
 
+  const legalNameOf = (advertiserId) =>
+    advertisers.find((a) => a.id === advertiserId)?.legalName || ''
+
   useEffect(() => {
     if (!open) return
     if (initial) {
@@ -62,30 +80,45 @@ export function CampaignForm({ open, onClose, initial }) {
         advertiserId: initial.advertiserId,
         objective: initial.objective,
         status: initial.status,
-        budget: String(initial.budget),
         startDate: initial.startDate,
         endDate: initial.endDate,
         channelIds: [...initial.channelIds],
         creativeUrl: initial.creativeUrl || DEFAULT_CREATIVE_URL,
+        creativeName: initial.creativeName || '',
         contractNumber: initial.contractNumber || '',
         package: initial.package || '',
         leagues: [...(initial.leagues || [])],
-        legalName: initial.legalName || '',
+        // Если у кампании юр. лицо не заполнено — берём из карточки бренда.
+        legalName: initial.legalName || legalNameOf(initial.advertiserId),
         contractStart: initial.contractStart || '',
         contractEnd: initial.contractEnd || '',
-        paymentTerms: initial.paymentTerms || '',
+        paymentDate: initial.paymentDate || '',
         contractFile: initial.contractFile || null,
       })
     } else {
+      const advertiserId = isAdmin ? '' : user.advertiserId
       setForm({
         ...emptyForm,
-        advertiserId: isAdmin ? '' : user.advertiserId,
+        advertiserId,
+        legalName: legalNameOf(advertiserId),
       })
     }
     setErrors({})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial, isAdmin, user])
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+
+  // Смена бренда подтягивает его юр. лицо, но не затирает правку руками.
+  const setAdvertiser = (advertiserId) =>
+    setForm((f) => ({
+      ...f,
+      advertiserId,
+      legalName:
+        !f.legalName || f.legalName === legalNameOf(f.advertiserId)
+          ? legalNameOf(advertiserId)
+          : f.legalName,
+    }))
 
   const toggleChannel = (id) =>
     setForm((f) => ({
@@ -95,21 +128,10 @@ export function CampaignForm({ open, onClose, initial }) {
         : [...f.channelIds, id],
     }))
 
-  const toggleLeague = (id) =>
-    setForm((f) => ({
-      ...f,
-      leagues: f.leagues.includes(id)
-        ? f.leagues.filter((x) => x !== id)
-        : [...f.leagues, id],
-    }))
-
   const submit = () => {
     const err = {}
     if (!form.name.trim()) err.name = 'Укажите название'
     if (isAdmin && !form.advertiserId) err.advertiserId = 'Выберите рекламодателя'
-    if (isAdmin && (!form.budget || Number(form.budget) <= 0)) {
-      err.budget = 'Бюджет больше нуля'
-    }
     if (!form.startDate) err.startDate = 'Укажите начало периода'
     if (!form.endDate) err.endDate = 'Укажите окончание периода'
     if (form.startDate && form.endDate && form.endDate < form.startDate) {
@@ -119,7 +141,6 @@ export function CampaignForm({ open, onClose, initial }) {
       err.creativeUrl = 'Укажите ссылку на видео'
     }
     if (
-      isAdmin &&
       form.contractStart &&
       form.contractEnd &&
       form.contractEnd < form.contractStart
@@ -133,26 +154,23 @@ export function CampaignForm({ open, onClose, initial }) {
       name: form.name.trim(),
       advertiserId: form.advertiserId,
       objective: form.objective,
-      status: isAdmin && editing ? form.status : initial?.status || 'received',
-      // Бюджет проставляет админ — рекламодатель его не видит и не задаёт.
-      budget: isAdmin ? Number(form.budget) : initial?.budget || 0,
+      status: isAdmin && editing ? form.status : initial?.status || 'sent',
+      // Бюджет правится инлайн в таблице кампаний, форма его не трогает.
+      budget: initial?.budget || 0,
       startDate: form.startDate,
       endDate: form.endDate,
       channelIds: form.channelIds,
       creativeUrl: form.creativeUrl.trim(),
+      creativeName: form.creativeName,
+      // Условия договора — и при создании, и при редактировании.
       contractNumber: form.contractNumber.trim(),
-      // Условия договора заполняет только админ — у рекламодателя оставляем как есть.
-      ...(isAdmin
-        ? {
-            package: form.package,
-            leagues: form.leagues,
-            legalName: form.legalName.trim(),
-            contractStart: form.contractStart,
-            contractEnd: form.contractEnd,
-            paymentTerms: form.paymentTerms.trim(),
-            contractFile: form.contractFile,
-          }
-        : null),
+      package: form.package,
+      leagues: form.leagues,
+      legalName: form.legalName.trim(),
+      contractStart: form.contractStart,
+      contractEnd: form.contractEnd,
+      paymentDate: form.paymentDate.trim(),
+      contractFile: form.contractFile,
     }
 
     if (editing) {
@@ -208,7 +226,7 @@ export function CampaignForm({ open, onClose, initial }) {
             <Field label="Рекламодатель" required error={errors.advertiserId}>
               <Select
                 value={form.advertiserId}
-                onChange={(e) => set('advertiserId', e.target.value)}
+                onChange={(e) => setAdvertiser(e.target.value)}
               >
                 <option value="">— выберите —</option>
                 {advertisers.map((a) => (
@@ -236,17 +254,6 @@ export function CampaignForm({ open, onClose, initial }) {
             </Field>
           )}
 
-          {isAdmin && (
-            <Field label="Бюджет" required error={errors.budget}>
-              <Input
-                type="number"
-                min="0"
-                value={form.budget}
-                onChange={(e) => set('budget', e.target.value)}
-                placeholder="1000000"
-              />
-            </Field>
-          )}
         </div>
 
         <div>
@@ -277,145 +284,187 @@ export function CampaignForm({ open, onClose, initial }) {
           </div>
         </div>
 
-        <Field
-          label="Рекламный ролик"
-          error={errors.creativeUrl}
-          hint="Ссылка на видеофайл — можно заменить на другой ролик."
-        >
+        <div>
+          <p className="mb-2 text-[13px] font-medium text-ink-soft">
+            Рекламный ролик
+          </p>
           <div className="flex items-center gap-2">
-            <Input
-              inputMode="url"
-              value={form.creativeUrl}
-              onChange={(e) => set('creativeUrl', e.target.value)}
-              placeholder={DEFAULT_CREATIVE_URL}
-            />
-            <CreativeLink
-              url={
-                isValidUrl(form.creativeUrl.trim())
-                  ? form.creativeUrl.trim()
-                  : ''
+            <FilePicker
+              className="min-w-0 flex-1"
+              accept="video/*"
+              emptyLabel="Выбрать ролик"
+              name={form.creativeName || fileNameFromUrl(form.creativeUrl)}
+              url={form.creativeUrl}
+              onPick={(picked) =>
+                setForm((f) => ({
+                  ...f,
+                  creativeUrl: picked?.url || '',
+                  creativeName: picked?.name || '',
+                }))
               }
             />
+            <CreativeLink
+              url={isValidUrl(form.creativeUrl) ? form.creativeUrl : ''}
+            />
           </div>
-        </Field>
+          <p className="mt-1.5 text-xs text-ink-muted">
+            Видеофайл с компьютера — по клику откроется выбор файла.
+          </p>
+        </div>
 
-        {/* Рекламодатель указывает только номер договора. */}
-        {!isAdmin && (
-          <Field label="Номер договора">
+        {/* Условия договора — одинаковые при создании и редактировании. */}
+        <div className="space-y-4 rounded-2xl ">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Пакет">
+              <Select
+                value={form.package}
+                onChange={(e) => set('package', e.target.value)}
+              >
+                <option value="">— не выбран —</option>
+                {Object.entries(PACKAGES).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Номер договора">
+              <Input
+                value={form.contractNumber}
+                onChange={(e) => set('contractNumber', e.target.value)}
+                placeholder="Например, Д-2026/114"
+              />
+            </Field>
+          </div>
+
+          <Field label="Наименование юр. лица">
             <Input
-              value={form.contractNumber}
-              onChange={(e) => set('contractNumber', e.target.value)}
-              placeholder="Например, Д-2026/114"
+              value={form.legalName}
+              onChange={(e) => set('legalName', e.target.value)}
+              placeholder='ООО «Пример»'
             />
           </Field>
-        )}
 
-        {/* Условия договора — целиком на стороне админа. */}
-        {isAdmin && (
-          <div className="space-y-4 rounded-2xl border border-line bg-paper/55 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-              Договор
+          <Field label="Лиги" hint="Можно выбрать несколько.">
+            <MultiSelect
+              options={LEAGUES}
+              value={form.leagues}
+              onChange={(v) => set('leagues', v)}
+              placeholder="— не выбраны —"
+            />
+          </Field>
+
+          <div>
+            <p className="mb-2 text-[13px] font-medium text-ink-soft">
+              Срок договора
             </p>
-
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Пакет">
-                <Select
-                  value={form.package}
-                  onChange={(e) => set('package', e.target.value)}
-                >
-                  <option value="">— не выбран —</option>
-                  {Object.entries(PACKAGES).map(([k, v]) => (
-                    <option key={k} value={k}>
-                      {v.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Номер договора">
+              <Field label="Начало">
                 <Input
-                  value={form.contractNumber}
-                  onChange={(e) => set('contractNumber', e.target.value)}
-                  placeholder="Например, Д-2026/114"
+                  type="date"
+                  value={form.contractStart}
+                  max={form.contractEnd || undefined}
+                  onChange={(e) => set('contractStart', e.target.value)}
+                />
+              </Field>
+              <Field label="Окончание" error={errors.contractEnd}>
+                <Input
+                  type="date"
+                  value={form.contractEnd}
+                  min={form.contractStart || undefined}
+                  onChange={(e) => set('contractEnd', e.target.value)}
                 />
               </Field>
             </div>
-
-            <Field label="Наименование юр. лица">
-              <Input
-                value={form.legalName}
-                onChange={(e) => set('legalName', e.target.value)}
-                placeholder='ООО «Пример»'
-              />
-            </Field>
-
-            <div>
-              <p className="mb-2 text-[13px] font-medium text-ink-soft">Лиги</p>
-              <div className="flex flex-wrap gap-2">
-                {LEAGUES.map((l) => {
-                  const on = form.leagues.includes(l.id)
-                  return (
-                    <button
-                      key={l.id}
-                      type="button"
-                      onClick={() => toggleLeague(l.id)}
-                      aria-pressed={on}
-                      className={cn(
-                        'rounded-xl border px-3 py-1.5 text-[13px] font-medium transition-colors focus-ring',
-                        on
-                          ? 'border-indigo-300 bg-indigo-50 text-indigo-900'
-                          : 'border-line bg-surface text-ink-soft hover:bg-ink/[0.03]',
-                      )}
-                    >
-                      {l.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-2 text-[13px] font-medium text-ink-soft">
-                Срок договора
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Начало">
-                  <Input
-                    type="date"
-                    value={form.contractStart}
-                    max={form.contractEnd || undefined}
-                    onChange={(e) => set('contractStart', e.target.value)}
-                  />
-                </Field>
-                <Field label="Окончание" error={errors.contractEnd}>
-                  <Input
-                    type="date"
-                    value={form.contractEnd}
-                    min={form.contractStart || undefined}
-                    onChange={(e) => set('contractEnd', e.target.value)}
-                  />
-                </Field>
-              </div>
-            </div>
-
-            <Field
-              label="Сроки оплаты"
-              hint="Например: 50% предоплата до 01.09, остаток до 30.09."
-            >
-              <Input
-                value={form.paymentTerms}
-                onChange={(e) => set('paymentTerms', e.target.value)}
-                placeholder="Опишите порядок и сроки оплаты"
-              />
-            </Field>
-
-            <ContractFile
-              file={form.contractFile}
-              onChange={(v) => set('contractFile', v)}
-            />
           </div>
-        )}
+
+          <Field label="Сроки оплаты" hint="Дата, до которой нужно внести оплату.">
+            <Input
+              type="date"
+              value={form.paymentDate}
+              onChange={(e) => set('paymentDate', e.target.value)}
+            />
+          </Field>
+
+          <ContractFile
+            file={form.contractFile}
+            onChange={(v) => set('contractFile', v)}
+          />
+        </div>
       </div>
     </Modal>
+  )
+}
+
+/**
+ * Поле выбора файла: клик по нему открывает системный диалог.
+ * Небольшие файлы кладём в базу как data-URL, крупные держим ссылкой на сессию —
+ * иначе они не помещаются в localStorage.
+ */
+function FilePicker({ name, onPick, accept, emptyLabel, className }) {
+  const inputRef = useRef(null)
+  const toast = useToast()
+
+  const pick = (e) => {
+    const picked = e.target.files?.[0]
+    // Сбрасываем input, иначе повторный выбор того же файла не сработает.
+    e.target.value = ''
+    if (!picked) return
+    if (picked.size <= MAX_CONTRACT_SIZE) {
+      const reader = new FileReader()
+      reader.onload = () =>
+        onPick({ name: picked.name, url: String(reader.result) })
+      reader.onerror = () => toast.error('Не удалось прочитать файл')
+      reader.readAsDataURL(picked)
+      return
+    }
+    onPick({ name: picked.name, url: URL.createObjectURL(picked) })
+    toast.info('Файл больше 2 МБ — ссылка на него живёт до перезагрузки страницы')
+  }
+
+  return (
+    <div className={cn('relative', className)}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        onChange={pick}
+        className="hidden"
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        title={name || emptyLabel}
+        className={cn(
+          'flex h-11 w-full items-center gap-2 rounded-xl border px-3.5 text-left text-sm transition-colors focus-ring',
+          name
+            ? 'border-line bg-surface text-ink hover:border-indigo-300'
+            : 'border-dashed border-line bg-surface text-ink-soft hover:border-indigo-300 hover:bg-indigo-50',
+        )}
+      >
+        {name ? (
+          <Film size={16} className="shrink-0 text-indigo-800" />
+        ) : (
+          <Paperclip size={16} className="shrink-0 text-ink-muted" />
+        )}
+        <span className="min-w-0 flex-1 truncate">{name || emptyLabel}</span>
+        {name && (
+          <span
+            role="button"
+            tabIndex={-1}
+            aria-label="Убрать файл"
+            title="Убрать файл"
+            onClick={(e) => {
+              e.stopPropagation()
+              onPick(null)
+            }}
+            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink"
+          >
+            <X size={14} />
+          </span>
+        )}
+      </button>
+    </div>
   )
 }
 
@@ -492,9 +541,6 @@ function ContractFile({ file, onChange }) {
           Загрузить договор
         </button>
       )}
-      <p className="mt-1.5 text-xs text-ink-muted">
-        PDF, DOC или скан, до 2 МБ.
-      </p>
     </div>
   )
 }

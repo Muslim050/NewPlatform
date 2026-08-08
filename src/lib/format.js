@@ -27,6 +27,24 @@ export function formatDate(value) {
   })
 }
 
+/** Дата со временем: 05.09.2026 14:20. Если времени в записи нет — только дата. */
+export function formatDateTime(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+  const date = d.toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+  if (typeof value === 'string' && !value.includes('T')) return date
+  const time = d.toLocaleTimeString('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  return `${date} ${time}`
+}
+
 export function formatDateShort(value) {
   if (!value) return '—'
   const d = new Date(value)

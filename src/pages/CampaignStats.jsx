@@ -20,6 +20,7 @@ import {
   ctr,
   cvr,
   pacing,
+  statusLabel,
 } from "@/lib/metrics.js";
 import { seededSeries } from "@/lib/id.js";
 import {
@@ -43,11 +44,36 @@ import {
   CampaignTabs,
   EditableSpotTable,
 } from "@/components/campaigns/CampaignMediaTabs.jsx";
+import { SpotLogTable } from "@/components/campaigns/SpotLogTable.jsx";
 import {
   ChannelSummaryReport,
   SocialMediaReport,
   TotalStatisticsReport,
 } from "@/components/campaigns/CampaignReportPanels.jsx";
+
+// Логи выходов: вкладка → лист в загружаемом отчёте.
+const SPOT_LOGS = {
+  ss1uzb: {
+    sheetName: "SS1 UZB",
+    title: "SS1 UZB",
+    subtitle: "Setanta Sports 1 · выходы роликов на UZB TV",
+  },
+  ss2uzb: {
+    sheetName: "SS2 UZB",
+    title: "SS2 UZB",
+    subtitle: "Setanta Sports 2 · выходы роликов на UZB TV",
+  },
+  promo1: {
+    sheetName: "Event Promo SS 1",
+    title: "Event Promo SS1",
+    subtitle: "Setanta Sports 1 · промо событий в эфире",
+  },
+  promo2: {
+    sheetName: "Event Promo SS2",
+    title: "Event Promo SS2",
+    subtitle: "Setanta Sports 2 · промо событий в эфире",
+  },
+};
 
 const METRICS = {
   spent: { label: "Расход", color: "#FFD106", format: formatMoneyCompact },
@@ -135,7 +161,7 @@ export default function CampaignStats() {
             </div>
           </div>
           <Badge tone={status.tone} dot className="w-fit shadow-soft">
-            {status.label}
+            {statusLabel(campaign.status)}
           </Badge>
         </div>
       </section>
@@ -144,7 +170,9 @@ export default function CampaignStats() {
         <CampaignTabs value={activeTab} onChange={setActiveTab} />
       )}
 
-      {hasMediaTables && activeTab === "stats" ? (
+      {hasMediaTables && SPOT_LOGS[activeTab] ? (
+        <SpotLogTable logKey={activeTab} {...SPOT_LOGS[activeTab]} />
+      ) : hasMediaTables && activeTab === "stats" ? (
         <TotalStatisticsReport />
       ) : hasMediaTables && activeTab === "channels" ? (
         <ChannelSummaryReport />

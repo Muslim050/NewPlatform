@@ -25,7 +25,6 @@ import {
   formatMoneyCompact,
   formatPct,
 } from '@/lib/format.js'
-import { PageHeader } from '@/components/PageHeader.jsx'
 import { Card } from '@/components/ui/Card.jsx'
 import { Button } from '@/components/ui/Button.jsx'
 import { Progress } from '@/components/ui/Progress.jsx'
@@ -43,37 +42,59 @@ import {
 // Раскладка строки: у рекламодателя нет колонок бюджета и действий.
 // У админа колонок больше, поэтому и промежутки между ними уже.
 const GRID_ADMIN =
-  'md:gap-2.5 md:grid-cols-[minmax(150px,1fr)_146px_126px_108px_130px_86px_96px] 2xl:grid-cols-[minmax(180px,320px)_156px_140px_112px_148px_80px_54px_96px_104px]'
+  'md:gap-2.5 md:grid-cols-[minmax(150px,1fr)_146px_118px_96px_124px_76px_88px] 2xl:grid-cols-[minmax(200px,360px)_156px_140px_112px_148px_80px_54px_96px_104px]'
 const GRID_ADVERTISER =
-  'md:gap-4 md:grid-cols-[minmax(168px,1fr)_164px_200px_124px_108px] 2xl:grid-cols-[minmax(195px,320px)_164px_200px_124px_86px_58px_108px]'
+  'md:gap-4 md:grid-cols-[minmax(168px,1fr)_164px_200px_124px_108px] 2xl:grid-cols-[minmax(195px,360px)_164px_200px_124px_86px_58px_108px]'
 
 // Порядок группировки строк — как в фильтрах над таблицей.
 const STATUS_ORDER = {
-  received: 0,
-  reviewing: 1,
-  active: 2,
-  completed: 3,
+  sent: 0,
+  received: 1,
+  reviewing: 2,
+  active: 3,
+  completed: 4,
 }
 
 const ALL_BRANDS = 'all'
 
-/** Вкладка «Все» плюс бренды, у которых есть кампании, со счётчиками. */
+/**
+ * Вкладка «Все» плюс бренды, у которых есть кампании, со счётчиками.
+ * sent — сколько заявок пришло и ещё не разобрано; по ним рисуем метку.
+ */
 function brandsOf(campaigns, advertiserById) {
   const byId = new Map()
   for (const c of campaigns) {
+    const isNew = c.status === 'sent'
     const found = byId.get(c.advertiserId)
     if (found) {
       found.count += 1
+      found.sent += isNew ? 1 : 0
       continue
     }
     const adv = advertiserById(c.advertiserId)
-    if (adv) byId.set(adv.id, { id: adv.id, name: adv.name, color: adv.color, count: 1 })
+    if (adv) {
+      byId.set(adv.id, {
+        id: adv.id,
+        name: adv.name,
+        color: adv.color,
+        count: 1,
+        sent: isNew ? 1 : 0,
+      })
+    }
   }
   const list = [...byId.values()].sort((a, b) =>
     a.name.localeCompare(b.name, 'ru'),
   )
   if (!list.length) return []
-  return [{ id: ALL_BRANDS, name: 'Все', count: campaigns.length }, ...list]
+  return [
+    {
+      id: ALL_BRANDS,
+      name: 'Все',
+      count: campaigns.length,
+      sent: campaigns.filter((c) => c.status === 'sent').length,
+    },
+    ...list,
+  ]
 }
 
 export default function Campaigns() {
@@ -112,6 +133,7 @@ export default function Campaigns() {
 
   const counts = {
     all: brandCampaigns.length,
+    sent: brandCampaigns.filter((c) => c.status === 'sent').length,
     received: brandCampaigns.filter((c) => c.status === 'received').length,
     reviewing: brandCampaigns.filter((c) => c.status === 'reviewing').length,
     active: brandCampaigns.filter((c) => c.status === 'active').length,
@@ -171,31 +193,8 @@ export default function Campaigns() {
 
   return (
     <div>
-      <PageHeader
-      >
-        {isAdvertiser && (
-          <Button
-            variant="primary"
-            onClick={() => setModal({ open: true, initial: null })}
-          >
-            <Plus size={18} />
-            Новая кампания
-          </Button>
-        )}
-      </PageHeader>
-
-      {/* Вкладки брендов */}
-      {brands.length > 0 && (
-        <BrandTabs
-          items={brands}
-          value={activeBrand}
-          onChange={setBrandId}
-          className="mb-4"
-        />
-      )}
-
-      {/* Панель фильтров */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Поиск, фильтр статусов и создание кампании — одной строкой */}
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search
             size={17}
@@ -209,7 +208,8 @@ export default function Campaigns() {
             className="h-11 w-full rounded-xl border border-line bg-surface pl-10 pr-3.5 text-sm text-ink placeholder:text-ink-muted focus-ring focus-visible:border-indigo-300"
           />
         </div>
-        <SegmentTabs
+        <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+          <SegmentTabs
           value={status}
           onChange={setStatus}
           items={[
@@ -217,6 +217,11 @@ export default function Campaigns() {
             ...(isAdvertiser
               ? []
               : [
+                  {
+                    value: 'sent',
+                    label: 'Отправленные',
+                    count: counts.sent,
+                  },
                   {
                     value: 'received',
                     label: 'Полученные',
@@ -235,8 +240,30 @@ export default function Campaigns() {
               count: counts.completed,
             },
           ]}
-        />
+          />
+          {isAdvertiser && (
+            <Button
+              variant="primary"
+              // Высота под сегментные табы: их 42px против дефолтных 44px кнопки.
+              className="h-[42px] shrink-0"
+              onClick={() => setModal({ open: true, initial: null })}
+            >
+              <Plus size={18} />
+              Новая кампания
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* Вкладки брендов */}
+      {brands.length > 0 && (
+        <BrandTabs
+          items={brands}
+          value={activeBrand}
+          onChange={setBrandId}
+          className="mb-4"
+        />
+      )}
 
       <Card>
         {filtered.length === 0 ? (
@@ -267,7 +294,10 @@ export default function Campaigns() {
                 showBudget ? GRID_ADMIN : GRID_ADVERTISER,
               )}
             >
-              <span>Кампания</span>
+              <span className="flex items-center gap-2.5">
+                <span className="w-5 shrink-0">№</span>
+                Кампания
+              </span>
               <span >Статус</span>
               <span >Период</span>
               <span>Номер договора</span>
@@ -281,18 +311,21 @@ export default function Campaigns() {
             </div>
 
             <div className="divide-y divide-line">
-              {filtered.map((c) => {
+              {filtered.map((c, index) => {
                 const adv = advertiserById(c.advertiserId)
                 const pacing = c.budget ? (c.spent / c.budget) * 100 : 0
                 return (
                   <div
                     key={c.id}
                     className={cn(
-                      'flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-ink/[0.015] md:grid',
+                      'flex items-center gap-2.5 px-5 py-3.5 transition-colors hover:bg-ink/[0.015] md:grid',
                       showBudget ? GRID_ADMIN : GRID_ADVERTISER,
                     )}
                   >
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                      <span className="w-5 shrink-0 text-[12px] text-ink-muted tnum">
+                        {index + 1}
+                      </span>
                       {isAdmin && adv && (
                         <Avatar name={adv.name} color={adv.color} size="sm" />
                       )}
@@ -322,7 +355,11 @@ export default function Campaigns() {
                     </div>
 
                     <div className="hidden sm:block md:w-auto">
-                      <CampaignStatusPill status={c.status} pacing={pacing} />
+                      <CampaignStatusPill
+                        status={c.status}
+                        pacing={pacing}
+                        createdAt={c.createdAt}
+                      />
                     </div>
 
                     <div className="hidden min-w-0 md:block">

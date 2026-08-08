@@ -1,19 +1,20 @@
-import { buildSeed } from './seed.js'
+import { ADVERTISERS, CAMPAIGNS, buildSeed } from './seed.js'
 import { uid } from './id.js'
 
-const DB_KEY = 'bloom.db.v9'
-const CAMPAIGN_STATUS_LAYOUT_VERSION = 3
-const DEMO_CAMPAIGN_STATUSES = {
-  cmp_1001: 'active',
-  cmp_1002: 'active',
-  cmp_1003: 'active',
-  cmp_1004: 'received',
-  cmp_1005: 'received',
-  cmp_1006: 'reviewing',
-  cmp_1007: 'completed',
-  cmp_1008: 'active',
-  cmp_1009: 'reviewing',
-}
+// Юр. лица демо-брендов — добираем их в базах, созданных до появления поля.
+const SEED_LEGAL_NAMES = new Map(ADVERTISERS.map((a) => [a.id, a.legalName]))
+// Время создания демо-кампаний: в старых базах даты сохранены без времени.
+const SEED_CREATED_AT = new Map(CAMPAIGNS.map((c) => [c.id, c.createdAt]))
+
+// Ключ версионируем: при смене набора демо-кампаний старая база в localStorage
+// заменяется свежим сидом.
+const DB_KEY = 'bloom.db.v10'
+// При смене версии статусы демо-кампаний подтягиваются из сида — так старая
+// база в браузере догоняет новую воронку (появился статус «Отправлен»).
+const CAMPAIGN_STATUS_LAYOUT_VERSION = 4
+const DEMO_CAMPAIGN_STATUSES = Object.fromEntries(
+  CAMPAIGNS.map((c) => [c.id, c.status]),
+)
 
 function normalizeCampaignStatus(campaign) {
   if (campaign.status !== 'paused' && campaign.status !== 'draft') {
@@ -33,15 +34,28 @@ function normalizeDatabase(database) {
     database.campaignStatusLayoutVersion !== CAMPAIGN_STATUS_LAYOUT_VERSION
 
   return {
-    advertisers: database.advertisers ?? [],
+    advertisers: (database.advertisers ?? []).map((advertiser) =>
+      advertiser.legalName
+        ? advertiser
+        : {
+            ...advertiser,
+            legalName: SEED_LEGAL_NAMES.get(advertiser.id) ?? '',
+          },
+    ),
     channels: database.channels ?? [],
     campaigns: (database.campaigns ?? []).map((campaign) => {
       const normalizedCampaign = normalizeCampaignStatus(campaign)
       const demoStatus = DEMO_CAMPAIGN_STATUSES[campaign.id]
+      const withStatus =
+        shouldUpdateDemoStatuses && demoStatus
+          ? { ...normalizedCampaign, status: demoStatus }
+          : normalizedCampaign
 
-      return shouldUpdateDemoStatuses && demoStatus
-        ? { ...normalizedCampaign, status: demoStatus }
-        : normalizedCampaign
+      // Дата без времени — берём полную метку из сида, если кампания демо-шная.
+      const seedCreatedAt = SEED_CREATED_AT.get(campaign.id)
+      return seedCreatedAt && !String(campaign.createdAt).includes('T')
+        ? { ...withStatus, createdAt: seedCreatedAt }
+        : withStatus
     }),
     campaignStatusLayoutVersion: CAMPAIGN_STATUS_LAYOUT_VERSION,
   }

@@ -183,7 +183,7 @@ export function ChannelSummaryReport() {
       <div className="pointer-events-none absolute -left-20 bottom-0 h-48 w-48 rounded-full bg-indigo-100/70 blur-3xl" />
       <ReportHeader
         eyebrow="Channel report"
-        title="Setanta Sports 1 | Setanta Sports 2"
+        title="Total Spot statistic"
         subtitle="Сводные показатели стандартных и live-размещений по двум телеканалам."
       />
 
@@ -434,14 +434,18 @@ export function TotalStatisticsReport() {
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-paper/95 backdrop-blur">
                 <tr className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-                  <th className="px-5 py-2.5 text-left">Город</th>
+                  <th className="w-10 py-2.5 pl-5 text-left">№</th>
+                  <th className="py-2.5 pl-2.5 pr-5 text-left">Город</th>
                   <th className="px-5 py-2.5 text-right">Зрители</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {CITY_SHARE.map((city) => (
+                {CITY_SHARE.map((city, index) => (
                   <tr key={city.name} className="hover:bg-ink/[0.015]">
-                    <td className="px-5 py-2.5 font-medium text-ink-soft">
+                    <td className="py-2.5 pl-5 text-[12px] text-ink-muted tnum">
+                      {index + 1}
+                    </td>
+                    <td className="py-2.5 pl-2.5 pr-5 font-medium text-ink-soft">
                       {city.name}
                     </td>
                     <td className="relative px-5 py-2.5 text-right">

@@ -38,6 +38,8 @@ export function aggregate(campaigns) {
 
 
 export const STATUS = {
+  // Заявка от рекламодателя: сначала «Отправлен», в «Получен» её переводит админ.
+  sent: { label: 'Отправлен', tone: 'warning' },
   received: { label: 'Получен', tone: 'warning' },
   reviewing: { label: 'Рассматривается', tone: 'warning' },
   active: { label: 'Активен', tone: 'success' },
@@ -70,6 +72,8 @@ export const LEAGUES = [
 
 export const leagueLabel = (id) =>
   LEAGUES.find((l) => l.id === id)?.label || id
+
+export const statusLabel = (status) => STATUS[status]?.label || status
 
 export const ADV_STATUS = {
   active: { label: 'Активен', tone: 'success' },
