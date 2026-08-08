@@ -12,6 +12,7 @@ import {
   Package,
   Trophy,
 } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext.jsx'
 import { PACKAGES, STATUS, leagueLabel, statusLabel } from '@/lib/metrics.js'
 import {
   formatDate,
@@ -144,6 +145,7 @@ function ContractTile({ icon: Icon, label, value }) {
 
 /** Плитки с условиями договора — встают в общую сетку карточки. */
 function ContractTiles({ campaign }) {
+  const { isAdvertiser } = useAuth()
   const tiles = [
     { label: 'Пакет', icon: Package, value: PACKAGES[campaign.package]?.label },
     {
@@ -158,7 +160,12 @@ function ContractTiles({ campaign }) {
       icon: FileText,
       value: campaign.contractNumber,
     },
-    { label: 'Юр. лицо', icon: Building2, value: campaign.legalName },
+    // Юр. лицо и освоение бюджета — внутренняя кухня, рекламодателю не нужны.
+    {
+      label: 'Юр. лицо',
+      icon: Building2,
+      value: isAdvertiser ? null : campaign.legalName,
+    },
     {
       label: 'Срок договора',
       icon: CalendarRange,
@@ -211,6 +218,7 @@ export function CampaignPreviewModal({
   onClose,
   onOpenStats,
 }) {
+  const { isAdvertiser } = useAuth()
   const pacing = campaign?.budget
     ? (campaign.spent / campaign.budget) * 100
     : 0
@@ -267,6 +275,7 @@ export function CampaignPreviewModal({
             <ContractTiles campaign={campaign} />
 
             {/* Освоение бюджета шире остальных — занимает две плитки. */}
+            {!isAdvertiser && (
             <div className="col-span-2 rounded-2xl border border-line bg-paper/55 p-4">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
@@ -281,6 +290,7 @@ export function CampaignPreviewModal({
               </p>
               <Progress value={pacing} className="mt-2 h-2" />
             </div>
+            )}
           </div>
 
 

@@ -8,8 +8,6 @@ import {
   Megaphone,
   BarChart3,
   FolderOpen,
-  Check,
-  X,
   CalendarPlus,
   CalendarCheck,
   CalendarClock,
@@ -34,6 +32,7 @@ import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { CampaignForm } from '@/components/forms/CampaignForm.jsx'
 import { BrandTabs } from '@/components/campaigns/BrandTabs.jsx'
+import { MoneyPopover } from '@/components/campaigns/MoneyPopover.jsx'
 import { cn } from '@/lib/cn.js'
 import {
   CampaignPreviewModal,
@@ -57,6 +56,19 @@ const STATUS_ORDER = {
 }
 
 const ALL_BRANDS = 'all'
+const ALL_CONTRACTS = 'all'
+
+/**
+ * Договоры бренда со счётчиком кампаний. Отдельной вкладки «Все» нет —
+ * повторный клик по выбранному договору снимает фильтр.
+ */
+function contractsOf(advertiser, campaigns) {
+  return (advertiser?.contracts ?? []).map((contract) => ({
+    value: contract.number,
+    label: contract.number,
+    count: campaigns.filter((c) => c.contractNumber === contract.number).length,
+  }))
+}
 
 /**
  * Вкладка «Все» плюс бренды, у которых есть кампании, со счётчиками.
@@ -99,7 +111,7 @@ function brandsOf(campaigns, advertiserById) {
 }
 
 export default function Campaigns() {
-  const { isAdmin, isAdvertiser } = useAuth()
+  const { user, isAdmin, isAdvertiser } = useAuth()
   const navigate = useNavigate()
   const { advertiserById, channelById, remove, update } = useData()
   const campaigns = useScopedCampaigns()
@@ -109,9 +121,10 @@ export default function Campaigns() {
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('all')
   const [brandId, setBrandId] = useState(ALL_BRANDS)
+  const [contract, setContract] = useState(ALL_CONTRACTS)
   const [modal, setModal] = useState({ open: false, initial: null })
   const [preview, setPreview] = useState(null)
-  // Инлайн-правка бюджета и прибыли прямо в таблице (только админ).
+  // Правка сумм в поповере у ячейки «Бюджет / Прибыль» (только админ).
   const [money, setMoney] = useState(null)
 
   // Рекламодатель не видит бюджет и не управляет кампаниями из таблицы.
@@ -132,17 +145,37 @@ export default function Campaigns() {
       ? campaigns
       : campaigns.filter((c) => c.advertiserId === activeBrand)
 
+  // Второй уровень: договоры выбранного бренда. У рекламодателя бренд один,
+  // поэтому его договоры показываем сразу.
+  const contractBrandId = isAdvertiser
+    ? user?.advertiserId
+    : activeBrand === ALL_BRANDS
+      ? null
+      : activeBrand
+  const contracts = contractBrandId
+    ? contractsOf(advertiserById(contractBrandId), brandCampaigns)
+    : []
+  // Договор мог пропасть вместе со сменой бренда — тогда показываем все.
+  const activeContract = contracts.some((c) => c.value === contract)
+    ? contract
+    : ALL_CONTRACTS
+
+  const scoped =
+    activeContract === ALL_CONTRACTS
+      ? brandCampaigns
+      : brandCampaigns.filter((c) => c.contractNumber === activeContract)
+
   const counts = {
-    all: brandCampaigns.length,
-    sent: brandCampaigns.filter((c) => c.status === 'sent').length,
-    received: brandCampaigns.filter((c) => c.status === 'received').length,
-    reviewing: brandCampaigns.filter((c) => c.status === 'reviewing').length,
-    active: brandCampaigns.filter((c) => c.status === 'active').length,
-    completed: brandCampaigns.filter((c) => c.status === 'completed').length,
+    all: scoped.length,
+    sent: scoped.filter((c) => c.status === 'sent').length,
+    received: scoped.filter((c) => c.status === 'received').length,
+    reviewing: scoped.filter((c) => c.status === 'reviewing').length,
+    active: scoped.filter((c) => c.status === 'active').length,
+    completed: scoped.filter((c) => c.status === 'completed').length,
   }
 
   const query = q.trim().toLowerCase()
-  const filtered = brandCampaigns
+  const filtered = scoped
     .filter(
       (c) =>
         (status === 'all' || c.status === status) &&
@@ -163,21 +196,10 @@ export default function Campaigns() {
       })
     : []
 
-  const saveMoney = () => {
-    const budget = Number(money.budget)
-    const spent = Number(money.spent)
-    if (!Number.isFinite(budget) || !Number.isFinite(spent) || budget < 0 || spent < 0) {
-      toast.error('Суммы должны быть неотрицательными числами')
-      return
-    }
-    update('campaigns', money.id, { budget, spent })
+  const saveMoney = ({ budget, spent }) => {
+    update('campaigns', money.campaign.id, { budget, spent })
     setMoney(null)
     toast.success('Суммы обновлены')
-  }
-
-  const onMoneyKeyDown = (e) => {
-    if (e.key === 'Enter') saveMoney()
-    if (e.key === 'Escape') setMoney(null)
   }
 
   const del = async (c) => {
@@ -264,6 +286,19 @@ export default function Campaigns() {
           onChange={setBrandId}
           className="mb-4"
         />
+      )}
+
+      {/* Договоры выбранного бренда — второй уровень фильтра */}
+      {contracts.length > 0 && (
+        <div className="mb-4 overflow-x-auto">
+          <SegmentTabs
+            value={activeContract}
+            onChange={(value) =>
+              setContract(value === activeContract ? ALL_CONTRACTS : value)
+            }
+            items={contracts}
+          />
+        </div>
       )}
 
       <Card>
@@ -424,97 +459,39 @@ export default function Campaigns() {
 
                     {showBudget && (
                       <div className="hidden md:block">
-                        {money?.id === c.id ? (
-                          <div className="space-y-1">
-                            <input
-                              type="number"
-                              min="0"
-                              autoFocus
-                              value={money.budget}
-                              onChange={(e) =>
-                                setMoney((m) => ({
-                                  ...m,
-                                  budget: e.target.value,
-                                }))
-                              }
-                              onKeyDown={onMoneyKeyDown}
-                              aria-label={`Бюджет кампании ${c.name}`}
-                              placeholder="Бюджет"
-                              className="h-7 w-full rounded-lg border border-line bg-surface px-1.5 text-[12px] text-ink tnum focus-ring"
-                            />
-                            <input
-                              type="number"
-                              min="0"
-                              value={money.spent}
-                              onChange={(e) =>
-                                setMoney((m) => ({
-                                  ...m,
-                                  spent: e.target.value,
-                                }))
-                              }
-                              onKeyDown={onMoneyKeyDown}
-                              aria-label={`Прибыль кампании ${c.name}`}
-                              placeholder="Прибыль"
-                              className="h-7 w-full rounded-lg border border-line bg-surface px-1.5 text-[12px] text-ink tnum focus-ring"
-                            />
-                            <div className="flex gap-1">
-                              <Button
-                                size="sm"
-                                className="h-7 flex-1 px-0"
-                                onClick={saveMoney}
-                                title="Сохранить"
-                                aria-label="Сохранить суммы"
-                              >
-                                <Check size={14} />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                className="h-7 flex-1 px-0"
-                                onClick={() => setMoney(null)}
-                                title="Отменить"
-                                aria-label="Отменить редактирование"
-                              >
-                                <X size={14} />
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={c.status === 'completed'}
-                            onClick={() =>
-                              setMoney({
-                                id: c.id,
-                                budget: String(c.budget),
-                                spent: String(c.spent),
-                              })
-                            }
-                            title={
-                              c.status === 'completed'
-                                ? 'Завершённую кампанию менять нельзя'
-                                : 'Изменить бюджет и прибыль'
-                            }
-                            className="group w-full rounded-lg px-1 py-0.5 text-left transition-colors enabled:hover:bg-ink/[0.04] disabled:cursor-default focus-ring"
-                          >
-                            <span className="flex items-center gap-1.5 text-[12px]">
-                              <span className="text-ink-muted tnum">
-                                {formatMoneyCompact(c.budget)}
-                              </span>
-                              <span className="ml-auto font-medium text-ink tnum">
-                                {formatMoneyCompact(c.spent)}
-                              </span>
-                              {c.status !== 'completed' && (
-                                <Pencil
-                                  size={12}
-                                  aria-hidden="true"
-                                  className="shrink-0 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100"
-                                />
-                              )}
+                        <button
+                          type="button"
+                          disabled={c.status === 'completed'}
+                          onClick={(e) =>
+                            setMoney({
+                              campaign: c,
+                              anchor: e.currentTarget.getBoundingClientRect(),
+                            })
+                          }
+                          title={
+                            c.status === 'completed'
+                              ? 'Завершённую кампанию менять нельзя'
+                              : 'Изменить суммы и внести поступление'
+                          }
+                          className="group w-full rounded-lg px-1 py-0.5 text-left transition-colors enabled:hover:bg-ink/[0.04] disabled:cursor-default focus-ring"
+                        >
+                          <span className="flex items-center gap-1.5 text-[12px]">
+                            <span className="text-ink-muted tnum">
+                              {formatMoneyCompact(c.budget)}
                             </span>
-                            <Progress value={pacing} className="mt-1.5" />
-                          </button>
-                        )}
+                            <span className="ml-auto font-medium text-ink tnum">
+                              {formatMoneyCompact(c.spent)}
+                            </span>
+                            {c.status !== 'completed' && (
+                              <Pencil
+                                size={12}
+                                aria-hidden="true"
+                                className="shrink-0 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100"
+                              />
+                            )}
+                          </span>
+                          <Progress value={pacing} className="mt-1.5" />
+                        </button>
                       </div>
                     )}
 
@@ -618,6 +595,15 @@ export default function Campaigns() {
           </>
         )}
       </Card>
+
+      {money && (
+        <MoneyPopover
+          anchor={money.anchor}
+          campaign={money.campaign}
+          onSave={saveMoney}
+          onClose={() => setMoney(null)}
+        />
+      )}
 
       <CampaignForm
         open={modal.open}

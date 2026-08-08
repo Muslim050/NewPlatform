@@ -53,15 +53,8 @@ export function formatDateShort(value) {
   return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })
 }
 
-/** Дата в формате дд-мм-гггг. */
-export function formatDateNumeric(value) {
-  if (!value) return '—'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return '—'
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  return `${day}-${month}-${d.getFullYear()}`
-}
+/** Дата в формате дд.мм.гггг — тот же вид, что и у formatDate. */
+export const formatDateNumeric = formatDate
 
 /** Метки последних N дней в формате дд.мм. */
 export function lastNDates(n) {

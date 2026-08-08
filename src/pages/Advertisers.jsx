@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Pencil, Trash2, Building2, Mail } from 'lucide-react'
+import { Search, Pencil, Plus, Trash2, Building2, Mail } from 'lucide-react'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import { ADV_STATUS } from '@/lib/metrics.js'
-import { formatMoneyCompact } from '@/lib/format.js'
-import { PageHeader } from '@/components/PageHeader.jsx'
 import { Card } from '@/components/ui/Card.jsx'
+import { Button } from '@/components/ui/Button.jsx'
 import { Badge } from '@/components/ui/Badge.jsx'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
@@ -27,16 +26,11 @@ export default function Advertisers() {
       .includes(q.trim().toLowerCase()),
   )
 
-  const statsFor = (id) => {
-    const list = campaigns.filter((c) => c.advertiserId === id)
-    return {
-      count: list.length,
-      spent: list.reduce((s, c) => s + c.spent, 0),
-    }
-  }
+  const campaignCount = (id) =>
+    campaigns.filter((c) => c.advertiserId === id).length
 
   const del = async (a) => {
-    const { count } = statsFor(a.id)
+    const count = campaignCount(a.id)
     const ok = await confirm({
       title: 'Удалить рекламодателя?',
       description: a.name,
@@ -52,19 +46,29 @@ export default function Advertisers() {
 
   return (
     <div>
-      <PageHeader />
-
-      <div className="relative mb-4 w-full sm:max-w-xs">
-        <Search
-          size={17}
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted"
-        />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Поиск бренда…"
-          className="h-11 w-full rounded-xl border border-line bg-surface pl-10 pr-3.5 text-sm text-ink placeholder:text-ink-muted focus-ring focus-visible:border-indigo-300"
-        />
+      {/* Поиск и создание бренда — одной строкой */}
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-xs">
+          <Search
+            size={17}
+            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted"
+          />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Поиск бренда"
+            placeholder="Поиск бренда…"
+            className="h-11 w-full rounded-xl border border-line bg-surface pl-10 pr-3.5 text-sm text-ink placeholder:text-ink-muted focus-ring focus-visible:border-indigo-300"
+          />
+        </div>
+        <Button
+          variant="primary"
+          className="shrink-0"
+          onClick={() => setModal({ open: true, initial: null })}
+        >
+          <Plus size={18} />
+          Новый рекламодатель
+        </Button>
       </div>
 
       {filtered.length === 0 ? (
@@ -73,13 +77,21 @@ export default function Advertisers() {
             icon={Building2}
             title="Рекламодателей нет"
             description="Список рекламодателей пока пуст."
+            action={
+              <Button
+                variant="secondary"
+                onClick={() => setModal({ open: true, initial: null })}
+              >
+                <Plus size={16} />
+                Добавить
+              </Button>
+            }
           />
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((a, i) => {
             const st = ADV_STATUS[a.status]
-            const s = statsFor(a.id)
             return (
               <motion.div
                 key={a.id}
@@ -95,8 +107,8 @@ export default function Advertisers() {
                         <p className="truncate font-display text-[15px] font-semibold text-ink">
                           {a.name}
                         </p>
-                        <p className="text-[12px] text-ink-muted">
-                          {a.category}
+                        <p className="truncate text-[12px] text-ink-muted">
+                          {a.legalName || a.category}
                         </p>
                       </div>
                     </div>
@@ -127,11 +139,11 @@ export default function Advertisers() {
                     </span>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-4">
-                    <Metric label="Баланс" value={formatMoneyCompact(a.balance)} />
-                    <Metric label="Кампаний" value={s.count} />
-                    <Metric label="Расход" value={formatMoneyCompact(s.spent)} />
+                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4">
+                    <Metric label="Договоров" value={a.contracts?.length ?? 0} />
+                    <Metric label="Кампаний" value={campaignCount(a.id)} />
                   </div>
+
                 </Card>
               </motion.div>
             )

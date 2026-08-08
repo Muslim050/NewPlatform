@@ -116,6 +116,76 @@ export const ADVERTISERS = [
   },
 ]
 
+/** Платёжные реквизиты брендов — их же подставляем в договоры. */
+const REQUISITES_TEMPLATE = {
+  address: 'г. Ташкент, Яшнабадский район, Choʻlpon MFY, улица Elbek, дом №8',
+  bank: 'ГО АК «Алокабанк», г. Ташкент',
+  mfo: '00401',
+  vat: '',
+  oked: '63990',
+  phone: '',
+}
+
+function requisitesFor(advertiser, index) {
+  return {
+    ...REQUISITES_TEMPLATE,
+    inn: `3119853${11 + index}`,
+    account: `2020800040721497600${index + 1}`,
+    email: advertiser.email,
+  }
+}
+
+/**
+ * Договоры брендов. Кампания ссылается на номер договора, остальные условия
+ * (пакет, лиги, срок, оплата) подставляются из выбранного договора.
+ */
+const CONTRACT_TEMPLATES = [
+  {
+    suffix: '01',
+    package: 'partner',
+    leagues: ['epl', 'laliga', 'seriea'],
+    start: '2026-01-01',
+    end: '2026-12-31',
+    paymentDate: '2026-08-31',
+  },
+  {
+    suffix: '02',
+    package: 'general',
+    leagues: ['ufc', 'f1'],
+    start: '2026-06-01',
+    end: '2027-05-31',
+    paymentDate: '2026-08-20',
+  },
+]
+
+function contractsFor(advertiser, index) {
+  return CONTRACT_TEMPLATES.map((template) => ({
+    id: `ctr_${advertiser.id.replace('adv_', '')}_${template.suffix}`,
+    number: `Д-2026/${index + 1}${template.suffix}`,
+    legalName: advertiser.legalName,
+    package: template.package,
+    leagues: [...template.leagues],
+    start: template.start,
+    end: template.end,
+    paymentDate: template.paymentDate,
+    file: null,
+  }))
+}
+
+export const REQUISITES_BY_ADVERTISER = Object.fromEntries(
+  ADVERTISERS.map((advertiser, index) => [
+    advertiser.id,
+    requisitesFor(advertiser, index),
+  ]),
+)
+
+export const CONTRACTS_BY_ADVERTISER = Object.fromEntries(
+  ADVERTISERS.map((advertiser, index) => [
+    advertiser.id,
+    contractsFor(advertiser, index),
+  ]),
+)
+
 export const CHANNELS = [
   {
     id: 'ch_prime',
@@ -816,36 +886,39 @@ const CAMPAIGN_BASE = [
   },
 ]
 
-// Условия договора для демо: у каждой кампании свой номер, пакет и лиги,
-// чтобы карточка «Открыть» была заполненной без ручного ввода.
-const PACKAGE_ROTATION = ['partner', 'general', 'presenter']
-const LEAGUE_ROTATION = [
-  ['epl', 'laliga'],
-  ['ufc', 'f1'],
-  ['seriea', 'bundesliga'],
-  ['nba', 'nhl'],
-  ['atp', 'wta'],
-  ['ligue1', 'zuffa'],
-]
-// Оплату демо-кампаний ставим на август — как и значение по умолчанию в форме.
-const PAYMENT_ROTATION = ['2026-08-10', '2026-08-20', '2026-08-31']
+// Каждая кампания привязана к одному из договоров своего бренда — условия
+// (пакет, лиги, юр. лицо, срок, оплата) берём прямо из него.
+const seenByAdvertiser = new Map()
 
-const LEGAL_NAMES = new Map(ADVERTISERS.map((a) => [a.id, a.legalName]))
+export const CAMPAIGNS = CAMPAIGN_BASE.map((campaign) => {
+  const contracts = CONTRACTS_BY_ADVERTISER[campaign.advertiserId] ?? []
+  const seen = seenByAdvertiser.get(campaign.advertiserId) ?? 0
+  seenByAdvertiser.set(campaign.advertiserId, seen + 1)
+  const contract = contracts[seen % (contracts.length || 1)]
+  if (!contract) return campaign
 
-export const CAMPAIGNS = CAMPAIGN_BASE.map((campaign, index) => ({
-  ...campaign,
-  contractNumber: `Д-2026/${101 + index}`,
-  legalName: LEGAL_NAMES.get(campaign.advertiserId) || '',
-  package: PACKAGE_ROTATION[index % PACKAGE_ROTATION.length],
-  leagues: LEAGUE_ROTATION[index % LEAGUE_ROTATION.length],
-  contractStart: campaign.createdAt.slice(0, 10),
-  contractEnd: campaign.endDate,
-  paymentDate: PAYMENT_ROTATION[index % PAYMENT_ROTATION.length],
-}))
+  return {
+    ...campaign,
+    contractNumber: contract.number,
+    legalName: contract.legalName,
+    package: contract.package,
+    leagues: [...contract.leagues],
+    contractStart: contract.start,
+    contractEnd: contract.end,
+    paymentDate: contract.paymentDate,
+  }
+})
 
 export function buildSeed() {
   return {
-    advertisers: ADVERTISERS.map((a) => ({ ...a })),
+    advertisers: ADVERTISERS.map((a) => ({
+      ...a,
+      requisites: { ...REQUISITES_BY_ADVERTISER[a.id] },
+      contracts: CONTRACTS_BY_ADVERTISER[a.id].map((c) => ({
+        ...c,
+        leagues: [...c.leagues],
+      })),
+    })),
     channels: CHANNELS.map((c) => ({ ...c })),
     campaigns: CAMPAIGNS.map((c) => ({
       ...c,

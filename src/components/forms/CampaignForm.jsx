@@ -71,8 +71,31 @@ export function CampaignForm({ open, onClose, initial }) {
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
 
-  const legalNameOf = (advertiserId) =>
-    advertisers.find((a) => a.id === advertiserId)?.legalName || ''
+  const advertiserOf = (advertiserId) =>
+    advertisers.find((a) => a.id === advertiserId)
+  const legalNameOf = (advertiserId) => advertiserOf(advertiserId)?.legalName || ''
+  // Договоры бренда — из них выбирается номер и подтягиваются условия.
+  const contracts = advertiserOf(form.advertiserId)?.contracts ?? []
+
+  /** Выбрали договор — переносим его условия в кампанию. */
+  const applyContract = (number) => {
+    const contract = contracts.find((c) => c.number === number)
+    setForm((f) => ({
+      ...f,
+      contractNumber: number,
+      ...(contract
+        ? {
+            package: contract.package || '',
+            leagues: [...(contract.leagues ?? [])],
+            legalName: contract.legalName || f.legalName,
+            contractStart: contract.start || '',
+            contractEnd: contract.end || '',
+            paymentDate: contract.paymentDate || f.paymentDate,
+            contractFile: contract.file || f.contractFile,
+          }
+        : null),
+    }))
+  }
 
   useEffect(() => {
     if (!open) return
@@ -317,26 +340,47 @@ export function CampaignForm({ open, onClose, initial }) {
         {/* Условия договора — одинаковые при создании и редактировании. */}
         <div className="space-y-4 rounded-2xl ">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Пакет">
-              <Select
-                value={form.package}
-                onChange={(e) => set('package', e.target.value)}
-              >
-                <option value="">— не выбран —</option>
-                {Object.entries(PACKAGES).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v.label}
-                  </option>
-                ))}
-              </Select>
+            {/* Номер берём из договоров бренда; если их нет — вводится руками. */}
+            <Field
+              label="Номер договора"
+              hint={
+                contracts.length
+                  ? 'Условия подставятся из выбранного договора.'
+                  : 'У бренда нет договоров — добавьте их в карточке рекламодателя.'
+              }
+            >
+              {contracts.length ? (
+                <Select
+                  value={form.contractNumber}
+                  onChange={(e) => applyContract(e.target.value)}
+                >
+                  <option value="">— выберите договор —</option>
+                  {contracts.map((contract) => (
+                    <option key={contract.id} value={contract.number}>
+                      {contract.number}
+                      {contract.package
+                        ? ` · ${PACKAGES[contract.package]?.label ?? ''}`
+                        : ''}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <Input
+                  value={form.contractNumber}
+                  onChange={(e) => set('contractNumber', e.target.value)}
+                  placeholder="Например, Д-2026/114"
+                />
+              )}
             </Field>
-            <Field label="Номер договора">
-              <Input
-                value={form.contractNumber}
-                onChange={(e) => set('contractNumber', e.target.value)}
-                placeholder="Например, Д-2026/114"
-              />
-            </Field>
+            <Field label="Лиги" hint="Можно выбрать несколько.">
+            <MultiSelect
+              options={LEAGUES}
+              value={form.leagues}
+              onChange={(v) => set('leagues', v)}
+              placeholder="— не выбраны —"
+            />
+          </Field>
+            
           </div>
 
           <Field label="Наименование юр. лица">
@@ -347,14 +391,7 @@ export function CampaignForm({ open, onClose, initial }) {
             />
           </Field>
 
-          <Field label="Лиги" hint="Можно выбрать несколько.">
-            <MultiSelect
-              options={LEAGUES}
-              value={form.leagues}
-              onChange={(v) => set('leagues', v)}
-              placeholder="— не выбраны —"
-            />
-          </Field>
+         
 
           <div>
             <p className="mb-2 text-[13px] font-medium text-ink-soft">

@@ -1,4 +1,10 @@
-import { ADVERTISERS, CAMPAIGNS, buildSeed } from './seed.js'
+import {
+  ADVERTISERS,
+  CAMPAIGNS,
+  CONTRACTS_BY_ADVERTISER,
+  REQUISITES_BY_ADVERTISER,
+  buildSeed,
+} from './seed.js'
 import { uid } from './id.js'
 
 // Юр. лица демо-брендов — добираем их в базах, созданных до появления поля.
@@ -11,7 +17,7 @@ const SEED_CREATED_AT = new Map(CAMPAIGNS.map((c) => [c.id, c.createdAt]))
 const DB_KEY = 'bloom.db.v10'
 // При смене версии демо-кампании догоняют сид: статусы воронки и условия
 // договора. Заполненное руками не трогаем — дописываем только пустые поля.
-const CAMPAIGN_STATUS_LAYOUT_VERSION = 5
+const CAMPAIGN_STATUS_LAYOUT_VERSION = 6
 const DEMO_CAMPAIGN_STATUSES = Object.fromEntries(
   CAMPAIGNS.map((c) => [c.id, c.status]),
 )
@@ -26,10 +32,19 @@ const CONTRACT_FIELDS = [
   'paymentDate',
 ]
 
-/** Дописываем условия договора из сида в те поля, что остались пустыми. */
-function fillContract(campaign) {
+/**
+ * Дописываем условия договора из сида в пустые поля. Если кампания ссылается
+ * на номер, которого нет среди договоров бренда, переносим её на сидовый —
+ * иначе фильтр по договорам показывал бы пустоту.
+ */
+function fillContract(campaign, contractNumbers) {
   const seed = SEED_CAMPAIGNS.get(campaign.id)
   if (!seed) return campaign
+
+  const known = contractNumbers.get(campaign.advertiserId)
+  if (known?.size && !known.has(campaign.contractNumber)) {
+    return { ...campaign, ...pickContractFields(seed) }
+  }
 
   const patch = {}
   for (const field of CONTRACT_FIELDS) {
@@ -53,19 +68,43 @@ function normalizeCampaignStatus(campaign) {
   return { ...campaign, status }
 }
 
+const pickContractFields = (source) =>
+  Object.fromEntries(
+    CONTRACT_FIELDS.map((field) => [
+      field,
+      Array.isArray(source[field]) ? [...source[field]] : source[field],
+    ]),
+  )
+
 function normalizeDatabase(database) {
   const shouldUpdateDemoStatuses =
     database.campaignStatusLayoutVersion !== CAMPAIGN_STATUS_LAYOUT_VERSION
 
+  const advertisers = (database.advertisers ?? []).map((advertiser) => ({
+      ...advertiser,
+      legalName: advertiser.legalName || SEED_LEGAL_NAMES.get(advertiser.id) || '',
+      // Реквизиты и договоры появились позже — добираем их из сида.
+      requisites: advertiser.requisites ?? {
+        ...(REQUISITES_BY_ADVERTISER[advertiser.id] ?? {}),
+      },
+      contracts: advertiser.contracts?.length
+        ? advertiser.contracts
+        : (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).map((contract) => ({
+            ...contract,
+            leagues: [...contract.leagues],
+          })),
+  }))
+
+  // Номера договоров по брендам — чтобы проверить ссылки кампаний.
+  const contractNumbers = new Map(
+    advertisers.map((a) => [
+      a.id,
+      new Set((a.contracts ?? []).map((c) => c.number)),
+    ]),
+  )
+
   return {
-    advertisers: (database.advertisers ?? []).map((advertiser) =>
-      advertiser.legalName
-        ? advertiser
-        : {
-            ...advertiser,
-            legalName: SEED_LEGAL_NAMES.get(advertiser.id) ?? '',
-          },
-    ),
+    advertisers,
     channels: database.channels ?? [],
     campaigns: (database.campaigns ?? []).map((campaign) => {
       const normalizedCampaign = normalizeCampaignStatus(campaign)
@@ -82,7 +121,9 @@ function normalizeDatabase(database) {
           ? { ...withStatus, createdAt: seedCreatedAt }
           : withStatus
 
-      return shouldUpdateDemoStatuses ? fillContract(withCreatedAt) : withCreatedAt
+      return shouldUpdateDemoStatuses
+        ? fillContract(withCreatedAt, contractNumbers)
+        : withCreatedAt
     }),
     campaignStatusLayoutVersion: CAMPAIGN_STATUS_LAYOUT_VERSION,
   }
