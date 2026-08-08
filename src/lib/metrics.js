@@ -45,6 +45,32 @@ export const STATUS = {
   archived: { label: 'В архиве', tone: 'muted' },
 }
 
+/** Рекламный пакет кампании. */
+export const PACKAGES = {
+  partner: { label: 'Партнёр' },
+  general: { label: 'Генеральный спонсор' },
+  presenter: { label: 'Презентер' },
+}
+
+/** Лиги и турниры, доступные для размещения. */
+export const LEAGUES = [
+  { id: 'epl', label: 'EPL' },
+  { id: 'laliga', label: 'LaLiga' },
+  { id: 'bundesliga', label: 'Bundesliga' },
+  { id: 'ligue1', label: 'Ligue 1' },
+  { id: 'seriea', label: 'Serie A' },
+  { id: 'ufc', label: 'UFC' },
+  { id: 'f1', label: 'F1' },
+  { id: 'atp', label: 'ATP' },
+  { id: 'wta', label: 'WTA' },
+  { id: 'zuffa', label: 'Zuffa Boxing' },
+  { id: 'nba', label: 'NBA' },
+  { id: 'nhl', label: 'NHL' },
+]
+
+export const leagueLabel = (id) =>
+  LEAGUES.find((l) => l.id === id)?.label || id
+
 export const ADV_STATUS = {
   active: { label: 'Активен', tone: 'success' },
   paused: { label: 'На паузе', tone: 'warning' },

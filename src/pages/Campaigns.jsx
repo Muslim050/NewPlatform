@@ -33,6 +33,7 @@ import { Avatar } from '@/components/ui/Avatar.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { CampaignForm } from '@/components/forms/CampaignForm.jsx'
+import { BrandTabs } from '@/components/campaigns/BrandTabs.jsx'
 import { cn } from '@/lib/cn.js'
 import {
   CampaignPreviewModal,
@@ -40,10 +41,11 @@ import {
 } from '@/components/campaigns/CampaignPreviewModal.jsx'
 
 // Раскладка строки: у рекламодателя нет колонок бюджета и действий.
+// У админа колонок больше, поэтому и промежутки между ними уже.
 const GRID_ADMIN =
-  'md:grid-cols-[minmax(168px,1fr)_164px_140px_145px_108px_116px] 2xl:grid-cols-[minmax(195px,320px)_164px_145px_155px_86px_58px_108px_116px]'
+  'md:gap-2.5 md:grid-cols-[minmax(150px,1fr)_146px_126px_108px_130px_86px_96px] 2xl:grid-cols-[minmax(180px,320px)_156px_140px_112px_148px_80px_54px_96px_104px]'
 const GRID_ADVERTISER =
-  'md:grid-cols-[minmax(168px,1fr)_164px_200px_108px] 2xl:grid-cols-[minmax(195px,320px)_164px_200px_86px_58px_108px]'
+  'md:gap-4 md:grid-cols-[minmax(168px,1fr)_164px_200px_124px_108px] 2xl:grid-cols-[minmax(195px,320px)_164px_200px_124px_86px_58px_108px]'
 
 // Порядок группировки строк — как в фильтрах над таблицей.
 const STATUS_ORDER = {
@@ -51,6 +53,27 @@ const STATUS_ORDER = {
   reviewing: 1,
   active: 2,
   completed: 3,
+}
+
+const ALL_BRANDS = 'all'
+
+/** Вкладка «Все» плюс бренды, у которых есть кампании, со счётчиками. */
+function brandsOf(campaigns, advertiserById) {
+  const byId = new Map()
+  for (const c of campaigns) {
+    const found = byId.get(c.advertiserId)
+    if (found) {
+      found.count += 1
+      continue
+    }
+    const adv = advertiserById(c.advertiserId)
+    if (adv) byId.set(adv.id, { id: adv.id, name: adv.name, color: adv.color, count: 1 })
+  }
+  const list = [...byId.values()].sort((a, b) =>
+    a.name.localeCompare(b.name, 'ru'),
+  )
+  if (!list.length) return []
+  return [{ id: ALL_BRANDS, name: 'Все', count: campaigns.length }, ...list]
 }
 
 export default function Campaigns() {
@@ -63,6 +86,7 @@ export default function Campaigns() {
 
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('all')
+  const [brandId, setBrandId] = useState(ALL_BRANDS)
   const [modal, setModal] = useState({ open: false, initial: null })
   const [preview, setPreview] = useState(null)
   // Инлайн-правка бюджета и прибыли прямо в таблице (только админ).
@@ -72,16 +96,30 @@ export default function Campaigns() {
   const showBudget = !isAdvertiser
   const showActions = !isAdvertiser
 
+  // Вкладки брендов: только те, у кого есть кампании. Рекламодателю не нужны —
+  // он и так видит лишь свой бренд.
+  const brands = isAdvertiser ? [] : brandsOf(campaigns, advertiserById)
+  // Если выбранный бренд пропал из списка — возвращаемся ко «Всем».
+  const activeBrand = brands.some((b) => b.id === brandId)
+    ? brandId
+    : ALL_BRANDS
+
+  // Внутри вкладки бренда — только его кампании.
+  const brandCampaigns =
+    activeBrand === ALL_BRANDS
+      ? campaigns
+      : campaigns.filter((c) => c.advertiserId === activeBrand)
+
   const counts = {
-    all: campaigns.length,
-    received: campaigns.filter((c) => c.status === 'received').length,
-    reviewing: campaigns.filter((c) => c.status === 'reviewing').length,
-    active: campaigns.filter((c) => c.status === 'active').length,
-    completed: campaigns.filter((c) => c.status === 'completed').length,
+    all: brandCampaigns.length,
+    received: brandCampaigns.filter((c) => c.status === 'received').length,
+    reviewing: brandCampaigns.filter((c) => c.status === 'reviewing').length,
+    active: brandCampaigns.filter((c) => c.status === 'active').length,
+    completed: brandCampaigns.filter((c) => c.status === 'completed').length,
   }
 
   const query = q.trim().toLowerCase()
-  const filtered = campaigns
+  const filtered = brandCampaigns
     .filter(
       (c) =>
         (status === 'all' || c.status === status) &&
@@ -145,6 +183,16 @@ export default function Campaigns() {
           </Button>
         )}
       </PageHeader>
+
+      {/* Вкладки брендов */}
+      {brands.length > 0 && (
+        <BrandTabs
+          items={brands}
+          value={activeBrand}
+          onChange={setBrandId}
+          className="mb-4"
+        />
+      )}
 
       {/* Панель фильтров */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -215,13 +263,14 @@ export default function Campaigns() {
             {/* Заголовки колонок */}
             <div
               className={cn(
-                'hidden items-center gap-4 border-b border-line px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted md:grid',
+                'hidden items-center border-b border-line px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted md:grid',
                 showBudget ? GRID_ADMIN : GRID_ADVERTISER,
               )}
             >
               <span>Кампания</span>
               <span >Статус</span>
               <span >Период</span>
+              <span>Номер договора</span>
               {showBudget && (
                 <span className="flex justify-center">Бюджет / Прибыль</span>
               )}
@@ -239,7 +288,7 @@ export default function Campaigns() {
                   <div
                     key={c.id}
                     className={cn(
-                      'flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-ink/[0.015] md:grid md:gap-4',
+                      'flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-ink/[0.015] md:grid',
                       showBudget ? GRID_ADMIN : GRID_ADVERTISER,
                     )}
                   >
@@ -316,6 +365,21 @@ export default function Campaigns() {
                             {formatDateNumeric(c.endDate)}
                           </p>
                         </>
+                      )}
+                    </div>
+
+                    <div className="hidden min-w-0 md:block">
+                      {c.contractNumber ? (
+                        <p
+                          className="truncate text-[12px] font-medium text-ink-soft tnum"
+                          title={`Договор ${c.contractNumber}`}
+                        >
+                          {c.contractNumber}
+                        </p>
+                      ) : (
+                        <span className="text-sm text-ink-muted" aria-hidden="true">
+                          —
+                        </span>
                       )}
                     </div>
 

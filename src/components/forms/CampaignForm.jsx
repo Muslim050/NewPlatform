@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Megaphone } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ExternalLink, FileText, Megaphone, Paperclip, X } from 'lucide-react'
 import { useData } from '@/context/DataContext.jsx'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
@@ -7,10 +7,12 @@ import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button.jsx'
 import { Field, Input, Select } from '@/components/ui/Field.jsx'
 import { CreativeLink } from '@/components/campaigns/CreativePlayer.jsx'
-import { STATUS } from '@/lib/metrics.js'
+import { LEAGUES, PACKAGES, STATUS } from '@/lib/metrics.js'
 import { cn } from '@/lib/cn.js'
 
 const DEFAULT_CREATIVE_URL = '/creatives/setanta-2.mp4'
+// Договор храним прямо в базе (localStorage), поэтому ограничиваем размер.
+const MAX_CONTRACT_SIZE = 2 * 1024 * 1024
 
 const emptyForm = {
   name: '',
@@ -22,6 +24,14 @@ const emptyForm = {
   endDate: '',
   channelIds: [],
   creativeUrl: DEFAULT_CREATIVE_URL,
+  contractNumber: '',
+  package: '',
+  leagues: [],
+  legalName: '',
+  contractStart: '',
+  contractEnd: '',
+  paymentTerms: '',
+  contractFile: null,
 }
 
 /** Принимаем и внешние ссылки, и файлы из /public. */
@@ -57,6 +67,14 @@ export function CampaignForm({ open, onClose, initial }) {
         endDate: initial.endDate,
         channelIds: [...initial.channelIds],
         creativeUrl: initial.creativeUrl || DEFAULT_CREATIVE_URL,
+        contractNumber: initial.contractNumber || '',
+        package: initial.package || '',
+        leagues: [...(initial.leagues || [])],
+        legalName: initial.legalName || '',
+        contractStart: initial.contractStart || '',
+        contractEnd: initial.contractEnd || '',
+        paymentTerms: initial.paymentTerms || '',
+        contractFile: initial.contractFile || null,
       })
     } else {
       setForm({
@@ -77,6 +95,14 @@ export function CampaignForm({ open, onClose, initial }) {
         : [...f.channelIds, id],
     }))
 
+  const toggleLeague = (id) =>
+    setForm((f) => ({
+      ...f,
+      leagues: f.leagues.includes(id)
+        ? f.leagues.filter((x) => x !== id)
+        : [...f.leagues, id],
+    }))
+
   const submit = () => {
     const err = {}
     if (!form.name.trim()) err.name = 'Укажите название'
@@ -92,6 +118,14 @@ export function CampaignForm({ open, onClose, initial }) {
     if (form.creativeUrl.trim() && !isValidUrl(form.creativeUrl.trim())) {
       err.creativeUrl = 'Укажите ссылку на видео'
     }
+    if (
+      isAdmin &&
+      form.contractStart &&
+      form.contractEnd &&
+      form.contractEnd < form.contractStart
+    ) {
+      err.contractEnd = 'Окончание должно быть позже начала'
+    }
     setErrors(err)
     if (Object.keys(err).length) return
 
@@ -106,6 +140,19 @@ export function CampaignForm({ open, onClose, initial }) {
       endDate: form.endDate,
       channelIds: form.channelIds,
       creativeUrl: form.creativeUrl.trim(),
+      contractNumber: form.contractNumber.trim(),
+      // Условия договора заполняет только админ — у рекламодателя оставляем как есть.
+      ...(isAdmin
+        ? {
+            package: form.package,
+            leagues: form.leagues,
+            legalName: form.legalName.trim(),
+            contractStart: form.contractStart,
+            contractEnd: form.contractEnd,
+            paymentTerms: form.paymentTerms.trim(),
+            contractFile: form.contractFile,
+          }
+        : null),
     }
 
     if (editing) {
@@ -251,7 +298,203 @@ export function CampaignForm({ open, onClose, initial }) {
             />
           </div>
         </Field>
+
+        {/* Рекламодатель указывает только номер договора. */}
+        {!isAdmin && (
+          <Field label="Номер договора">
+            <Input
+              value={form.contractNumber}
+              onChange={(e) => set('contractNumber', e.target.value)}
+              placeholder="Например, Д-2026/114"
+            />
+          </Field>
+        )}
+
+        {/* Условия договора — целиком на стороне админа. */}
+        {isAdmin && (
+          <div className="space-y-4 rounded-2xl border border-line bg-paper/55 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+              Договор
+            </p>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Пакет">
+                <Select
+                  value={form.package}
+                  onChange={(e) => set('package', e.target.value)}
+                >
+                  <option value="">— не выбран —</option>
+                  {Object.entries(PACKAGES).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Номер договора">
+                <Input
+                  value={form.contractNumber}
+                  onChange={(e) => set('contractNumber', e.target.value)}
+                  placeholder="Например, Д-2026/114"
+                />
+              </Field>
+            </div>
+
+            <Field label="Наименование юр. лица">
+              <Input
+                value={form.legalName}
+                onChange={(e) => set('legalName', e.target.value)}
+                placeholder='ООО «Пример»'
+              />
+            </Field>
+
+            <div>
+              <p className="mb-2 text-[13px] font-medium text-ink-soft">Лиги</p>
+              <div className="flex flex-wrap gap-2">
+                {LEAGUES.map((l) => {
+                  const on = form.leagues.includes(l.id)
+                  return (
+                    <button
+                      key={l.id}
+                      type="button"
+                      onClick={() => toggleLeague(l.id)}
+                      aria-pressed={on}
+                      className={cn(
+                        'rounded-xl border px-3 py-1.5 text-[13px] font-medium transition-colors focus-ring',
+                        on
+                          ? 'border-indigo-300 bg-indigo-50 text-indigo-900'
+                          : 'border-line bg-surface text-ink-soft hover:bg-ink/[0.03]',
+                      )}
+                    >
+                      {l.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-[13px] font-medium text-ink-soft">
+                Срок договора
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Начало">
+                  <Input
+                    type="date"
+                    value={form.contractStart}
+                    max={form.contractEnd || undefined}
+                    onChange={(e) => set('contractStart', e.target.value)}
+                  />
+                </Field>
+                <Field label="Окончание" error={errors.contractEnd}>
+                  <Input
+                    type="date"
+                    value={form.contractEnd}
+                    min={form.contractStart || undefined}
+                    onChange={(e) => set('contractEnd', e.target.value)}
+                  />
+                </Field>
+              </div>
+            </div>
+
+            <Field
+              label="Сроки оплаты"
+              hint="Например: 50% предоплата до 01.09, остаток до 30.09."
+            >
+              <Input
+                value={form.paymentTerms}
+                onChange={(e) => set('paymentTerms', e.target.value)}
+                placeholder="Опишите порядок и сроки оплаты"
+              />
+            </Field>
+
+            <ContractFile
+              file={form.contractFile}
+              onChange={(v) => set('contractFile', v)}
+            />
+          </div>
+        )}
       </div>
     </Modal>
+  )
+}
+
+/** Загрузка скана договора — файл кладём в базу как data-URL. */
+function ContractFile({ file, onChange }) {
+  const inputRef = useRef(null)
+  const toast = useToast()
+
+  const pick = (e) => {
+    const picked = e.target.files?.[0]
+    // Сбрасываем input, иначе повторный выбор того же файла не сработает.
+    e.target.value = ''
+    if (!picked) return
+    if (picked.size > MAX_CONTRACT_SIZE) {
+      toast.error('Файл больше 2 МБ — загрузите версию поменьше')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () =>
+      onChange({ name: picked.name, url: String(reader.result) })
+    reader.onerror = () => toast.error('Не удалось прочитать файл')
+    reader.readAsDataURL(picked)
+  }
+
+  return (
+    <div>
+      <p className="mb-2 text-[13px] font-medium text-ink-soft">Файл договора</p>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,image/*"
+        onChange={pick}
+        className="hidden"
+      />
+      {file ? (
+        <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2">
+          <FileText size={16} className="shrink-0 text-indigo-800" />
+          <a
+            href={file.url}
+            download={file.name}
+            className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-medium text-ink underline-offset-2 hover:text-indigo-800 hover:underline focus-ring"
+            title={file.name}
+          >
+            <span className="truncate">{file.name}</span>
+            <ExternalLink size={13} className="shrink-0 text-ink-muted" />
+          </a>
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => inputRef.current?.click()}
+            >
+              Заменить
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-9 w-9 px-0"
+              onClick={() => onChange(null)}
+              title="Удалить файл"
+              aria-label="Удалить файл договора"
+            >
+              <X size={16} />
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line px-3 py-3 text-[13px] font-medium text-ink-soft transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+        >
+          <Paperclip size={16} className="text-ink-muted" />
+          Загрузить договор
+        </button>
+      )}
+      <p className="mt-1.5 text-xs text-ink-muted">
+        PDF, DOC или скан, до 2 МБ.
+      </p>
+    </div>
   )
 }

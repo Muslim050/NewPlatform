@@ -4,12 +4,13 @@ import {
   CircleDollarSign,
   ExternalLink,
   Eye,
+  FileText,
   Film,
   FolderOpen,
   MousePointerClick,
   Target,
 } from 'lucide-react'
-import { STATUS, ctr } from '@/lib/metrics.js'
+import { PACKAGES, STATUS, ctr, leagueLabel } from '@/lib/metrics.js'
 import {
   formatCompact,
   formatDate,
@@ -104,6 +105,54 @@ function CreativeTile({ url }) {
         <ExternalLink size={15} className="text-ink-muted" />
       </p>
     </a>
+  )
+}
+
+/** Условия договора — показываем только то, что заполнил админ. */
+function ContractBlock({ campaign }) {
+  const rows = [
+    ['Пакет', PACKAGES[campaign.package]?.label],
+    ['Лиги', campaign.leagues?.length
+      ? campaign.leagues.map(leagueLabel).join(', ')
+      : null],
+    ['Номер договора', campaign.contractNumber],
+    ['Юр. лицо', campaign.legalName],
+    ['Срок договора', campaign.contractStart && campaign.contractEnd
+      ? `${formatDate(campaign.contractStart)} — ${formatDate(campaign.contractEnd)}`
+      : null],
+    ['Сроки оплаты', campaign.paymentTerms],
+  ].filter(([, value]) => value)
+
+  if (!rows.length && !campaign.contractFile) return null
+
+  return (
+    <div className="mt-4 rounded-2xl border border-line p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+        Договор
+      </p>
+      <dl className="mt-3 space-y-2">
+        {rows.map(([label, value]) => (
+          <div
+            key={label}
+            className="flex flex-col gap-0.5 text-[13px] sm:flex-row sm:items-baseline sm:gap-4"
+          >
+            <dt className="shrink-0 text-ink-muted sm:w-40">{label}</dt>
+            <dd className="min-w-0 font-medium text-ink">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {campaign.contractFile && (
+        <a
+          href={campaign.contractFile.url}
+          download={campaign.contractFile.name}
+          className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-paper/55 px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+        >
+          <FileText size={16} className="shrink-0 text-indigo-800" />
+          <span className="truncate">{campaign.contractFile.name}</span>
+          <ExternalLink size={13} className="ml-auto shrink-0 text-ink-muted" />
+        </a>
+      )}
+    </div>
   )
 }
 
@@ -222,6 +271,7 @@ export function CampaignPreviewModal({
             <Progress value={pacing} className="mt-2.5 h-2" />
           </div>
 
+          <ContractBlock campaign={campaign} />
         </div>
       )}
     </Modal>
