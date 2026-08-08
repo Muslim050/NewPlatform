@@ -19,16 +19,17 @@ const AUDIENCE_STATS = [
     position: 'left-1/2 top-[20.5%] -translate-x-1/2',
     primary: true,
   },
-  { value: '93M', label: 'Зрителей', position: 'right-[2%] top-[27.5%]' },
-  { value: '23M', label: 'ТВ-аудитория', position: 'right-[0.5%] top-[38%]' },
+  // Боковые колонки выровнены по краям панели — одинаковый отступ у всех.
+  { value: '93M', label: 'Зрителей', position: 'right-6 top-[27.5%]' },
+  { value: '23M', label: 'ТВ-аудитория', position: 'right-6 top-[38%]' },
   {
     value: '285 000+',
     label: 'Активных зрителей у партнёров',
-    position: 'right-[0.5%] top-[48.5%]',
+    position: 'right-6 top-[48.5%]',
   },
-  { value: '35', label: 'Платформ', position: 'left-[0.5%] top-[48.5%]' },
-  { value: '15', label: 'Стран', position: 'left-[0.5%] top-[38%]' },
-  { value: '5', label: 'Языков', position: 'left-[2%] top-[27.5%]' },
+  { value: '35', label: 'Платформ', position: 'left-6 top-[48.5%]' },
+  { value: '15', label: 'Стран', position: 'left-6 top-[38%]' },
+  { value: '5', label: 'Языков', position: 'left-6 top-[27.5%]' },
 ]
 
 function AudienceStatsOrbit({ stats }) {
