@@ -17,12 +17,9 @@ import { useData } from '@/context/DataContext.jsx'
 import { useScopedCampaigns } from '@/lib/useScope.js'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
-import { ctr } from '@/lib/metrics.js'
 import {
-  formatCompact,
   formatDateNumeric,
   formatMoneyCompact,
-  formatPct,
 } from '@/lib/format.js'
 import { Card } from '@/components/ui/Card.jsx'
 import { Button } from '@/components/ui/Button.jsx'
@@ -42,9 +39,9 @@ import {
 // Раскладка строки: у рекламодателя нет колонки бюджета, а из действий —
 // только «Открыть». У админа колонок больше, поэтому промежутки уже.
 const GRID_ADMIN =
-  'md:gap-2.5 md:grid-cols-[minmax(180px,1fr)_146px_112px_96px_124px_96px_76px_88px] 2xl:grid-cols-[minmax(200px,360px)_150px_132px_104px_140px_100px_76px_52px_88px_96px]'
+  'md:gap-2.5 md:grid-cols-[minmax(180px,1fr)_146px_112px_96px_124px_96px_76px_88px] 2xl:grid-cols-[minmax(200px,360px)_150px_132px_104px_140px_100px_88px_96px]'
 const GRID_ADVERTISER =
-  'md:gap-3 md:grid-cols-[minmax(180px,1fr)_150px_212px_110px_100px_88px_56px] 2xl:grid-cols-[minmax(200px,340px)_164px_212px_120px_110px_86px_58px_100px_56px]'
+  'md:gap-3 md:grid-cols-[minmax(180px,1fr)_150px_212px_110px_100px_88px_56px] 2xl:grid-cols-[minmax(200px,340px)_164px_212px_120px_110px_100px_56px]'
 
 // Порядок группировки строк — как в фильтрах над таблицей.
 const STATUS_ORDER = {
@@ -341,8 +338,6 @@ export default function Campaigns() {
                 <span className="flex justify-center">Бюджет / Прибыль</span>
               )}
               <span>Сроки оплаты</span>
-              <span className="hidden text-right 2xl:block">Показы</span>
-              <span className="hidden text-right 2xl:block">CTR</span>
               <span className='flex justify-center'>Статистика</span>
               <span className="text-center">Действия</span>
             </div>
@@ -514,13 +509,6 @@ export default function Campaigns() {
                         </span>
                       )}
                     </div>
-
-                    <span className="hidden text-right text-sm text-ink-soft tnum 2xl:block">
-                      {formatCompact(c.impressions)}
-                    </span>
-                    <span className="hidden text-right text-sm text-ink-soft tnum 2xl:block">
-                      {formatPct(ctr(c))}
-                    </span>
 
                     <div className="flex justify-center">
                       {c.status === 'active' || c.status === 'completed' ? (

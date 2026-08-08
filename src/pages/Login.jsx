@@ -12,14 +12,8 @@ const TV_SPOTS = [
   '/creatives/setanta-2.mp4',
 ]
 
+// Боковые колонки выровнены по краям панели — одинаковый отступ у всех.
 const AUDIENCE_STATS = [
-  {
-    value: '9 800 000+',
-    label: 'Пользователей всего',
-    position: 'left-1/2 top-[20.5%] -translate-x-1/2',
-    primary: true,
-  },
-  // Боковые колонки выровнены по краям панели — одинаковый отступ у всех.
   { value: '93M', label: 'Зрителей', position: 'right-6 top-[27.5%]' },
   { value: '23M', label: 'ТВ-аудитория', position: 'right-6 top-[38%]' },
   {
@@ -27,9 +21,14 @@ const AUDIENCE_STATS = [
     label: 'Активных зрителей у партнёров',
     position: 'right-6 top-[48.5%]',
   },
-  { value: '35', label: 'Платформ', position: 'left-6 top-[48.5%]' },
-  { value: '15', label: 'Стран', position: 'left-6 top-[38%]' },
-  { value: '5', label: 'Языков', position: 'left-6 top-[27.5%]' },
+  {
+    value: '9 800 000+',
+    label: 'Всего пользователей',
+    position: 'left-6 top-[27.5%]',
+    primary: true,
+  },
+  { value: '35', label: 'Платформ', position: 'left-6 top-[38%]' },
+  { value: '15', label: 'Стран', position: 'left-6 top-[48.5%]' },
 ]
 
 function AudienceStatsOrbit({ stats }) {
@@ -40,7 +39,7 @@ function AudienceStatsOrbit({ stats }) {
       {stats.map((stat, index) => (
         <div
           key={stat.label}
-          className={`absolute ${stat.position} ${stat.primary ? 'w-[220px]' : 'w-[168px]'}`}
+          className={`absolute ${stat.position} w-[184px]`}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 8 }}
