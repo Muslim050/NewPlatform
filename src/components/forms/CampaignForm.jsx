@@ -21,6 +21,8 @@ import { cn } from '@/lib/cn.js'
 const DEFAULT_CREATIVE_URL = '/creatives/setanta-2.mp4'
 // Договор храним прямо в базе (localStorage), поэтому ограничиваем размер.
 const MAX_CONTRACT_SIZE = 2 * 1024 * 1024
+// По умолчанию оплату ставим на конец августа текущего года.
+const defaultPaymentDate = () => `${new Date().getFullYear()}-08-31`
 
 const emptyForm = {
   name: '',
@@ -38,7 +40,7 @@ const emptyForm = {
   legalName: '',
   contractStart: '',
   contractEnd: '',
-  paymentDate: '',
+  paymentDate: defaultPaymentDate(),
   contractFile: null,
 }
 
@@ -92,7 +94,7 @@ export function CampaignForm({ open, onClose, initial }) {
         legalName: initial.legalName || legalNameOf(initial.advertiserId),
         contractStart: initial.contractStart || '',
         contractEnd: initial.contractEnd || '',
-        paymentDate: initial.paymentDate || '',
+        paymentDate: initial.paymentDate || defaultPaymentDate(),
         contractFile: initial.contractFile || null,
       })
     } else {

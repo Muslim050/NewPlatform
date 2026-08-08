@@ -1,21 +1,21 @@
 import {
   BarChart3,
+  Building2,
+  CalendarClock,
   CalendarDays,
-  CircleDollarSign,
+  CalendarRange,
   ExternalLink,
-  Eye,
+  Gauge,
   FileText,
   Film,
   FolderOpen,
-  MousePointerClick,
-  Target,
+  Package,
+  Trophy,
 } from 'lucide-react'
-import { PACKAGES, STATUS, ctr, leagueLabel, statusLabel } from '@/lib/metrics.js'
+import { PACKAGES, STATUS, leagueLabel, statusLabel } from '@/lib/metrics.js'
 import {
-  formatCompact,
   formatDate,
   formatDateTime,
-  formatMoneyCompact,
   formatPct,
 } from '@/lib/format.js'
 import { Modal } from '@/components/ui/Modal.jsx'
@@ -123,69 +123,84 @@ function CreativeTile({ url }) {
   )
 }
 
-/** Условия договора — показываем только то, что заполнил админ. */
-function ContractBlock({ campaign }) {
-  const rows = [
-    ['Пакет', PACKAGES[campaign.package]?.label],
-    ['Лиги', campaign.leagues?.length
-      ? campaign.leagues.map(leagueLabel).join(', ')
-      : null],
-    ['Номер договора', campaign.contractNumber],
-    ['Юр. лицо', campaign.legalName],
-    ['Срок договора', campaign.contractStart && campaign.contractEnd
-      ? `${formatDate(campaign.contractStart)} — ${formatDate(campaign.contractEnd)}`
-      : null],
-    ['Сроки оплаты', campaign.paymentDate ? formatDate(campaign.paymentDate) : null],
-  ].filter(([, value]) => value)
-
-  if (!rows.length && !campaign.contractFile) return null
-
-  return (
-    <div className="mt-4 rounded-2xl border border-line p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-        Договор
-      </p>
-      <dl className="mt-3 space-y-2">
-        {rows.map(([label, value]) => (
-          <div
-            key={label}
-            className="flex flex-col gap-0.5 text-[13px] sm:flex-row sm:items-baseline sm:gap-4"
-          >
-            <dt className="shrink-0 text-ink-muted sm:w-40">{label}</dt>
-            <dd className="min-w-0 font-medium text-ink">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      {campaign.contractFile && (
-        <a
-          href={campaign.contractFile.url}
-          download={campaign.contractFile.name}
-          className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-paper/55 px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
-        >
-          <FileText size={16} className="shrink-0 text-indigo-800" />
-          <span className="truncate">{campaign.contractFile.name}</span>
-          <ExternalLink size={13} className="ml-auto shrink-0 text-ink-muted" />
-        </a>
-      )}
-    </div>
-  )
-}
-
-function PreviewMetric({ icon: Icon, label, value }) {
+/** Плитка договора — тот же формат, что у метрик, но текст поменьше. */
+function ContractTile({ icon: Icon, label, value }) {
   return (
     <div className="rounded-2xl border border-line bg-paper/55 p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
           {label}
         </span>
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900">
           <Icon size={16} />
         </span>
       </div>
-      <p className="mt-3 font-display text-xl font-semibold text-ink tnum">
+      <p className="mt-3 break-words text-[15px] font-semibold leading-snug text-ink">
         {value}
       </p>
     </div>
+  )
+}
+
+/** Плитки с условиями договора — встают в общую сетку карточки. */
+function ContractTiles({ campaign }) {
+  const tiles = [
+    { label: 'Пакет', icon: Package, value: PACKAGES[campaign.package]?.label },
+    {
+      label: 'Лиги',
+      icon: Trophy,
+      value: campaign.leagues?.length
+        ? campaign.leagues.map(leagueLabel).join(', ')
+        : null,
+    },
+    {
+      label: 'Номер договора',
+      icon: FileText,
+      value: campaign.contractNumber,
+    },
+    { label: 'Юр. лицо', icon: Building2, value: campaign.legalName },
+    {
+      label: 'Срок договора',
+      icon: CalendarRange,
+      value:
+        campaign.contractStart && campaign.contractEnd
+          ? `${formatDate(campaign.contractStart)} — ${formatDate(campaign.contractEnd)}`
+          : null,
+    },
+    {
+      label: 'Сроки оплаты',
+      icon: CalendarClock,
+      value: campaign.paymentDate ? formatDate(campaign.paymentDate) : null,
+    },
+  ].filter((tile) => tile.value)
+
+  return (
+    <>
+      {tiles.map((tile) => (
+        <ContractTile key={tile.label} {...tile} />
+      ))}
+      {campaign.contractFile && (
+        <a
+          href={campaign.contractFile.url}
+          download={campaign.contractFile.name}
+          title={campaign.contractFile.name}
+          className="group rounded-2xl border border-line bg-paper/55 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
+              Файл договора
+            </span>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900 transition-transform group-hover:scale-105">
+              <FileText size={16} />
+            </span>
+          </div>
+          <p className="mt-3 flex items-center gap-1.5 text-[15px] font-semibold text-ink">
+            <span className="truncate">Скачать</span>
+            <ExternalLink size={14} className="shrink-0 text-ink-muted" />
+          </p>
+        </a>
+      )}
+    </>
   )
 }
 
@@ -248,49 +263,27 @@ export function CampaignPreviewModal({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <PreviewMetric
-              icon={CircleDollarSign}
-              label="Бюджет"
-              value={formatMoneyCompact(campaign.budget)}
-            />
-            <PreviewMetric
-              icon={CircleDollarSign}
-              label="Расход"
-              value={formatMoneyCompact(campaign.spent)}
-            />
-            <PreviewMetric
-              icon={Eye}
-              label="Показы"
-              value={formatCompact(campaign.impressions)}
-            />
-            <PreviewMetric
-              icon={MousePointerClick}
-              label="Клики"
-              value={formatCompact(campaign.clicks)}
-            />
-
-            <PreviewMetric
-              icon={BarChart3}
-              label="CTR"
-              value={formatPct(ctr(campaign))}
-            />
-
             <CreativeTile url={campaign.creativeUrl} />
-          </div>
+            <ContractTiles campaign={campaign} />
 
-          <div className="mt-4 rounded-2xl border border-line p-4">
-            <div className="flex items-center justify-between gap-4 text-[12px]">
-              <span className="font-medium text-ink-soft">
-                Освоение бюджета
-              </span>
-              <span className="font-semibold text-ink tnum">
+            {/* Освоение бюджета шире остальных — занимает две плитки. */}
+            <div className="col-span-2 rounded-2xl border border-line bg-paper/55 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
+                  Освоение бюджета
+                </span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900">
+                  <Gauge size={16} />
+                </span>
+              </div>
+              <p className="mt-3 text-[15px] font-semibold text-ink tnum">
                 {formatPct(pacing, 0)}
-              </span>
+              </p>
+              <Progress value={pacing} className="mt-2 h-2" />
             </div>
-            <Progress value={pacing} className="mt-2.5 h-2" />
           </div>
 
-          <ContractBlock campaign={campaign} />
+
         </div>
       )}
     </Modal>

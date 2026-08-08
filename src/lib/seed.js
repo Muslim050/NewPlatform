@@ -185,7 +185,7 @@ export const CHANNELS = [
   },
 ]
 
-export const CAMPAIGNS = [
+const CAMPAIGN_BASE = [
   {
     id: 'cmp_1001',
     name: 'Кондиционеры — летний сезон',
@@ -816,10 +816,41 @@ export const CAMPAIGNS = [
   },
 ]
 
+// Условия договора для демо: у каждой кампании свой номер, пакет и лиги,
+// чтобы карточка «Открыть» была заполненной без ручного ввода.
+const PACKAGE_ROTATION = ['partner', 'general', 'presenter']
+const LEAGUE_ROTATION = [
+  ['epl', 'laliga'],
+  ['ufc', 'f1'],
+  ['seriea', 'bundesliga'],
+  ['nba', 'nhl'],
+  ['atp', 'wta'],
+  ['ligue1', 'zuffa'],
+]
+// Оплату демо-кампаний ставим на август — как и значение по умолчанию в форме.
+const PAYMENT_ROTATION = ['2026-08-10', '2026-08-20', '2026-08-31']
+
+const LEGAL_NAMES = new Map(ADVERTISERS.map((a) => [a.id, a.legalName]))
+
+export const CAMPAIGNS = CAMPAIGN_BASE.map((campaign, index) => ({
+  ...campaign,
+  contractNumber: `Д-2026/${101 + index}`,
+  legalName: LEGAL_NAMES.get(campaign.advertiserId) || '',
+  package: PACKAGE_ROTATION[index % PACKAGE_ROTATION.length],
+  leagues: LEAGUE_ROTATION[index % LEAGUE_ROTATION.length],
+  contractStart: campaign.createdAt.slice(0, 10),
+  contractEnd: campaign.endDate,
+  paymentDate: PAYMENT_ROTATION[index % PAYMENT_ROTATION.length],
+}))
+
 export function buildSeed() {
   return {
     advertisers: ADVERTISERS.map((a) => ({ ...a })),
     channels: CHANNELS.map((c) => ({ ...c })),
-    campaigns: CAMPAIGNS.map((c) => ({ ...c, channelIds: [...c.channelIds] })),
+    campaigns: CAMPAIGNS.map((c) => ({
+      ...c,
+      channelIds: [...c.channelIds],
+      leagues: [...c.leagues],
+    })),
   }
 }

@@ -9,12 +9,36 @@ const SEED_CREATED_AT = new Map(CAMPAIGNS.map((c) => [c.id, c.createdAt]))
 // Ключ версионируем: при смене набора демо-кампаний старая база в localStorage
 // заменяется свежим сидом.
 const DB_KEY = 'bloom.db.v10'
-// При смене версии статусы демо-кампаний подтягиваются из сида — так старая
-// база в браузере догоняет новую воронку (появился статус «Отправлен»).
-const CAMPAIGN_STATUS_LAYOUT_VERSION = 4
+// При смене версии демо-кампании догоняют сид: статусы воронки и условия
+// договора. Заполненное руками не трогаем — дописываем только пустые поля.
+const CAMPAIGN_STATUS_LAYOUT_VERSION = 5
 const DEMO_CAMPAIGN_STATUSES = Object.fromEntries(
   CAMPAIGNS.map((c) => [c.id, c.status]),
 )
+const SEED_CAMPAIGNS = new Map(CAMPAIGNS.map((c) => [c.id, c]))
+const CONTRACT_FIELDS = [
+  'contractNumber',
+  'legalName',
+  'package',
+  'leagues',
+  'contractStart',
+  'contractEnd',
+  'paymentDate',
+]
+
+/** Дописываем условия договора из сида в те поля, что остались пустыми. */
+function fillContract(campaign) {
+  const seed = SEED_CAMPAIGNS.get(campaign.id)
+  if (!seed) return campaign
+
+  const patch = {}
+  for (const field of CONTRACT_FIELDS) {
+    const value = campaign[field]
+    const isEmpty = Array.isArray(value) ? !value.length : !value
+    if (isEmpty) patch[field] = Array.isArray(seed[field]) ? [...seed[field]] : seed[field]
+  }
+  return Object.keys(patch).length ? { ...campaign, ...patch } : campaign
+}
 
 function normalizeCampaignStatus(campaign) {
   if (campaign.status !== 'paused' && campaign.status !== 'draft') {
@@ -53,9 +77,12 @@ function normalizeDatabase(database) {
 
       // Дата без времени — берём полную метку из сида, если кампания демо-шная.
       const seedCreatedAt = SEED_CREATED_AT.get(campaign.id)
-      return seedCreatedAt && !String(campaign.createdAt).includes('T')
-        ? { ...withStatus, createdAt: seedCreatedAt }
-        : withStatus
+      const withCreatedAt =
+        seedCreatedAt && !String(campaign.createdAt).includes('T')
+          ? { ...withStatus, createdAt: seedCreatedAt }
+          : withStatus
+
+      return shouldUpdateDemoStatuses ? fillContract(withCreatedAt) : withCreatedAt
     }),
     campaignStatusLayoutVersion: CAMPAIGN_STATUS_LAYOUT_VERSION,
   }

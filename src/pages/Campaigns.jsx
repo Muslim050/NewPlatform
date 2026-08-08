@@ -12,6 +12,7 @@ import {
   X,
   CalendarPlus,
   CalendarCheck,
+  CalendarClock,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useData } from '@/context/DataContext.jsx'
@@ -39,12 +40,12 @@ import {
   CampaignStatusPill,
 } from '@/components/campaigns/CampaignPreviewModal.jsx'
 
-// Раскладка строки: у рекламодателя нет колонок бюджета и действий.
-// У админа колонок больше, поэтому и промежутки между ними уже.
+// Раскладка строки: у рекламодателя нет колонки бюджета, а из действий —
+// только «Открыть». У админа колонок больше, поэтому промежутки уже.
 const GRID_ADMIN =
-  'md:gap-2.5 md:grid-cols-[minmax(150px,1fr)_146px_118px_96px_124px_76px_88px] 2xl:grid-cols-[minmax(200px,360px)_156px_140px_112px_148px_80px_54px_96px_104px]'
+  'md:gap-2.5 md:grid-cols-[minmax(180px,1fr)_146px_112px_96px_124px_96px_76px_88px] 2xl:grid-cols-[minmax(200px,360px)_150px_132px_104px_140px_100px_76px_52px_88px_96px]'
 const GRID_ADVERTISER =
-  'md:gap-4 md:grid-cols-[minmax(168px,1fr)_164px_200px_124px_108px] 2xl:grid-cols-[minmax(195px,360px)_164px_200px_124px_86px_58px_108px]'
+  'md:gap-3 md:grid-cols-[minmax(180px,1fr)_150px_212px_110px_100px_88px_56px] 2xl:grid-cols-[minmax(200px,340px)_164px_212px_120px_110px_86px_58px_100px_56px]'
 
 // Порядок группировки строк — как в фильтрах над таблицей.
 const STATUS_ORDER = {
@@ -304,10 +305,11 @@ export default function Campaigns() {
               {showBudget && (
                 <span className="flex justify-center">Бюджет / Прибыль</span>
               )}
+              <span>Сроки оплаты</span>
               <span className="hidden text-right 2xl:block">Показы</span>
               <span className="hidden text-right 2xl:block">CTR</span>
               <span className='flex justify-center'>Статистика</span>
-              {showActions && <span className="text-center">Действия</span>}
+              <span className="text-center">Действия</span>
             </div>
 
             <div className="divide-y divide-line">
@@ -516,6 +518,26 @@ export default function Campaigns() {
                       </div>
                     )}
 
+                    <div className="hidden min-w-0 md:block">
+                      {c.paymentDate ? (
+                        <p
+                          className="flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-ink-soft tnum"
+                          title={`Оплата до ${formatDateNumeric(c.paymentDate)}`}
+                        >
+                          <CalendarClock
+                            size={13}
+                            className="shrink-0 text-indigo-800"
+                            aria-hidden="true"
+                          />
+                          {formatDateNumeric(c.paymentDate)}
+                        </p>
+                      ) : (
+                        <span className="text-sm text-ink-muted" aria-hidden="true">
+                          —
+                        </span>
+                      )}
+                    </div>
+
                     <span className="hidden text-right text-sm text-ink-soft tnum 2xl:block">
                       {formatCompact(c.impressions)}
                     </span>
@@ -545,18 +567,19 @@ export default function Campaigns() {
                       )}
                     </div>
 
-                    {showActions && (
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="h-9 w-9 shrink-0 px-0"
-                          onClick={() => setPreview(c)}
-                          aria-label={`Открыть кампанию ${c.name}`}
-                          title="Открыть"
-                        >
-                          <FolderOpen size={16} />
-                        </Button>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-9 w-9 shrink-0 px-0"
+                        onClick={() => setPreview(c)}
+                        aria-label={`Открыть кампанию ${c.name}`}
+                        title="Открыть"
+                      >
+                        <FolderOpen size={16} />
+                      </Button>
+                      {showActions && (
+                        <>
                         {/* Запущенную и завершённую кампанию править нельзя. */}
                         {c.status !== 'active' && c.status !== 'completed' && (
                           <Button
@@ -585,8 +608,9 @@ export default function Campaigns() {
                           </Button>
                         )}
                         */}
-                      </div>
-                    )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 )
               })}

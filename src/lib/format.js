@@ -16,13 +16,14 @@ export const formatMoneyCompact = (v) => nfCompact.format(Number(v) || 0)
 export const formatPct = (v, digits = 1) =>
   `${(Number(v) || 0).toFixed(digits)}%`
 
+/** Дата в формате дд.мм.гггг. */
 export function formatDate(value) {
   if (!value) return '—'
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('ru-RU', {
     day: '2-digit',
-    month: 'short',
+    month: '2-digit',
     year: 'numeric',
   })
 }
