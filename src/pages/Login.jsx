@@ -113,7 +113,7 @@ function TvShowcase() {
 
       <AudienceStatsOrbit stats={AUDIENCE_STATS} />
 
-      <div className="absolute bottom-0 left-1/2 z-20 aspect-[1672/941] w-[132%] -translate-x-1/2">
+      <div className="absolute bottom-0 left-1/2 z-20 aspect-[1671/941] w-[132%] -translate-x-1/2">
         <motion.div
           initial={{ opacity: 0, scale: 1.025, y: 18 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -121,7 +121,7 @@ function TvShowcase() {
           className="relative h-full w-full"
         >
           <img
-            src="/family-tv-video-frame.png"
+            src="/family-tv-16x9-frame.png"
             alt="Семья смотрит телевизор"
             className="pointer-events-none absolute inset-0 z-20 h-full w-full select-none object-contain"
             draggable="false"
@@ -130,7 +130,7 @@ function TvShowcase() {
           <div
             data-testid="tv-video-frame"
             className="absolute z-10 overflow-hidden bg-[#050607]"
-            style={{ left: '24.22%', top: '12.11%', width: '51.91%', height: '40.28%' }}
+            style={{ left: '31.5978%', top: '17.7471%', width: '36.6846%', height: '36.6631%' }}
           >
             <motion.video
               data-testid="tv-video"

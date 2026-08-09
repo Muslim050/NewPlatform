@@ -7,6 +7,7 @@ import {
   Trash2,
   Megaphone,
   BarChart3,
+  FileText,
   FolderOpen,
   CalendarPlus,
   CalendarCheck,
@@ -30,6 +31,7 @@ import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { CampaignForm } from '@/components/forms/CampaignForm.jsx'
 import { BrandTabs } from '@/components/campaigns/BrandTabs.jsx'
 import { MoneyPopover } from '@/components/campaigns/MoneyPopover.jsx'
+import { ContractModal } from '@/components/campaigns/ContractModal.jsx'
 import { cn } from '@/lib/cn.js'
 import {
   CampaignPreviewModal,
@@ -119,6 +121,7 @@ export default function Campaigns() {
   const [status, setStatus] = useState('all')
   const [brandId, setBrandId] = useState(ALL_BRANDS)
   const [contract, setContract] = useState(ALL_CONTRACTS)
+  const [contractModal, setContractModal] = useState(null)
   const [modal, setModal] = useState({ open: false, initial: null })
   const [preview, setPreview] = useState(null)
   // Правка сумм в поповере у ячейки «Бюджет / Прибыль» (только админ).
@@ -149,9 +152,8 @@ export default function Campaigns() {
     : activeBrand === ALL_BRANDS
       ? null
       : activeBrand
-  const contracts = contractBrandId
-    ? contractsOf(advertiserById(contractBrandId), brandCampaigns)
-    : []
+  const contractBrand = contractBrandId ? advertiserById(contractBrandId) : null
+  const contracts = contractsOf(contractBrand, brandCampaigns)
   // Договор мог пропасть вместе со сменой бренда — тогда показываем все.
   const activeContract = contracts.some((c) => c.value === contract)
     ? contract
@@ -285,16 +287,44 @@ export default function Campaigns() {
         />
       )}
 
-      {/* Договоры выбранного бренда — второй уровень фильтра */}
-      {contracts.length > 0 && (
-        <div className="mb-4 overflow-x-auto">
-          <SegmentTabs
-            value={activeContract}
-            onChange={(value) =>
-              setContract(value === activeContract ? ALL_CONTRACTS : value)
-            }
-            items={contracts}
-          />
+      {/* Договоры выбранного бренда — фильтр, просмотр и добавление */}
+      {contractBrand && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {contracts.length > 0 && (
+            <SegmentTabs
+              value={activeContract}
+              onChange={(value) =>
+                setContract(value === activeContract ? ALL_CONTRACTS : value)
+              }
+              items={contracts}
+            />
+          )}
+          {activeContract !== ALL_CONTRACTS && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                setContractModal({
+                  contract: contractBrand.contracts.find(
+                    (c) => c.number === activeContract,
+                  ),
+                })
+              }
+            >
+              <FileText size={15} />
+              Открыть договор
+            </Button>
+          )}
+          {!isAdvertiser && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setContractModal({ contract: null })}
+            >
+              <Plus size={15} />
+              Договор
+            </Button>
+          )}
         </div>
       )}
 
@@ -583,6 +613,13 @@ export default function Campaigns() {
           </>
         )}
       </Card>
+
+      <ContractModal
+        open={!!contractModal}
+        contract={contractModal?.contract ?? null}
+        advertiser={contractBrand}
+        onClose={() => setContractModal(null)}
+      />
 
       {money && (
         <MoneyPopover
