@@ -360,6 +360,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
                 accept=".pdf,.doc,.docx,image/*"
                 emptyLabel="Загрузить договор"
                 name={contract.file?.name}
+                url={contract.file?.url}
                 onPick={(file) => setContract(contract.id, { file })}
               />
             </Field>

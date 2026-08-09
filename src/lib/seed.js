@@ -158,6 +158,11 @@ const CONTRACT_TEMPLATES = [
   },
 ]
 
+// Сканы договоров лежат в /public — в базе храним только имя и ссылку.
+const CONTRACT_FILES = {
+  adv_artel: { name: 'NDA_проект.docx', url: '/contracts/nda-artel.docx' },
+}
+
 function contractsFor(advertiser, index) {
   return CONTRACT_TEMPLATES.map((template) => ({
     id: `ctr_${advertiser.id.replace('adv_', '')}_${template.suffix}`,
@@ -168,7 +173,7 @@ function contractsFor(advertiser, index) {
     start: template.start,
     end: template.end,
     paymentDate: template.paymentDate,
-    file: null,
+    file: CONTRACT_FILES[advertiser.id] ?? null,
   }))
 }
 

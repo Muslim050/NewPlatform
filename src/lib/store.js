@@ -83,12 +83,19 @@ function normalizeDatabase(database) {
   const advertisers = (database.advertisers ?? []).map((advertiser) => ({
       ...advertiser,
       legalName: advertiser.legalName || SEED_LEGAL_NAMES.get(advertiser.id) || '',
-      // Реквизиты и договоры появились позже — добираем их из сида.
+      // Реквизиты, договоры и сканы появились позже — добираем их из сида.
       requisites: advertiser.requisites ?? {
         ...(REQUISITES_BY_ADVERTISER[advertiser.id] ?? {}),
       },
       contracts: advertiser.contracts?.length
-        ? advertiser.contracts
+        ? advertiser.contracts.map((contract) => {
+            // Скан договора мог появиться в сиде позже — подтягиваем по номеру.
+            if (contract.file) return contract
+            const seed = (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).find(
+              (c) => c.number === contract.number,
+            )
+            return seed?.file ? { ...contract, file: { ...seed.file } } : contract
+          })
         : (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).map((contract) => ({
             ...contract,
             leagues: [...contract.leagues],

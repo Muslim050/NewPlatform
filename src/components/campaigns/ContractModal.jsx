@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FileText, Trash2 } from 'lucide-react'
+import { Download, FileText, Trash2 } from 'lucide-react'
 import { useData } from '@/context/DataContext.jsx'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
@@ -152,7 +152,8 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
                 className="flex items-center gap-2 rounded-xl border border-line bg-paper/55 px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
               >
                 <FileText size={16} className="shrink-0 text-indigo-800" />
-                <span className="truncate">{form.file.name}</span>
+                <span className="min-w-0 flex-1 truncate">{form.file.name}</span>
+                <Download size={15} className="shrink-0 text-ink-muted" />
               </a>
             </div>
           )}
@@ -230,6 +231,7 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
               accept=".pdf,.doc,.docx,image/*"
               emptyLabel="Загрузить договор"
               name={form.file?.name}
+              url={form.file?.url}
               onPick={(file) => set('file', file)}
             />
           </Field>

@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { FileText, Paperclip, X } from 'lucide-react'
+import { Download, FileText, Paperclip, X } from 'lucide-react'
 import { cn } from '@/lib/cn.js'
 import { useToast } from '@/components/ui/Toast.jsx'
 
@@ -14,6 +14,7 @@ const MAX_INLINE_SIZE = 2 * 1024 * 1024
  */
 export function FilePicker({
   name,
+  url,
   onPick,
   accept,
   emptyLabel = 'Выбрать файл',
@@ -39,8 +40,18 @@ export function FilePicker({
     toast.info('Файл больше 2 МБ — ссылка на него живёт до перезагрузки страницы')
   }
 
+  // Кнопки «скачать» и «убрать» держим соседями поля выбора, а не внутри него:
+  // ссылка внутри button — невалидная вложенность.
   return (
-    <div className={cn('relative', className)}>
+    <div
+      className={cn(
+        'flex h-11 w-full items-center gap-1 rounded-xl border pr-2 transition-colors',
+        name
+          ? 'border-line bg-surface hover:border-indigo-300'
+          : 'border-dashed border-line bg-surface hover:border-indigo-300 hover:bg-indigo-50',
+        className,
+      )}
+    >
       <input
         ref={inputRef}
         type="file"
@@ -53,10 +64,8 @@ export function FilePicker({
         onClick={() => inputRef.current?.click()}
         title={name || emptyLabel}
         className={cn(
-          'flex h-11 w-full items-center gap-2 rounded-xl border px-3.5 text-left text-sm transition-colors focus-ring',
-          name
-            ? 'border-line bg-surface text-ink hover:border-indigo-300'
-            : 'border-dashed border-line bg-surface text-ink-soft hover:border-indigo-300 hover:bg-indigo-50',
+          'flex h-full min-w-0 flex-1 items-center gap-2 rounded-xl pl-3.5 text-left text-sm focus-ring',
+          name ? 'text-ink' : 'text-ink-soft',
         )}
       >
         {name ? (
@@ -65,22 +74,29 @@ export function FilePicker({
           <Paperclip size={16} className="shrink-0 text-ink-muted" />
         )}
         <span className="min-w-0 flex-1 truncate">{name || emptyLabel}</span>
-        {name && (
-          <span
-            role="button"
-            tabIndex={-1}
-            aria-label="Убрать файл"
-            title="Убрать файл"
-            onClick={(e) => {
-              e.stopPropagation()
-              onPick(null)
-            }}
-            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink"
-          >
-            <X size={14} />
-          </span>
-        )}
       </button>
+      {name && url && (
+        <a
+          href={url}
+          download={name}
+          aria-label="Скачать файл"
+          title="Скачать файл"
+          className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-indigo-800 focus-ring"
+        >
+          <Download size={14} />
+        </a>
+      )}
+      {name && (
+        <button
+          type="button"
+          aria-label="Убрать файл"
+          title="Убрать файл"
+          onClick={() => onPick(null)}
+          className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring"
+        >
+          <X size={14} />
+        </button>
+      )}
     </div>
   )
 }
