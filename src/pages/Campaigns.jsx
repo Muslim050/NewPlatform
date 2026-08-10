@@ -30,6 +30,7 @@ import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { CampaignForm } from '@/components/forms/CampaignForm.jsx'
 import { BrandTabs } from '@/components/campaigns/BrandTabs.jsx'
+import { MonthTabs } from '@/components/campaigns/MonthTabs.jsx'
 import { MoneyPopover } from '@/components/campaigns/MoneyPopover.jsx'
 import { ContractModal } from '@/components/campaigns/ContractModal.jsx'
 import { cn } from '@/lib/cn.js'
@@ -38,12 +39,14 @@ import {
   CampaignStatusPill,
 } from '@/components/campaigns/CampaignPreviewModal.jsx'
 
-// Раскладка строки: у рекламодателя нет колонки бюджета, а из действий —
-// только «Открыть». У админа колонок больше, поэтому промежутки уже.
+// Раскладка строки: у рекламодателя нет колонок бюджета и статистики, а из
+// действий — только «Открыть». У админа колонок больше, поэтому промежутки уже.
+// Колонка «Статистика» временно скрыта, поэтому её ширины (76px и 88px)
+// убраны из шаблона — при возврате колонки вернуть их перед «Действиями».
 const GRID_ADMIN =
-  'md:gap-2.5 md:grid-cols-[minmax(180px,1fr)_146px_112px_96px_124px_96px_76px_88px] 2xl:grid-cols-[minmax(200px,360px)_150px_132px_104px_140px_100px_88px_96px]'
+  'md:gap-2.5 md:grid-cols-[minmax(180px,1fr)_146px_112px_96px_124px_96px_88px] 2xl:grid-cols-[minmax(200px,360px)_150px_132px_104px_140px_100px_96px]'
 const GRID_ADVERTISER =
-  'md:gap-3 md:grid-cols-[minmax(180px,1fr)_150px_212px_110px_100px_88px_56px] 2xl:grid-cols-[minmax(200px,340px)_164px_212px_120px_110px_100px_56px]'
+  'md:gap-3 md:grid-cols-[minmax(180px,1fr)_150px_212px_110px_100px_56px] 2xl:grid-cols-[minmax(200px,340px)_164px_212px_120px_110px_56px]'
 
 // Порядок группировки строк — как в фильтрах над таблицей.
 const STATUS_ORDER = {
@@ -56,6 +59,43 @@ const STATUS_ORDER = {
 
 const ALL_BRANDS = 'all'
 const ALL_CONTRACTS = 'all'
+const MONTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
+/** Границы месяца в ISO — с ними и сравниваем период кампании. */
+function monthBounds(year, month) {
+  const mm = String(month + 1).padStart(2, '0')
+  const lastDay = new Date(year, month + 1, 0).getDate()
+  return [`${year}-${mm}-01`, `${year}-${mm}-${lastDay}`]
+}
+
+/** Кампания попадает в месяц, если её период пересекается с ним. */
+function inMonth(campaign, year, month) {
+  const from = campaign.startDate || campaign.endDate
+  const to = campaign.endDate || campaign.startDate
+  if (!from || !to) return false
+  const [start, end] = monthBounds(year, month)
+  return from <= end && to >= start
+}
+
+/** Месяц наступил? По будущим месяцам кампаний не показываем. */
+function isPassedMonth(year, month) {
+  const now = new Date()
+  return (
+    year < now.getFullYear() ||
+    (year === now.getFullYear() && month <= now.getMonth())
+  )
+}
+
+/** Годы, которые задевают кампании, плюс текущий — по ним листаем месяцы. */
+function yearsOf(campaigns, currentYear) {
+  const years = new Set([currentYear])
+  for (const c of campaigns) {
+    for (const date of [c.startDate, c.endDate]) {
+      if (date) years.add(Number(date.slice(0, 4)))
+    }
+  }
+  return [...years].sort((a, b) => a - b)
+}
 
 /**
  * Договоры бренда со счётчиком кампаний. Отдельной вкладки «Все» нет —
@@ -72,15 +112,18 @@ function contractsOf(advertiser, campaigns) {
 /**
  * Вкладка «Все» плюс бренды, у которых есть кампании, со счётчиками.
  * sent — сколько заявок пришло и ещё не разобрано; по ним рисуем метку.
+ * active — сколько кампаний идёт прямо сейчас.
  */
 function brandsOf(campaigns, advertiserById) {
   const byId = new Map()
   for (const c of campaigns) {
     const isNew = c.status === 'sent'
+    const isActive = c.status === 'active'
     const found = byId.get(c.advertiserId)
     if (found) {
       found.count += 1
       found.sent += isNew ? 1 : 0
+      found.active += isActive ? 1 : 0
       continue
     }
     const adv = advertiserById(c.advertiserId)
@@ -91,6 +134,7 @@ function brandsOf(campaigns, advertiserById) {
         color: adv.color,
         count: 1,
         sent: isNew ? 1 : 0,
+        active: isActive ? 1 : 0,
       })
     }
   }
@@ -104,6 +148,7 @@ function brandsOf(campaigns, advertiserById) {
       name: 'Все',
       count: campaigns.length,
       sent: campaigns.filter((c) => c.status === 'sent').length,
+      active: campaigns.filter((c) => c.status === 'active').length,
     },
     ...list,
   ]
@@ -121,14 +166,21 @@ export default function Campaigns() {
   const [status, setStatus] = useState('all')
   const [brandId, setBrandId] = useState(ALL_BRANDS)
   const [contract, setContract] = useState(ALL_CONTRACTS)
+  const [year, setYear] = useState(() => new Date().getFullYear())
+  // Месяц не выбран — таблица показывает кампании за все периоды.
+  const [month, setMonth] = useState(null)
   const [contractModal, setContractModal] = useState(null)
   const [modal, setModal] = useState({ open: false, initial: null })
   const [preview, setPreview] = useState(null)
   // Правка сумм в поповере у ячейки «Бюджет / Прибыль» (только админ).
   const [money, setMoney] = useState(null)
 
-  // Рекламодатель не видит бюджет и не управляет кампаниями из таблицы.
+  // Рекламодатель не видит бюджет со статистикой и не управляет кампаниями
+  // из таблицы.
   const showBudget = !isAdvertiser
+  // Колонка «Статистика» временно скрыта и у админа.
+  // const showStats = !isAdvertiser
+  const showStats = false
   const showActions = !isAdvertiser
 
   // Вкладки брендов: только те, у кого есть кампании. Рекламодателю не нужны —
@@ -159,10 +211,38 @@ export default function Campaigns() {
     ? contract
     : ALL_CONTRACTS
 
-  const scoped =
+  const contractCampaigns =
     activeContract === ALL_CONTRACTS
       ? brandCampaigns
       : brandCampaigns.filter((c) => c.contractNumber === activeContract)
+
+  // Третий уровень: период. Появляется вместе с выбранным договором; год
+  // задаёт, за какой год показаны 12 месяцев, фильтр включается с выбором
+  // месяца. Без договора выбранный месяц не действует.
+  const showMonths = activeContract !== ALL_CONTRACTS
+  const currentYear = new Date().getFullYear()
+  const years = yearsOf(contractCampaigns, currentYear)
+  // Год мог пропасть вместе со сменой бренда или договора.
+  const activeYear = years.includes(year)
+    ? year
+    : years.includes(currentYear)
+      ? currentYear
+      : years[years.length - 1]
+  // Ненаступившие месяцы пустые: ни счётчика, ни фильтра.
+  const monthCounts = MONTHS.map((m) =>
+    isPassedMonth(activeYear, m)
+      ? contractCampaigns.filter((c) => inMonth(c, activeYear, m)).length
+      : 0,
+  )
+  const activeMonth =
+    showMonths && month != null && isPassedMonth(activeYear, month)
+      ? month
+      : null
+
+  const scoped =
+    activeMonth == null
+      ? contractCampaigns
+      : contractCampaigns.filter((c) => inMonth(c, activeYear, activeMonth))
 
   const counts = {
     all: scoped.length,
@@ -328,6 +408,19 @@ export default function Campaigns() {
         </div>
       )}
 
+      {/* Период выбранного договора: год слева, 12 месяцев */}
+      {showMonths && (
+        <MonthTabs
+          className="mb-4"
+          year={activeYear}
+          years={years}
+          onYearChange={setYear}
+          value={activeMonth}
+          onChange={setMonth}
+          counts={monthCounts}
+        />
+      )}
+
       <Card>
         {filtered.length === 0 ? (
           <EmptyState
@@ -368,7 +461,9 @@ export default function Campaigns() {
                 <span className="flex justify-center">Бюджет / Прибыль</span>
               )}
               <span>Сроки оплаты</span>
-              <span className='flex justify-center'>Статистика</span>
+              {showStats && (
+                <span className="flex justify-center">Статистика</span>
+              )}
               <span className="text-center">Действия</span>
             </div>
 
@@ -389,7 +484,12 @@ export default function Campaigns() {
                         {index + 1}
                       </span>
                       {isAdmin && adv && (
-                        <Avatar name={adv.name} color={adv.color} size="sm" />
+                        <Avatar
+                          name={adv.name}
+                          color={adv.color}
+                          src={adv.logo}
+                          size="sm"
+                        />
                       )}
                       <div className="min-w-0">
                         {c.creativeUrl ? (
@@ -540,27 +640,29 @@ export default function Campaigns() {
                       )}
                     </div>
 
-                    <div className="flex justify-center">
-                      {c.status === 'active' || c.status === 'completed' ? (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="w-fit shrink-0 border-indigo-200 bg-indigo-50 px-2.5 text-indigo-900 hover:border-indigo-400 hover:bg-indigo-100"
-                          onClick={() => navigate(`/app/campaigns/${c.id}`)}
-                          aria-label={`Статистика кампании ${c.name}`}
-                          title="Статистика"
-                        >
-                          <BarChart3 size={15} />
-                        </Button>
-                      ) : (
-                        <span
-                          className="text-sm text-ink-muted"
-                          aria-hidden="true"
-                        >
-                          —
-                        </span>
-                      )}
-                    </div>
+                    {showStats && (
+                      <div className="flex justify-center">
+                        {c.status === 'active' || c.status === 'completed' ? (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-fit shrink-0 border-indigo-200 bg-indigo-50 px-2.5 text-indigo-900 hover:border-indigo-400 hover:bg-indigo-100"
+                            onClick={() => navigate(`/app/campaigns/${c.id}`)}
+                            aria-label={`Статистика кампании ${c.name}`}
+                            title="Статистика"
+                          >
+                            <BarChart3 size={15} />
+                          </Button>
+                        ) : (
+                          <span
+                            className="text-sm text-ink-muted"
+                            aria-hidden="true"
+                          >
+                            —
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-center gap-1.5">
                       <Button

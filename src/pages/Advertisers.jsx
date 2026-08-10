@@ -102,7 +102,12 @@ export default function Advertisers() {
                 <Card hover className="p-5">
                   <div className="flex items-start justify-between">
                     <div className="flex min-w-0 gap-3">
-                      <Avatar name={a.name} color={a.color} size="lg" />
+                      <Avatar
+                        name={a.name}
+                        color={a.color}
+                        src={a.logo}
+                        size="lg"
+                      />
                       <div className="min-w-0">
                         <p className="truncate font-display text-[15px] font-semibold text-ink">
                           {a.name}

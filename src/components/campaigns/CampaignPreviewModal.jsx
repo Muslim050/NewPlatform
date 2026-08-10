@@ -228,6 +228,7 @@ export function CampaignPreviewModal({
       open={!!campaign}
       onClose={onClose}
       icon={FolderOpen}
+      logo={advertiser?.logo}
       title={campaign?.name || 'Кампания'}
       description={advertiser?.name || 'Карточка кампании'}
       size="lg"

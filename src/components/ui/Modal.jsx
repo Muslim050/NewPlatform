@@ -17,6 +17,8 @@ export function Modal({
   title,
   description,
   icon: Icon,
+  // Логотип бренда — показываем вместо иконки, если он есть.
+  logo,
   children,
   footer,
   size = 'md',
@@ -58,10 +60,20 @@ export function Modal({
             )}
           >
             <div className="flex items-start gap-3 border-b border-line px-6 py-5">
-              {Icon && (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-900">
-                  <Icon size={20} strokeWidth={2} />
-                </div>
+              {logo ? (
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
+                  <img
+                    src={logo}
+                    alt=""
+                    className="h-full w-full object-contain p-1"
+                  />
+                </span>
+              ) : (
+                Icon && (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-900">
+                    <Icon size={20} strokeWidth={2} />
+                  </div>
+                )
               )}
               <div className="min-w-0 flex-1">
                 <h2 className="font-display text-lg font-semibold text-ink">

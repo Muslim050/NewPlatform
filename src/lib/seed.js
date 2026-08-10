@@ -5,7 +5,7 @@
 // У полученных и рассматриваемых кампаний бюджет и метрики нулевые —
 // они появляются после запуска.
 
-export const ADVERTISERS = [
+const ADVERTISER_BASE = [
   {
     id: 'adv_artel',
     name: 'Artel',
@@ -115,6 +115,24 @@ export const ADVERTISERS = [
     createdAt: '2026-05-02',
   },
 ]
+
+// Логотипы брендов — файлы лежат в /public/logos.
+const BRAND_LOGOS = {
+  adv_artel: '/logos/artel.png',
+  adv_click: '/logos/click.png',
+  adv_korzinka: '/logos/korzinka.jpeg',
+  adv_payme: '/logos/payme.png',
+  adv_makro: '/logos/makro.png',
+  adv_byd: '/logos/byd.jpeg',
+  adv_leapmotor: '/logos/leapmotor.png',
+  adv_cherry: '/logos/cherry.png',
+  adv_cocacola: '/logos/cocacola.jpeg',
+}
+
+export const ADVERTISERS = ADVERTISER_BASE.map((advertiser) => ({
+  ...advertiser,
+  logo: BRAND_LOGOS[advertiser.id] ?? null,
+}))
 
 /** Платёжные реквизиты брендов — их же подставляем в договоры. */
 const REQUISITES_TEMPLATE = {
@@ -891,15 +909,103 @@ const CAMPAIGN_BASE = [
   },
 ]
 
+/**
+ * Помесячные кампании Artel: на каждый месяц с января по август приходится
+ * ровно 4 кампании. Добор считаем с учётом двух кампаний из CAMPAIGN_BASE,
+ * которые тянутся через несколько месяцев: «Телевизоры» закрывают янв–март,
+ * «Кондиционеры» — июнь–август.
+ */
+const ARTEL_MONTHLY_FILL = [3, 3, 3, 4, 4, 3, 3, 3]
+
+const ARTEL_PRODUCTS = [
+  'Холодильники',
+  'Стиральные машины',
+  'Телевизоры',
+  'Кондиционеры',
+  'Пылесосы',
+  'Микроволновки',
+  'Ноутбуки',
+  'Смартфоны',
+]
+
+const MONTH_NAMES = [
+  'январь',
+  'февраль',
+  'март',
+  'апрель',
+  'май',
+  'июнь',
+  'июль',
+  'август',
+]
+
+const MONTHLY_OBJECTIVES = ['awareness', 'traffic', 'conversions', 'reach']
+const MONTHLY_CHANNELS = [
+  ['ch_prime', 'ch_potok'],
+  ['ch_webvision', 'ch_social'],
+  ['ch_mobile'],
+  ['ch_potok', 'ch_social', 'ch_mobile'],
+]
+
+const pad = (n) => String(n).padStart(2, '0')
+
+/** Кампания живёт внутри своего месяца — так вкладка месяца считает её один раз. */
+function artelMonthlyCampaign(month, slot, index) {
+  const lastDay = new Date(2026, month + 1, 0).getDate()
+  const startDay = 1 + slot * 7
+  const endDay = Math.min(startDay + 13, lastDay)
+  const startDate = `2026-${pad(month + 1)}-${pad(startDay)}`
+  const endDate = `2026-${pad(month + 1)}-${pad(endDay)}`
+  // Август — текущий месяц: что уже идёт, то активно, поздний старт ещё на
+  // рассмотрении. Всё, что раньше, — завершено.
+  const status =
+    month < 7 ? 'completed' : startDay <= 10 ? 'active' : 'reviewing'
+  const planned = status === 'reviewing'
+  const budget = planned ? 0 : (120 + ((month * 7 + slot * 13) % 9) * 30) * 1e6
+  const ratio = status === 'completed' ? 0.7 + ((month + slot) % 4) * 0.07 : 0.4
+  const spent = Math.round((budget * ratio) / 1e6) * 1e6
+  const impressions = Math.round(spent / 12)
+  const clicks = Math.round(impressions / 70)
+
+  return {
+    id: `cmp_2${pad(index + 1).padStart(3, '0')}`,
+    name: `${ARTEL_PRODUCTS[(month * 4 + slot) % ARTEL_PRODUCTS.length]} Artel — ${MONTH_NAMES[month]}`,
+    advertiserId: 'adv_artel',
+    status,
+    objective: MONTHLY_OBJECTIVES[(month + slot) % MONTHLY_OBJECTIVES.length],
+    budget,
+    spent,
+    startDate,
+    endDate,
+    channelIds: [...MONTHLY_CHANNELS[(month + slot) % MONTHLY_CHANNELS.length]],
+    impressions,
+    clicks,
+    conversions: Math.round(clicks / 28),
+    creativeUrl: '/creatives/setanta-2.mp4',
+    // Заявку заводят за месяц до старта.
+    createdAt: `${month === 0 ? 2025 : 2026}-${pad(month === 0 ? 12 : month)}-20T${pad(9 + slot)}:15:00`,
+  }
+}
+
+const ARTEL_MONTHLY = ARTEL_MONTHLY_FILL.flatMap((fill, month) =>
+  Array.from({ length: fill }, (_, slot) => ({ month, slot })),
+).map(({ month, slot }, index) => artelMonthlyCampaign(month, slot, index))
+
 // Каждая кампания привязана к одному из договоров своего бренда — условия
 // (пакет, лиги, юр. лицо, срок, оплата) берём прямо из него.
 const seenByAdvertiser = new Map()
 
-export const CAMPAIGNS = CAMPAIGN_BASE.map((campaign) => {
+export const CAMPAIGNS = [...CAMPAIGN_BASE, ...ARTEL_MONTHLY].map((campaign) => {
   const contracts = CONTRACTS_BY_ADVERTISER[campaign.advertiserId] ?? []
   const seen = seenByAdvertiser.get(campaign.advertiserId) ?? 0
   seenByAdvertiser.set(campaign.advertiserId, seen + 1)
-  const contract = contracts[seen % (contracts.length || 1)]
+  // Берём договор, чей срок покрывает старт кампании; если такого нет —
+  // раскладываем по кругу, как раньше.
+  const fitting = contracts.filter(
+    (c) => c.start <= campaign.startDate && campaign.startDate <= c.end,
+  )
+  const pool = fitting.length ? fitting : contracts
+  const contract = pool[seen % (pool.length || 1)]
   if (!contract) return campaign
 
   return {

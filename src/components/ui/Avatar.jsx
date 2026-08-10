@@ -7,8 +7,44 @@ const sizes = {
   lg: 'h-12 w-12 text-sm rounded-xl',
 }
 
-/** Аватар с инициалами на цветной подложке. */
-export function Avatar({ name = '', color = '#FFD106', size = 'md', className }) {
+// Логотипы приходят с белым фоном, поэтому подложка тоже белая.
+const logoPadding = {
+  sm: 'p-0.5',
+  md: 'p-1',
+  lg: 'p-1',
+}
+
+/**
+ * Аватар с инициалами на цветной подложке. src — логотип бренда вместо
+ * инициалов, children — произвольное содержимое (например, счётчик).
+ */
+export function Avatar({
+  name = '',
+  color = '#FFD106',
+  size = 'md',
+  className,
+  children,
+  src,
+}) {
+  if (src && children == null) {
+    return (
+      <span
+        className={cn(
+          'inline-flex shrink-0 items-center justify-center overflow-hidden bg-white ring-1 ring-black/5',
+          sizes[size],
+          className,
+        )}
+      >
+        <img
+          src={src}
+          alt={name}
+          loading="lazy"
+          className={cn('h-full w-full object-cover', logoPadding[size])}
+        />
+      </span>
+    )
+  }
+
   return (
     <span
       className={cn(
@@ -21,7 +57,7 @@ export function Avatar({ name = '', color = '#FFD106', size = 'md', className })
         color: contrastColor(color),
       }}
     >
-      {toInitials(name)}
+      {children ?? toInitials(name)}
     </span>
   )
 }

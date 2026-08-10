@@ -1,0 +1,156 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { cn } from '@/lib/cn.js'
+
+export const MONTHS_SHORT = [
+  'Янв',
+  'Фев',
+  'Мар',
+  'Апр',
+  'Май',
+  'Июн',
+  'Июл',
+  'Авг',
+  'Сен',
+  'Окт',
+  'Ноя',
+  'Дек',
+]
+
+const MONTHS_FULL = [
+  'Январь',
+  'Февраль',
+  'Март',
+  'Апрель',
+  'Май',
+  'Июнь',
+  'Июль',
+  'Август',
+  'Сентябрь',
+  'Октябрь',
+  'Ноябрь',
+  'Декабрь',
+]
+
+/**
+ * Фирменный жёлтый с нарастанием: январь почти прозрачный, к декабрю —
+ * насыщенный #FFD106. Классы прописаны строками: Tailwind не собирает их
+ * по шаблону.
+ */
+const MONTH_FILLS = [
+  'bg-[#FFFCEB]',
+  'bg-[#FFFAE0]',
+  'bg-[#FFF8D2]',
+  'bg-[#FFF6C8]',
+  'bg-[#FFF3B0]',
+  'bg-[#FFEE9A]',
+  'bg-[#FFE977]',
+  'bg-[#FFE36A]',
+  'bg-[#FFDF52]',
+  'bg-[#FFD93B]',
+  'bg-[#FFD520]',
+  'bg-[#FFD106]',
+]
+
+// Месяцы, которые ещё не наступили, — серые и без кампаний.
+const FUTURE_FILL = 'bg-ink/[0.03] text-ink-muted/70 cursor-default'
+
+const arrowClass =
+  'flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted transition-colors focus-ring enabled:hover:bg-ink/[0.06] enabled:hover:text-ink-soft disabled:opacity-35'
+
+/**
+ * Фильтр периода: слева выбор года стрелками, справа 12 месяцев.
+ * Отдельной вкладки «Все» нет — повторный клик по месяцу снимает фильтр.
+ * years: доступные годы, counts: сколько кампаний попадает в каждый месяц.
+ */
+export function MonthTabs({
+  year,
+  years,
+  onYearChange,
+  value,
+  onChange,
+  counts,
+  className,
+}) {
+  const index = years.indexOf(year)
+  const prev = index > 0 ? years[index - 1] : null
+  const next = index >= 0 && index < years.length - 1 ? years[index + 1] : null
+
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth()
+
+  return (
+    <div className={cn('flex flex-wrap items-center gap-2', className)}>
+      <div className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-line bg-surface p-[4.5px]">
+        <button
+          type="button"
+          disabled={prev == null}
+          onClick={() => onYearChange(prev)}
+          aria-label="Предыдущий год"
+          className={arrowClass}
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <span className="min-w-[46px] text-center text-[13px] font-semibold text-ink tnum">
+          {year}
+        </span>
+        <button
+          type="button"
+          disabled={next == null}
+          onClick={() => onYearChange(next)}
+          aria-label="Следующий год"
+          className={arrowClass}
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
+      <div
+        role="tablist"
+        aria-label="Месяцы"
+        className="no-scrollbar inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-line bg-surface p-[4.5px]"
+      >
+        {MONTHS_SHORT.map((label, month) => {
+          const active = value === month
+          const count = counts?.[month] ?? 0
+          // Прошедшие и текущий месяц — цветные, будущие — серые.
+          const passed =
+            year < currentYear ||
+            (year === currentYear && month <= currentMonth)
+          return (
+            <button
+              key={label}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              disabled={!passed}
+              title={
+                passed
+                  ? `${MONTHS_FULL[month]} ${year}`
+                  : `${MONTHS_FULL[month]} ${year} — месяц ещё не наступил`
+              }
+              onClick={() => onChange(active ? null : month)}
+              className={cn(
+                'flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[13px] font-medium transition-all focus-ring',
+                passed
+                  ? cn(
+                      MONTH_FILLS[month],
+                      'text-indigo-900 hover:brightness-[0.97]',
+                    )
+                  : FUTURE_FILL,
+                active && 'font-semibold ring-2 ring-indigo-700',
+              )}
+            >
+              {label}
+              {passed && count > 0 && (
+                <span className="rounded-full bg-black/[0.07] px-1 text-[11px] tnum">
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

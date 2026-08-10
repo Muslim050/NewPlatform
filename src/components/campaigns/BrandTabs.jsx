@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { LayoutGrid } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { cn } from '@/lib/cn.js'
 
@@ -53,12 +52,15 @@ export function BrandTabs({ items, value, onChange, className }) {
                 : 'border-line bg-surface hover:bg-ink/[0.03]',
             )}
           >
+            {/* На месте инициалов — счётчик кампаний бренда. */}
             {b.color ? (
-              <Avatar name={b.name} color={b.color} size="sm" />
+              <Avatar name={b.name} color={b.color} size="sm" className="tnum">
+                {b.count}
+              </Avatar>
             ) : (
-              // Вкладка «Все» — без бренда, поэтому вместо аватара иконка.
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/[0.06] text-ink-soft">
-                <LayoutGrid size={15} />
+              // Вкладка «Все» — без бренда, поэтому подложка нейтральная.
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/[0.06] text-[11px] font-semibold text-ink-soft tnum">
+                {b.count}
               </span>
             )}
             <span
@@ -69,14 +71,16 @@ export function BrandTabs({ items, value, onChange, className }) {
             >
               {b.name}
             </span>
-            <span
-              className={cn(
-                'rounded-full px-1.5 text-[11px] tnum',
-                active ? 'bg-ink/10 text-ink' : 'bg-ink/[0.06] text-ink-muted',
-              )}
-            >
-              {b.count}
-            </span>
+            {/* Зелёная метка — сколько кампаний бренда идёт прямо сейчас. */}
+            {b.active > 0 && (
+              <span
+                className="flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 text-[11px] font-medium text-emerald-700 tnum"
+                title={`Активных кампаний: ${b.active}`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                {b.active}
+              </span>
+            )}
             {/* Синяя метка со счётчиком — у бренда есть неразобранные заявки. */}
             {b.sent > 0 && (
               <span

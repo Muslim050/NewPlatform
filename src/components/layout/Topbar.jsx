@@ -83,6 +83,7 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
             <Avatar
               name={adv ? adv.name : user.name}
               color={adv ? adv.color : '#FFD106'}
+              src={adv?.logo}
               size="sm"
             />
             <ChevronDown size={15} className="text-ink-muted" />

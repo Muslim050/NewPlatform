@@ -91,6 +91,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
         <Avatar
           name={adv ? adv.name : user.name}
           color={adv ? adv.color : '#FFD106'}
+          src={adv?.logo}
           size="md"
         />
         {!collapsed && (

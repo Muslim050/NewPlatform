@@ -148,6 +148,7 @@ export default function CampaignStats() {
               <Avatar
                 name={advertiser.name}
                 color={advertiser.color}
+                src={advertiser.logo}
                 size="lg"
               />
             )}

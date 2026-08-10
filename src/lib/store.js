@@ -9,12 +9,14 @@ import { uid } from './id.js'
 
 // Юр. лица демо-брендов — добираем их в базах, созданных до появления поля.
 const SEED_LEGAL_NAMES = new Map(ADVERTISERS.map((a) => [a.id, a.legalName]))
+// Логотипы появились позже — в старых базах их тоже добираем из сида.
+const SEED_LOGOS = new Map(ADVERTISERS.map((a) => [a.id, a.logo]))
 // Время создания демо-кампаний: в старых базах даты сохранены без времени.
 const SEED_CREATED_AT = new Map(CAMPAIGNS.map((c) => [c.id, c.createdAt]))
 
 // Ключ версионируем: при смене набора демо-кампаний старая база в localStorage
 // заменяется свежим сидом.
-const DB_KEY = 'bloom.db.v10'
+const DB_KEY = 'bloom.db.v11'
 // При смене версии демо-кампании догоняют сид: статусы воронки и условия
 // договора. Заполненное руками не трогаем — дописываем только пустые поля.
 const CAMPAIGN_STATUS_LAYOUT_VERSION = 6
@@ -83,6 +85,8 @@ function normalizeDatabase(database) {
   const advertisers = (database.advertisers ?? []).map((advertiser) => ({
       ...advertiser,
       legalName: advertiser.legalName || SEED_LEGAL_NAMES.get(advertiser.id) || '',
+      // Логотип — статика из сида: путь мог смениться вместе с файлом.
+      logo: SEED_LOGOS.get(advertiser.id) ?? advertiser.logo ?? null,
       // Реквизиты, договоры и сканы появились позже — добираем их из сида.
       requisites: advertiser.requisites ?? {
         ...(REQUISITES_BY_ADVERTISER[advertiser.id] ?? {}),
