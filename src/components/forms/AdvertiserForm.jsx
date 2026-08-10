@@ -4,7 +4,7 @@ import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button.jsx'
-import { Field, Input, Select } from '@/components/ui/Field.jsx'
+import { Field, Input, Select, Textarea } from '@/components/ui/Field.jsx'
 import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { FilePicker } from '@/components/ui/FilePicker.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
@@ -42,8 +42,31 @@ const emptyForm = {
   status: 'active',
   balance: '',
   legalName: '',
+  requisites: '',
   color: PALETTE[0],
   contracts: [],
+}
+
+const REQUISITES_LABELS = {
+  inn: 'ИНН',
+  account: 'Р/с',
+  bank: 'Банк',
+  mfo: 'МФО',
+  oked: 'ОКЭД',
+  vat: 'НДС',
+  address: 'Адрес',
+  phone: 'Телефон',
+  email: 'Email',
+}
+
+/** В старых записях реквизиты лежат объектом — в форме показываем их текстом. */
+const requisitesToText = (requisites) => {
+  if (!requisites) return ''
+  if (typeof requisites === 'string') return requisites
+  return Object.entries(REQUISITES_LABELS)
+    .filter(([key]) => requisites[key])
+    .map(([key, label]) => `${label}: ${requisites[key]}`)
+    .join('\n')
 }
 
 /** Пустой договор бренда — из него кампания берёт номер и условия. */
@@ -80,6 +103,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
             status: initial.status,
             balance: String(initial.balance),
             legalName: initial.legalName || '',
+            requisites: requisitesToText(initial.requisites),
             color: initial.color,
             contracts: (initial.contracts ?? []).map((contract) => ({
               ...contract,
@@ -129,6 +153,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
       status: form.status,
       balance: Number(form.balance) || 0,
       legalName: form.legalName.trim(),
+      requisites: form.requisites.trim(),
       color: form.color,
       // Договоры без номера не сохраняем — из них нечего выбирать в кампании.
       contracts: form.contracts
@@ -207,23 +232,24 @@ export function AdvertiserForm({ open, onClose, initial }) {
 
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {/* Подставляется в договор кампании как наименование юр. лица. */}
-          <Field label="Юр. лицо">
-            <Input
-              value={form.legalName}
-              onChange={(e) => set('legalName', e.target.value)}
-              placeholder='ООО «Пример»'
-            />
-          </Field>
-          <Field label="Реквизиты">
-            <Input
-              value={form.legalName}
-              onChange={(e) => set('legalName', e.target.value)}
-              placeholder='ООО «Пример»'
-            />
-          </Field>
-        </div>
+        {/* Подставляется в договор кампании как наименование юр. лица. */}
+        <Field label="Юр. лицо">
+          <Input
+            value={form.legalName}
+            onChange={(e) => set('legalName', e.target.value)}
+            placeholder='ООО «Пример»'
+          />
+        </Field>
+
+        <Field label="Реквизиты" hint="По строке на пункт: ИНН, банк, счёт, адрес.">
+          <Textarea
+            rows={7}
+            value={form.requisites}
+            onChange={(e) => set('requisites', e.target.value)}
+            className="min-h-[164px]"
+            placeholder={'ИНН: 311985311\nБанк: ГО АК «Алокабанк», г. Ташкент\nМФО: 00401\nР/с: 20208000407214976001\nАдрес: г. Ташкент, ул. Elbek, 8'}
+          />
+        </Field>
 
         <Field label="Цвет бренда">
           <div className="flex flex-wrap gap-2 pt-1">
