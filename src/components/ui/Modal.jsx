@@ -1,8 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/cn.js'
+
+// Сколько держим модалку в DOM после закрытия — ровно на время анимации.
+const CLOSE_MS = 180
 
 const sizes = {
   sm: 'sm:max-w-md',
@@ -23,6 +26,20 @@ export function Modal({
   footer,
   size = 'md',
 }) {
+  // Размонтируем сами, по таймеру: AnimatePresence в связке с порталом
+  // доигрывала анимацию закрытия, но оставляла оверлей в DOM — он перекрывал
+  // страницу и гасил все клики.
+  const [mounted, setMounted] = useState(open)
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+      return
+    }
+    const timer = setTimeout(() => setMounted(false), CLOSE_MS)
+    return () => clearTimeout(timer)
+  }, [open])
+
   useEffect(() => {
     if (!open) return
     const onKey = (e) => e.key === 'Escape' && onClose?.()
@@ -34,77 +51,86 @@ export function Modal({
     }
   }, [open, onClose])
 
+  if (!mounted) return null
+
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <div
-            className="absolute inset-0 bg-ink/40 backdrop-blur-[3px]"
-            onClick={onClose}
-          />
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            initial={{ y: 40, opacity: 0, scale: 0.98 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 24, opacity: 0, scale: 0.98 }}
-            transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-            className={cn(
-              'relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-line bg-surface shadow-lift sm:rounded-3xl',
-              sizes[size],
-            )}
-          >
-            <div className="flex items-start gap-3 border-b border-line px-6 py-5">
-              {logo ? (
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
-                  <img
-                    src={logo}
-                    alt=""
-                    className="h-full w-full object-contain p-1"
-                  />
-                </span>
-              ) : (
-                Icon && (
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-900">
-                    <Icon size={20} strokeWidth={2} />
-                  </div>
-                )
-              )}
-              <div className="min-w-0 flex-1">
-                <h2 className="font-display text-lg font-semibold text-ink">
-                  {title}
-                </h2>
-                {description && (
-                  <p className="mt-0.5 text-sm text-ink-muted">{description}</p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-ink/[0.05] hover:text-ink focus-ring"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              {children}
-            </div>
-
-            {footer && (
-              <div className="flex items-center justify-end gap-2 border-t border-line bg-paper/50 px-6 py-4">
-                {footer}
-              </div>
-            )}
-          </motion.div>
-        </motion.div>
+    <motion.div
+      className={cn(
+        'fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4',
+        // Пока доигрывает закрытие, кликам мешать нельзя.
+        !open && 'pointer-events-none',
       )}
-    </AnimatePresence>,
+      initial={{ opacity: 0 }}
+      animate={{ opacity: open ? 1 : 0 }}
+      transition={{ duration: CLOSE_MS / 1000 }}
+    >
+      <div
+        className="absolute inset-0 bg-ink/40 backdrop-blur-[3px]"
+        onClick={onClose}
+      />
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        initial={{ y: 40, opacity: 0, scale: 0.98 }}
+        animate={
+          open
+            ? { y: 0, opacity: 1, scale: 1 }
+            : { y: 24, opacity: 0, scale: 0.98 }
+        }
+        transition={
+          open
+            ? { type: 'spring', stiffness: 320, damping: 30 }
+            : { duration: CLOSE_MS / 1000 }
+        }
+        className={cn(
+          'relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl border border-line bg-surface shadow-lift sm:rounded-3xl',
+          sizes[size],
+        )}
+      >
+        <div className="flex items-start gap-3 border-b border-line px-6 py-5">
+          {logo ? (
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
+              <img
+                src={logo}
+                alt=""
+                className="h-full w-full object-contain p-1"
+              />
+            </span>
+          ) : (
+            Icon && (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-900">
+                <Icon size={20} strokeWidth={2} />
+              </div>
+            )
+          )}
+          <div className="min-w-0 flex-1">
+            <h2 className="font-display text-lg font-semibold text-ink">
+              {title}
+            </h2>
+            {description && (
+              <p className="mt-0.5 text-sm text-ink-muted">{description}</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-ink/[0.05] hover:text-ink focus-ring"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          {children}
+        </div>
+
+        {footer && (
+          <div className="flex items-center justify-end gap-2 border-t border-line bg-paper/50 px-6 py-4">
+            {footer}
+          </div>
+        )}
+      </motion.div>
+    </motion.div>,
     document.body,
   )
 }
