@@ -16,7 +16,7 @@ const SEED_CREATED_AT = new Map(CAMPAIGNS.map((c) => [c.id, c.createdAt]))
 
 // Ключ версионируем: при смене набора демо-кампаний старая база в localStorage
 // заменяется свежим сидом.
-const DB_KEY = 'bloom.db.v11'
+const DB_KEY = 'bloom.db.v12'
 // При смене версии демо-кампании догоняют сид: статусы воронки и условия
 // договора. Заполненное руками не трогаем — дописываем только пустые поля.
 const CAMPAIGN_STATUS_LAYOUT_VERSION = 6

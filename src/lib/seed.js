@@ -287,7 +287,7 @@ const CAMPAIGN_BASE = [
     objective: 'conversions',
     budget: 500000000,
     spent: 300000000,
-    startDate: '2026-06-01',
+    startDate: '2026-08-01',
     endDate: '2026-08-31',
     channelIds: ['ch_prime', 'ch_webvision', 'ch_social'],
     impressions: 9840000,
@@ -440,8 +440,8 @@ const CAMPAIGN_BASE = [
     objective: 'conversions',
     budget: 0,
     spent: 0,
-    startDate: '2026-09-01',
-    endDate: '2026-10-31',
+    startDate: '2026-08-18',
+    endDate: '2026-08-31',
     channelIds: ['ch_webvision', 'ch_social'],
     impressions: 0,
     clicks: 0,
@@ -451,14 +451,14 @@ const CAMPAIGN_BASE = [
   },
   {
     id: 'cmp_1011',
-    name: 'Стиральные машины — осенний старт',
+    name: 'Стиральные машины — старт продаж',
     advertiserId: 'adv_artel',
     status: 'reviewing',
     objective: 'traffic',
     budget: 0,
     spent: 0,
-    startDate: '2026-09-15',
-    endDate: '2026-11-15',
+    startDate: '2026-08-20',
+    endDate: '2026-08-31',
     channelIds: ['ch_mobile'],
     impressions: 0,
     clicks: 0,
@@ -468,14 +468,14 @@ const CAMPAIGN_BASE = [
   },
   {
     id: 'cmp_1012',
-    name: 'Телевизоры Artel — новогодняя серия',
+    name: 'Телевизоры Artel — большой экран',
     advertiserId: 'adv_artel',
     status: 'completed',
     objective: 'awareness',
     budget: 300000000,
     spent: 100000000,
-    startDate: '2026-01-10',
-    endDate: '2026-03-10',
+    startDate: '2026-08-01',
+    endDate: '2026-08-07',
     channelIds: ['ch_potok', 'ch_prime'],
     impressions: 8600000,
     clicks: 121000,
@@ -910,12 +910,12 @@ const CAMPAIGN_BASE = [
 ]
 
 /**
- * Помесячные кампании Artel: на каждый месяц с января по август приходится
- * ровно 4 кампании. Добор считаем с учётом двух кампаний из CAMPAIGN_BASE,
- * которые тянутся через несколько месяцев: «Телевизоры» закрывают янв–март,
- * «Кондиционеры» — июнь–август.
+ * Заказы Artel: все кампании бренда идут в текущем месяце (август 2026) —
+ * по нему в списке открывается наполненная таблица заказов. Вместе с
+ * четырьмя кампаниями из CAMPAIGN_BASE их получается 30.
  */
-const ARTEL_MONTHLY_FILL = [3, 3, 3, 4, 4, 3, 3, 3]
+const ARTEL_ORDERS = 26
+const ARTEL_MONTH = '2026-08'
 
 const ARTEL_PRODUCTS = [
   'Холодильники',
@@ -928,15 +928,11 @@ const ARTEL_PRODUCTS = [
   'Смартфоны',
 ]
 
-const MONTH_NAMES = [
-  'январь',
-  'февраль',
-  'март',
-  'апрель',
-  'май',
-  'июнь',
-  'июль',
-  'август',
+const ARTEL_OFFERS = [
+  'летняя акция',
+  'августовский завоз',
+  'трейд-ин',
+  'скидка недели',
 ]
 
 const MONTHLY_OBJECTIVES = ['awareness', 'traffic', 'conversions', 'reach']
@@ -949,47 +945,51 @@ const MONTHLY_CHANNELS = [
 
 const pad = (n) => String(n).padStart(2, '0')
 
-/** Кампания живёт внутри своего месяца — так вкладка месяца считает её один раз. */
-function artelMonthlyCampaign(month, slot, index) {
-  const lastDay = new Date(2026, month + 1, 0).getDate()
-  const startDay = 1 + slot * 7
-  const endDay = Math.min(startDay + 13, lastDay)
-  const startDate = `2026-${pad(month + 1)}-${pad(startDay)}`
-  const endDate = `2026-${pad(month + 1)}-${pad(endDay)}`
-  // Август — текущий месяц: что уже идёт, то активно, поздний старт ещё на
-  // рассмотрении. Всё, что раньше, — завершено.
-  const status =
-    month < 7 ? 'completed' : startDay <= 10 ? 'active' : 'reviewing'
+/**
+ * Заказ внутри текущего месяца. Статус согласован с датами: что закрылось
+ * в начале месяца — завершено, что идёт сейчас — активно, поздний старт —
+ * ещё на рассмотрении.
+ */
+function artelOrder(index) {
+  const status = ['completed', 'active', 'reviewing'][index % 3]
+  const [startDay, endDay] =
+    status === 'completed'
+      ? [1 + (index % 4), 5 + (index % 4)]
+      : status === 'active'
+        ? [1 + (index % 6), 24 + (index % 8)]
+        : [12 + (index % 8), 31]
   const planned = status === 'reviewing'
-  const budget = planned ? 0 : (120 + ((month * 7 + slot * 13) % 9) * 30) * 1e6
-  const ratio = status === 'completed' ? 0.7 + ((month + slot) % 4) * 0.07 : 0.4
+  const budget = planned ? 0 : (120 + ((index * 7) % 9) * 30) * 1e6
+  const ratio = status === 'completed' ? 0.7 + (index % 4) * 0.07 : 0.4
   const spent = Math.round((budget * ratio) / 1e6) * 1e6
   const impressions = Math.round(spent / 12)
   const clicks = Math.round(impressions / 70)
 
   return {
     id: `cmp_2${pad(index + 1).padStart(3, '0')}`,
-    name: `${ARTEL_PRODUCTS[(month * 4 + slot) % ARTEL_PRODUCTS.length]} Artel — ${MONTH_NAMES[month]}`,
+    name: `${ARTEL_PRODUCTS[index % ARTEL_PRODUCTS.length]} Artel — ${
+      ARTEL_OFFERS[Math.floor(index / ARTEL_PRODUCTS.length) % ARTEL_OFFERS.length]
+    }`,
     advertiserId: 'adv_artel',
     status,
-    objective: MONTHLY_OBJECTIVES[(month + slot) % MONTHLY_OBJECTIVES.length],
+    objective: MONTHLY_OBJECTIVES[index % MONTHLY_OBJECTIVES.length],
     budget,
     spent,
-    startDate,
-    endDate,
-    channelIds: [...MONTHLY_CHANNELS[(month + slot) % MONTHLY_CHANNELS.length]],
+    startDate: `${ARTEL_MONTH}-${pad(startDay)}`,
+    endDate: `${ARTEL_MONTH}-${pad(endDay)}`,
+    channelIds: [...MONTHLY_CHANNELS[index % MONTHLY_CHANNELS.length]],
     impressions,
     clicks,
     conversions: Math.round(clicks / 28),
     creativeUrl: '/creatives/setanta-2.mp4',
-    // Заявку заводят за месяц до старта.
-    createdAt: `${month === 0 ? 2025 : 2026}-${pad(month === 0 ? 12 : month)}-20T${pad(9 + slot)}:15:00`,
+    // Заявки завели в июле, перед стартом месяца.
+    createdAt: `2026-07-${pad(5 + (index % 20))}T${pad(9 + (index % 8))}:15:00`,
   }
 }
 
-const ARTEL_MONTHLY = ARTEL_MONTHLY_FILL.flatMap((fill, month) =>
-  Array.from({ length: fill }, (_, slot) => ({ month, slot })),
-).map(({ month, slot }, index) => artelMonthlyCampaign(month, slot, index))
+const ARTEL_MONTHLY = Array.from({ length: ARTEL_ORDERS }, (_, index) =>
+  artelOrder(index),
+)
 
 // Каждая кампания привязана к одному из договоров своего бренда — условия
 // (пакет, лиги, юр. лицо, срок, оплата) берём прямо из него.

@@ -16,7 +16,7 @@ export const MONTHS_SHORT = [
   'Дек',
 ]
 
-const MONTHS_FULL = [
+export const MONTHS_FULL = [
   'Январь',
   'Февраль',
   'Март',
@@ -80,7 +80,7 @@ export function MonthTabs({
   const currentMonth = now.getMonth()
 
   return (
-    <div className={cn('flex flex-wrap items-center gap-2', className)}>
+    <div className={cn('flex  items-center gap-2', className)}>
       <div className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-line bg-surface p-[4.5px]">
         <button
           type="button"

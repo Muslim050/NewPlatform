@@ -40,40 +40,7 @@ import { Button } from "@/components/ui/Button.jsx";
 import { Card } from "@/components/ui/Card.jsx";
 import { Progress } from "@/components/ui/Progress.jsx";
 import { SegmentTabs } from "@/components/ui/Tabs.jsx";
-import {
-  CampaignTabs,
-  EditableSpotTable,
-} from "@/components/campaigns/CampaignMediaTabs.jsx";
-import { SpotLogTable } from "@/components/campaigns/SpotLogTable.jsx";
-import {
-  ChannelSummaryReport,
-  SocialMediaReport,
-  TotalStatisticsReport,
-} from "@/components/campaigns/CampaignReportPanels.jsx";
-
-// Логи выходов: вкладка → лист в загружаемом отчёте.
-const SPOT_LOGS = {
-  ss1uzb: {
-    sheetName: "SS1 UZB",
-    title: "SS1 UZB",
-    subtitle: "Setanta Sports 1 · выходы роликов на UZB TV",
-  },
-  ss2uzb: {
-    sheetName: "SS2 UZB",
-    title: "SS2 UZB",
-    subtitle: "Setanta Sports 2 · выходы роликов на UZB TV",
-  },
-  promo1: {
-    sheetName: "Event Promo SS 1",
-    title: "Event Promo SS1",
-    subtitle: "Setanta Sports 1 · промо событий в эфире",
-  },
-  promo2: {
-    sheetName: "Event Promo SS2",
-    title: "Event Promo SS2",
-    subtitle: "Setanta Sports 2 · промо событий в эфире",
-  },
-};
+import { MediaReport } from "@/components/campaigns/MediaReport.jsx";
 
 const METRICS = {
   spent: { label: "Расход", color: "#FFD106", format: formatMoneyCompact },
@@ -104,7 +71,6 @@ export default function CampaignStats() {
   const campaigns = useScopedCampaigns();
   const { advertiserById, channelById } = useData();
   const [metric, setMetric] = useState("spent");
-  const [activeTab, setActiveTab] = useState("spot1");
 
   const campaign = campaigns.find((item) => item.id === campaignId);
   if (!campaign) return <Navigate to="/app/campaigns" replace />;
@@ -167,19 +133,9 @@ export default function CampaignStats() {
         </div>
       </section>
 
-      {hasMediaTables && (
-        <CampaignTabs value={activeTab} onChange={setActiveTab} />
-      )}
-
-      {hasMediaTables && SPOT_LOGS[activeTab] ? (
-        <SpotLogTable logKey={activeTab} {...SPOT_LOGS[activeTab]} />
-      ) : hasMediaTables && activeTab === "stats" ? (
-        <TotalStatisticsReport />
-      ) : hasMediaTables && activeTab === "channels" ? (
-        <ChannelSummaryReport />
-      ) : hasMediaTables && activeTab === "social" ? (
-        <SocialMediaReport />
-      ) : !hasMediaTables ? (
+      {hasMediaTables ? (
+        <MediaReport />
+      ) : (
         <>
           <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">
             <div className="pointer-events-none absolute -right-20 -top-28 h-64 w-64 rounded-full border border-indigo-300/60" />
@@ -341,8 +297,6 @@ export default function CampaignStats() {
             </Card>
           </div>
         </>
-      ) : (
-        <EditableSpotTable key={activeTab} tableKey={activeTab} />
       )}
 
       {hasMediaTables && (

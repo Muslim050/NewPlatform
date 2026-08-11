@@ -30,7 +30,8 @@ import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { CampaignForm } from '@/components/forms/CampaignForm.jsx'
 import { BrandTabs } from '@/components/campaigns/BrandTabs.jsx'
-import { MonthTabs } from '@/components/campaigns/MonthTabs.jsx'
+import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
+import { MediaReport } from '@/components/campaigns/MediaReport.jsx'
 import { MoneyPopover } from '@/components/campaigns/MoneyPopover.jsx'
 import { ContractModal } from '@/components/campaigns/ContractModal.jsx'
 import { cn } from '@/lib/cn.js'
@@ -84,6 +85,12 @@ function isPassedMonth(year, month) {
     year < now.getFullYear() ||
     (year === now.getFullYear() && month <= now.getMonth())
   )
+}
+
+/** Текущий месяц ещё идёт: по нему показываем список кампаний, а не отчёт. */
+function isCurrentMonth(year, month) {
+  const now = new Date()
+  return year === now.getFullYear() && month === now.getMonth()
 }
 
 /** Годы, которые задевают кампании, плюс текущий — по ним листаем месяцы. */
@@ -228,9 +235,10 @@ export default function Campaigns() {
     : years.includes(currentYear)
       ? currentYear
       : years[years.length - 1]
-  // Ненаступившие месяцы пустые: ни счётчика, ни фильтра.
+  // Счётчик заказов есть только у текущего месяца: в закрытых открывается
+  // отчёт, а не список, в будущих кампаний ещё нет.
   const monthCounts = MONTHS.map((m) =>
-    isPassedMonth(activeYear, m)
+    isCurrentMonth(activeYear, m)
       ? contractCampaigns.filter((c) => inMonth(c, activeYear, m)).length
       : 0,
   )
@@ -238,6 +246,9 @@ export default function Campaigns() {
     showMonths && month != null && isPassedMonth(activeYear, month)
       ? month
       : null
+  // Отчёт открываем только по закрытым месяцам; за текущий — список кампаний.
+  const showMonthReport =
+    activeMonth != null && !isCurrentMonth(activeYear, activeMonth)
 
   const scoped =
     activeMonth == null
@@ -421,6 +432,8 @@ export default function Campaigns() {
         />
       )}
 
+      {/* Выбран закрытый месяц — вместо списка кампаний показываем статистику */}
+      {!showMonthReport && (
       <Card>
         {filtered.length === 0 ? (
           <EmptyState
@@ -715,6 +728,19 @@ export default function Campaigns() {
           </>
         )}
       </Card>
+      )}
+
+      {showMonthReport && (
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <BarChart3 size={18} className="text-indigo-800" />
+            <h2 className="font-display text-base font-semibold text-ink">
+              Статистика за {MONTHS_FULL[activeMonth].toLowerCase()} {activeYear}
+            </h2>
+          </div>
+          <MediaReport key={`${activeYear}-${activeMonth}`} />
+        </section>
+      )}
 
       <ContractModal
         open={!!contractModal}
