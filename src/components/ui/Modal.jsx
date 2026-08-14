@@ -88,7 +88,10 @@ export function Modal({
         )}
       >
         <div className="flex items-start gap-3 border-b border-line px-6 py-5">
-          {logo ? (
+          {/* logo — либо ссылка на картинку бренда, либо готовый знак. */}
+          {logo && typeof logo !== 'string' ? (
+            <span className="flex shrink-0 items-center">{logo}</span>
+          ) : logo ? (
             <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
               <img
                 src={logo}

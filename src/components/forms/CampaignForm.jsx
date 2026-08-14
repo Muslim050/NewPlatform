@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  Download,
   ExternalLink,
   FileText,
   Film,
-  Megaphone,
   Paperclip,
   X,
 } from 'lucide-react'
@@ -15,10 +15,10 @@ import { Button } from '@/components/ui/Button.jsx'
 import { Field, Input, Select } from '@/components/ui/Field.jsx'
 import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { CreativeLink } from '@/components/campaigns/CreativePlayer.jsx'
+import { Logo } from '@/components/Logo.jsx'
 import { LEAGUES, PACKAGES, STATUS } from '@/lib/metrics.js'
 import { cn } from '@/lib/cn.js'
 
-const DEFAULT_CREATIVE_URL = '/creatives/setanta-2.mp4'
 // Договор храним прямо в базе (localStorage), поэтому ограничиваем размер.
 const MAX_CONTRACT_SIZE = 2 * 1024 * 1024
 // По умолчанию оплату ставим на конец августа текущего года.
@@ -32,7 +32,8 @@ const emptyForm = {
   startDate: '',
   endDate: '',
   channelIds: [],
-  creativeUrl: DEFAULT_CREATIVE_URL,
+  // Ролик приходит из выбранной рекламной кампании — дефолта нет.
+  creativeUrl: '',
   creativeName: '',
   contractNumber: '',
   package: '',
@@ -76,6 +77,9 @@ export function CampaignForm({ open, onClose, initial }) {
   const legalNameOf = (advertiserId) => advertiserOf(advertiserId)?.legalName || ''
   // Договоры бренда — из них выбирается номер и подтягиваются условия.
   const contracts = advertiserOf(form.advertiserId)?.contracts ?? []
+  const selectedContract = contracts.find(
+    (c) => c.number === form.contractNumber,
+  )
 
   /** Выбрали договор — переносим его условия в кампанию. */
   const applyContract = (number) => {
@@ -83,6 +87,7 @@ export function CampaignForm({ open, onClose, initial }) {
     setForm((f) => ({
       ...f,
       contractNumber: number,
+      // Кампанию из договора не подставляем — её выбирают вручную.
       ...(contract
         ? {
             package: contract.package || '',
@@ -108,7 +113,7 @@ export function CampaignForm({ open, onClose, initial }) {
         startDate: initial.startDate,
         endDate: initial.endDate,
         channelIds: [...initial.channelIds],
-        creativeUrl: initial.creativeUrl || DEFAULT_CREATIVE_URL,
+        creativeUrl: initial.creativeUrl || '',
         creativeName: initial.creativeName || '',
         contractNumber: initial.contractNumber || '',
         package: initial.package || '',
@@ -133,6 +138,21 @@ export function CampaignForm({ open, onClose, initial }) {
   }, [open, initial, isAdmin, user])
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+
+  /** Выбрали рекламную кампанию — вместе с ней подтягивается её ролик. */
+  const selectCampaign = (name) => {
+    const creative =
+      name && name === selectedContract?.campaignName
+        ? selectedContract.creative
+        : null
+    setForm((f) => ({
+      ...f,
+      name,
+      ...(creative
+        ? { creativeUrl: creative.url, creativeName: creative.name }
+        : null),
+    }))
+  }
 
   // Смена бренда подтягивает его юр. лицо, но не затирает правку руками.
   const setAdvertiser = (advertiserId) =>
@@ -218,12 +238,12 @@ export function CampaignForm({ open, onClose, initial }) {
     <Modal
       open={open}
       onClose={onClose}
-      icon={Megaphone}
+      logo={<Logo size={40} withWord={false} />}
       title={editing ? 'Редактировать кампанию' : 'Новая кампания'}
       description={
         editing
           ? 'Обновите параметры кампании.'
-          : 'Заполните параметры запуска. Метрики появятся после старта.'
+          : 'Заполните параметры запуска кампаний.'
       }
       size="lg"
       footer={
@@ -238,13 +258,92 @@ export function CampaignForm({ open, onClose, initial }) {
       }
     >
       <div className="space-y-4">
-        <Field label="Название" required error={errors.name}>
-          <Input
-            value={form.name}
-            onChange={(e) => set('name', e.target.value)}
-            placeholder="Например, Летняя распродажа"
-          />
-        </Field>
+        {/* Период кампании идёт первым — с него начинают заполнять форму. */}
+        <div>
+          <p className="mb-2 text-[13px] font-medium text-ink-soft">
+            Период кампании <span className="text-danger">*</span>
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Начало периода" required error={errors.startDate}>
+              <Input
+                type="date"
+                value={form.startDate}
+                max={form.endDate || undefined}
+                onChange={(e) => set('startDate', e.target.value)}
+              />
+            </Field>
+            <Field label="Окончание периода" required error={errors.endDate}>
+              <Input
+                type="date"
+                value={form.endDate}
+                min={form.startDate || undefined}
+                onChange={(e) => set('endDate', e.target.value)}
+              />
+            </Field>
+          </div>
+        </div>
+
+        {/* Сначала договор, затем рекламная кампания из него: с ней в форму
+            приходят ролик, пакет, лиги и срок. */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Номер договора"
+            hint={
+              contracts.length
+                ? undefined
+                : 'У бренда нет договоров — добавьте их в карточке рекламодателя.'
+            }
+          >
+            {contracts.length ? (
+              <Select
+                value={form.contractNumber}
+                onChange={(e) => applyContract(e.target.value)}
+              >
+                <option value="">— выберите договор —</option>
+                {contracts.map((contract) => (
+                  <option key={contract.id} value={contract.number}>
+                    {contract.number}
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <Input
+                value={form.contractNumber}
+                onChange={(e) => set('contractNumber', e.target.value)}
+                placeholder="Например, Д-2026/114"
+              />
+            )}
+          </Field>
+
+          <Field
+            label="Рекламная кампания"
+            required
+            error={errors.name}
+            hint={
+              selectedContract && !selectedContract.campaignName
+                ? 'В договоре кампания не указана — впишите название.'
+                : undefined
+            }
+          >
+            {selectedContract?.campaignName ? (
+              <Select
+                value={form.name}
+                onChange={(e) => selectCampaign(e.target.value)}
+              >
+                <option value="">— выберите кампанию —</option>
+                <option value={selectedContract.campaignName}>
+                  {selectedContract.campaignName}
+                </option>
+              </Select>
+            ) : (
+              <Input
+                value={form.name}
+                onChange={(e) => set('name', e.target.value)}
+                placeholder="Например, Летняя распродажа"
+              />
+            )}
+          </Field>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           {isAdmin && (
@@ -281,98 +380,9 @@ export function CampaignForm({ open, onClose, initial }) {
 
         </div>
 
-        <div>
-          <p className="mb-2 text-[13px] font-medium text-ink-soft">
-            Период кампании <span className="text-danger">*</span>
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Начало периода" required error={errors.startDate}>
-              <Input
-                type="date"
-                value={form.startDate}
-                max={form.endDate || undefined}
-                onChange={(e) => set('startDate', e.target.value)}
-              />
-            </Field>
-            <Field
-              label="Окончание периода"
-              required
-              error={errors.endDate}
-            >
-              <Input
-                type="date"
-                value={form.endDate}
-                min={form.startDate || undefined}
-                onChange={(e) => set('endDate', e.target.value)}
-              />
-            </Field>
-          </div>
-        </div>
-
-        <div>
-          <p className="mb-2 text-[13px] font-medium text-ink-soft">
-            Рекламный ролик
-          </p>
-          <div className="flex items-center gap-2">
-            <FilePicker
-              className="min-w-0 flex-1"
-              accept="video/*"
-              emptyLabel="Выбрать ролик"
-              name={form.creativeName || fileNameFromUrl(form.creativeUrl)}
-              url={form.creativeUrl}
-              onPick={(picked) =>
-                setForm((f) => ({
-                  ...f,
-                  creativeUrl: picked?.url || '',
-                  creativeName: picked?.name || '',
-                }))
-              }
-            />
-            <CreativeLink
-              url={isValidUrl(form.creativeUrl) ? form.creativeUrl : ''}
-            />
-          </div>
-          <p className="mt-1.5 text-xs text-ink-muted">
-            Видеофайл с компьютера — по клику откроется выбор файла.
-          </p>
-        </div>
-
-        {/* Условия договора — одинаковые при создании и редактировании. */}
-        <div className="space-y-4 rounded-2xl ">
-          <div className="grid gap-4 sm:grid-cols-2">
-            {/* Номер берём из договоров бренда; если их нет — вводится руками. */}
-            <Field
-              label="Номер договора"
-              hint={
-                contracts.length
-                  ? 'Условия подставятся из выбранного договора.'
-                  : 'У бренда нет договоров — добавьте их в карточке рекламодателя.'
-              }
-            >
-              {contracts.length ? (
-                <Select
-                  value={form.contractNumber}
-                  onChange={(e) => applyContract(e.target.value)}
-                >
-                  <option value="">— выберите договор —</option>
-                  {contracts.map((contract) => (
-                    <option key={contract.id} value={contract.number}>
-                      {contract.number}
-                      {contract.package
-                        ? ` · ${PACKAGES[contract.package]?.label ?? ''}`
-                        : ''}
-                    </option>
-                  ))}
-                </Select>
-              ) : (
-                <Input
-                  value={form.contractNumber}
-                  onChange={(e) => set('contractNumber', e.target.value)}
-                  placeholder="Например, Д-2026/114"
-                />
-              )}
-            </Field>
-            <Field label="Лиги" hint="Можно выбрать несколько.">
+        {/* Лиги и ролик — одной строкой. */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Лиги">
             <MultiSelect
               options={LEAGUES}
               value={form.leagues}
@@ -380,16 +390,48 @@ export function CampaignForm({ open, onClose, initial }) {
               placeholder="— не выбраны —"
             />
           </Field>
-            
-          </div>
 
-          <Field label="Наименование юр. лица">
-            <Input
-              value={form.legalName}
-              onChange={(e) => set('legalName', e.target.value)}
-              placeholder='ООО «Пример»'
-            />
-          </Field>
+          <div>
+            <p className="mb-1.5 text-[13px] font-medium text-ink-soft">
+              Рекламный ролик
+            </p>
+            <div className="flex items-center gap-2">
+              <FilePicker
+                className="min-w-0 flex-1"
+                accept="video/*"
+                emptyLabel="Выбрать ролик"
+                // Рекламодателю ролик приходит из договора — убрать его нельзя.
+                removable={isAdmin}
+                name={form.creativeName || fileNameFromUrl(form.creativeUrl)}
+                url={form.creativeUrl}
+                onPick={(picked) =>
+                  setForm((f) => ({
+                    ...f,
+                    creativeUrl: picked?.url || '',
+                    creativeName: picked?.name || '',
+                  }))
+                }
+              />
+              <CreativeLink
+                url={isValidUrl(form.creativeUrl) ? form.creativeUrl : ''}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Условия договора — одинаковые при создании и редактировании. */}
+        <div className="space-y-4 rounded-2xl ">
+
+          {/* Юр. лицо ведёт админ — рекламодателю его не показываем. */}
+          {isAdmin && (
+            <Field label="Наименование юр. лица">
+              <Input
+                value={form.legalName}
+                onChange={(e) => set('legalName', e.target.value)}
+                placeholder='ООО «Пример»'
+              />
+            </Field>
+          )}
 
          
 
@@ -398,11 +440,13 @@ export function CampaignForm({ open, onClose, initial }) {
               Срок договора
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
+              {/* Рекламодателю срок подставляется из договора и не правится. */}
               <Field label="Начало">
                 <Input
                   type="date"
                   value={form.contractStart}
                   max={form.contractEnd || undefined}
+                  disabled={!isAdmin}
                   onChange={(e) => set('contractStart', e.target.value)}
                 />
               </Field>
@@ -411,22 +455,16 @@ export function CampaignForm({ open, onClose, initial }) {
                   type="date"
                   value={form.contractEnd}
                   min={form.contractStart || undefined}
+                  disabled={!isAdmin}
                   onChange={(e) => set('contractEnd', e.target.value)}
                 />
               </Field>
             </div>
           </div>
 
-          <Field label="Сроки оплаты" hint="Дата, до которой нужно внести оплату.">
-            <Input
-              type="date"
-              value={form.paymentDate}
-              onChange={(e) => set('paymentDate', e.target.value)}
-            />
-          </Field>
-
           <ContractFile
             file={form.contractFile}
+            readOnly={!isAdmin}
             onChange={(v) => set('contractFile', v)}
           />
         </div>
@@ -440,7 +478,15 @@ export function CampaignForm({ open, onClose, initial }) {
  * Небольшие файлы кладём в базу как data-URL, крупные держим ссылкой на сессию —
  * иначе они не помещаются в localStorage.
  */
-function FilePicker({ name, onPick, accept, emptyLabel, className }) {
+function FilePicker({
+  name,
+  onPick,
+  accept,
+  emptyLabel,
+  className,
+  // Ролик из договора убирать нельзя — крестик показываем только админу.
+  removable = true,
+}) {
   const inputRef = useRef(null)
   const toast = useToast()
 
@@ -487,7 +533,7 @@ function FilePicker({ name, onPick, accept, emptyLabel, className }) {
           <Paperclip size={16} className="shrink-0 text-ink-muted" />
         )}
         <span className="min-w-0 flex-1 truncate">{name || emptyLabel}</span>
-        {name && (
+        {name && removable && (
           <span
             role="button"
             tabIndex={-1}
@@ -507,8 +553,11 @@ function FilePicker({ name, onPick, accept, emptyLabel, className }) {
   )
 }
 
-/** Загрузка скана договора — файл кладём в базу как data-URL. */
-function ContractFile({ file, onChange }) {
+/**
+ * Загрузка скана договора — файл кладём в базу как data-URL.
+ * readOnly — режим рекламодателя: договор грузит админ, здесь только скачать.
+ */
+function ContractFile({ file, onChange, readOnly = false }) {
   const inputRef = useRef(null)
   const toast = useToast()
 
@@ -526,6 +575,33 @@ function ContractFile({ file, onChange }) {
       onChange({ name: picked.name, url: String(reader.result) })
     reader.onerror = () => toast.error('Не удалось прочитать файл')
     reader.readAsDataURL(picked)
+  }
+
+  if (readOnly) {
+    return (
+      <div>
+        <p className="mb-2 text-[13px] font-medium text-ink-soft">
+          Файл договора
+        </p>
+        {file ? (
+          <a
+            href={file.url}
+            download={file.name}
+            className="flex w-full items-center gap-2 rounded-xl border border-line bg-paper/55 px-3 py-3 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+            title={file.name}
+          >
+            <FileText size={16} className="shrink-0 text-indigo-800" />
+            <span className="min-w-0 flex-1 truncate">{file.name}</span>
+            <Download size={15} className="shrink-0 text-indigo-800" />
+            Скачать договор
+          </a>
+        ) : (
+          <p className="rounded-xl border border-dashed border-line px-3 py-3 text-center text-[13px] text-ink-muted">
+            Договор ещё не загружен — его добавит менеджер.
+          </p>
+        )}
+      </div>
+    )
   }
 
   return (

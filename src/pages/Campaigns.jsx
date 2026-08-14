@@ -16,11 +16,13 @@ import {
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useData } from '@/context/DataContext.jsx'
 import { useScopedCampaigns } from '@/lib/useScope.js'
+import { statusLabel, timeProgress } from '@/lib/metrics.js'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import {
   formatDateNumeric,
   formatMoneyCompact,
+  formatPct,
 } from '@/lib/format.js'
 import { Card } from '@/components/ui/Card.jsx'
 import { Button } from '@/components/ui/Button.jsx'
@@ -35,6 +37,7 @@ import { MediaReport } from '@/components/campaigns/MediaReport.jsx'
 import { MoneyPopover } from '@/components/campaigns/MoneyPopover.jsx'
 import { ContractModal } from '@/components/campaigns/ContractModal.jsx'
 import { cn } from '@/lib/cn.js'
+import { uid } from '@/lib/id.js'
 import {
   CampaignPreviewModal,
   CampaignStatusPill,
@@ -44,10 +47,11 @@ import {
 // действий — только «Открыть». У админа колонок больше, поэтому промежутки уже.
 // Колонка «Статистика» временно скрыта, поэтому её ширины (76px и 88px)
 // убраны из шаблона — при возврате колонки вернуть их перед «Действиями».
+// Первая колонка тянется — иначе справа от «Действий» остаётся пустое поле.
 const GRID_ADMIN =
-  'md:gap-2.5 md:grid-cols-[minmax(180px,1fr)_146px_112px_96px_124px_96px_88px] 2xl:grid-cols-[minmax(200px,360px)_150px_132px_104px_140px_100px_96px]'
+  'md:gap-2.5 md:grid-cols-[minmax(180px,1fr)_146px_112px_96px_124px_88px] 2xl:grid-cols-[minmax(200px,1fr)_150px_132px_104px_140px_96px]'
 const GRID_ADVERTISER =
-  'md:gap-3 md:grid-cols-[minmax(180px,1fr)_150px_212px_110px_100px_56px] 2xl:grid-cols-[minmax(200px,340px)_164px_212px_120px_110px_56px]'
+  'md:gap-3 md:grid-cols-[minmax(180px,1fr)_150px_112px_110px_124px_56px] 2xl:grid-cols-[minmax(200px,1fr)_164px_132px_120px_140px_56px]'
 
 // Порядок группировки строк — как в фильтрах над таблицей.
 const STATUS_ORDER = {
@@ -56,6 +60,15 @@ const STATUS_ORDER = {
   reviewing: 2,
   active: 3,
   completed: 4,
+  awaiting_payment: 5,
+}
+
+// Метка статуса перед названием: цветная полоска у кампаний, по которым
+// ждут действия. Пульсирует, чтобы такие строки было видно сразу.
+const STATUS_MARKS = {
+  sent: 'bg-sky-500',
+  reviewing: 'bg-orange-500',
+  awaiting_payment: 'bg-red-500',
 }
 
 const ALL_BRANDS = 'all'
@@ -182,9 +195,10 @@ export default function Campaigns() {
   // Правка сумм в поповере у ячейки «Бюджет / Прибыль» (только админ).
   const [money, setMoney] = useState(null)
 
-  // Рекламодатель не видит бюджет со статистикой и не управляет кампаниями
-  // из таблицы.
-  const showBudget = !isAdvertiser
+  // Бюджет виден всем, но правит суммы только админ: рекламодателю по клику
+  // открывается история выплат.
+  const showBudget = true
+  const canEditMoney = canEdit && !isAdvertiser
   // Колонка «Статистика» временно скрыта и у админа.
   // const showStats = !isAdvertiser
   const showStats = false
@@ -263,6 +277,8 @@ export default function Campaigns() {
     reviewing: scoped.filter((c) => c.status === 'reviewing').length,
     active: scoped.filter((c) => c.status === 'active').length,
     completed: scoped.filter((c) => c.status === 'completed').length,
+    awaiting_payment: scoped.filter((c) => c.status === 'awaiting_payment')
+      .length,
   }
 
   const query = q.trim().toLowerCase()
@@ -287,10 +303,36 @@ export default function Campaigns() {
       })
     : []
 
-  const saveMoney = ({ budget, spent }) => {
-    update('campaigns', money.campaign.id, { budget, spent })
-    setMoney(null)
-    toast.success('Суммы обновлены')
+  // Кампанию для поповера берём из актуального списка: он остаётся открытым
+  // после сохранения и должен показывать свежие суммы и историю.
+  const moneyCampaign = money
+    ? campaigns.find((c) => c.id === money.id) ?? null
+    : null
+
+  const saveMoney = ({ budget, spent, amount, paidAt }) => {
+    const history = moneyCampaign.payments ?? []
+    // Поступление уходит в историю с выбранными датой и временем.
+    const payments = amount
+      ? [{ id: uid('pay'), amount, createdAt: paidAt }, ...history].sort(
+          (a, b) => (a.createdAt < b.createdAt ? 1 : -1),
+        )
+      : history
+    update('campaigns', moneyCampaign.id, { budget, spent, payments })
+    // Поповер намеренно не закрываем — можно внести следующее поступление.
+    toast.success(amount ? 'Поступление внесено' : 'Суммы обновлены')
+  }
+
+  /** Правка даты и времени уже внесённой выплаты. */
+  const editPayment = (paymentId, localValue) => {
+    if (!localValue) return
+    const createdAt = new Date(localValue)
+    if (Number.isNaN(createdAt.getTime())) return
+    const payments = (moneyCampaign.payments ?? []).map((payment) =>
+      payment.id === paymentId
+        ? { ...payment, createdAt: createdAt.toISOString() }
+        : payment,
+    )
+    update('campaigns', moneyCampaign.id, { payments })
   }
 
   const del = async (c) => {
@@ -352,6 +394,11 @@ export default function Campaigns() {
               value: 'completed',
               label: 'Завершенные',
               count: counts.completed,
+            },
+            {
+              value: 'awaiting_payment',
+              label: 'Ожидают оплату',
+              count: counts.awaiting_payment,
             },
           ]}
           />
@@ -461,7 +508,7 @@ export default function Campaigns() {
             <div
               className={cn(
                 'hidden items-center border-b border-line px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted md:grid',
-                showBudget ? GRID_ADMIN : GRID_ADVERTISER,
+                isAdvertiser ? GRID_ADVERTISER : GRID_ADMIN,
               )}
             >
               <span className="flex items-center gap-2.5">
@@ -472,11 +519,9 @@ export default function Campaigns() {
               <span >Период</span>
               <span>Номер договора</span>
               {showBudget && (
-                <span className="flex justify-center">Бюджет / Прибыль</span>
-              )}
-              <span>Сроки оплаты</span>
-              {showStats && (
-                <span className="flex justify-center">Статистика</span>
+                <span className="flex justify-center">
+                  {isAdvertiser ? 'Бюджет / Оплачено' : 'Бюджет / Прибыль'}
+                </span>
               )}
               <span className="text-center">Действия</span>
             </div>
@@ -490,13 +535,23 @@ export default function Campaigns() {
                     key={c.id}
                     className={cn(
                       'flex items-center gap-2.5 px-5 py-3.5 transition-colors hover:bg-ink/[0.015] md:grid',
-                      showBudget ? GRID_ADMIN : GRID_ADVERTISER,
+                      isAdvertiser ? GRID_ADVERTISER : GRID_ADMIN,
                     )}
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-2.5">
                       <span className="w-5 shrink-0 text-[12px] text-ink-muted tnum">
                         {index + 1}
                       </span>
+                      {/* Полоска после номера — статус кампании. */}
+                      {STATUS_MARKS[c.status] && (
+                        <span
+                          className={cn(
+                            'h-5 w-2.5 shrink-0 animate-pulse rounded-full',
+                            STATUS_MARKS[c.status],
+                          )}
+                          title={statusLabel(c.status)}
+                        />
+                      )}
                       {isAdmin && adv && (
                         <Avatar
                           name={adv.name}
@@ -533,52 +588,36 @@ export default function Campaigns() {
                     <div className="hidden sm:block md:w-auto">
                       <CampaignStatusPill
                         status={c.status}
-                        pacing={pacing}
+                        pacing={timeProgress(c)}
                         createdAt={c.createdAt}
                       />
                     </div>
 
+                    {/* Период — дата под датой: так колонка узкая и ничего
+                        не наезжает на номер договора. */}
                     <div className="hidden min-w-0 md:block">
-                      {isAdvertiser ? (
-                        <p
-                          className="flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-ink-soft tnum"
-                          title={`Период: ${formatDateNumeric(c.startDate)} — ${formatDateNumeric(c.endDate)}`}
-                        >
-                          <CalendarPlus
-                            size={13}
-                            className="shrink-0 text-emerald-600"
-                            aria-hidden="true"
-                          />
-                          {formatDateNumeric(c.startDate)}
-                          <span className="text-ink-muted">—</span>
-                          {formatDateNumeric(c.endDate)}
-                        </p>
-                      ) : (
-                        <>
-                          <p
-                            className="flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-ink-soft tnum"
-                            title={`Старт: ${formatDateNumeric(c.startDate)}`}
-                          >
-                            <CalendarPlus
-                              size={13}
-                              className="shrink-0 text-emerald-600"
-                              aria-hidden="true"
-                            />
-                            {formatDateNumeric(c.startDate)}
-                          </p>
-                          <p
-                            className="mt-1 flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-ink-soft tnum"
-                            title={`Финиш: ${formatDateNumeric(c.endDate)}`}
-                          >
-                            <CalendarCheck
-                              size={13}
-                              className="shrink-0 text-ink-muted"
-                              aria-hidden="true"
-                            />
-                            {formatDateNumeric(c.endDate)}
-                          </p>
-                        </>
-                      )}
+                      <p
+                        className="flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-ink-soft tnum"
+                        title={`Старт: ${formatDateNumeric(c.startDate)}`}
+                      >
+                        <CalendarPlus
+                          size={13}
+                          className="shrink-0 text-emerald-600"
+                          aria-hidden="true"
+                        />
+                        {formatDateNumeric(c.startDate)}
+                      </p>
+                      <p
+                        className="mt-1 flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-ink-soft tnum"
+                        title={`Финиш: ${formatDateNumeric(c.endDate)}`}
+                      >
+                        <CalendarCheck
+                          size={13}
+                          className="shrink-0 text-ink-muted"
+                          aria-hidden="true"
+                        />
+                        {formatDateNumeric(c.endDate)}
+                      </p>
                     </div>
 
                     <div className="hidden min-w-0 md:block">
@@ -600,18 +639,14 @@ export default function Campaigns() {
                       <div className="hidden md:block">
                         <button
                           type="button"
-                          disabled={c.status === 'completed' || !canEdit}
                           onClick={(e) =>
-                            setMoney({
-                              campaign: c,
-                              anchor: e.currentTarget.getBoundingClientRect(),
-                            })
+                            setMoney({ id: c.id, el: e.currentTarget })
                           }
                           title={
-                            !canEdit
-                              ? 'Бюджет и прибыль'
+                            !canEditMoney
+                              ? 'История выплат'
                               : c.status === 'completed'
-                                ? 'Завершённую кампанию менять нельзя'
+                                ? 'Завершённая кампания — только история выплат'
                                 : 'Изменить суммы и внести поступление'
                           }
                           className="group w-full rounded-lg px-1 py-0.5 text-left transition-colors enabled:hover:bg-ink/[0.04] disabled:cursor-default focus-ring"
@@ -623,7 +658,7 @@ export default function Campaigns() {
                             <span className="ml-auto font-medium text-ink tnum">
                               {formatMoneyCompact(c.spent)}
                             </span>
-                            {c.status !== 'completed' && canEdit && (
+                            {canEditMoney && c.status !== 'completed' && (
                               <Pencil
                                 size={12}
                                 aria-hidden="true"
@@ -631,34 +666,21 @@ export default function Campaigns() {
                               />
                             )}
                           </span>
-                          <Progress value={pacing} className="mt-1.5" />
+                          {/* Полоса про деньги: сколько из суммы уже оплачено. */}
+                          <Progress
+                            value={pacing}
+                            label={formatPct(pacing, 0)}
+                            className="mt-1.5"
+                          />
                         </button>
                       </div>
                     )}
 
-                    <div className="hidden min-w-0 md:block">
-                      {c.paymentDate ? (
-                        <p
-                          className="flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-ink-soft tnum"
-                          title={`Оплата до ${formatDateNumeric(c.paymentDate)}`}
-                        >
-                          <CalendarClock
-                            size={13}
-                            className="shrink-0 text-indigo-800"
-                            aria-hidden="true"
-                          />
-                          {formatDateNumeric(c.paymentDate)}
-                        </p>
-                      ) : (
-                        <span className="text-sm text-ink-muted" aria-hidden="true">
-                          —
-                        </span>
-                      )}
-                    </div>
-
                     {showStats && (
                       <div className="flex justify-center">
-                        {c.status === 'active' || c.status === 'completed' ? (
+                        {c.status === 'active' ||
+                        c.status === 'completed' ||
+                        c.status === 'awaiting_payment' ? (
                           <Button
                             variant="secondary"
                             size="sm"
@@ -693,19 +715,17 @@ export default function Campaigns() {
                       </Button>
                       {showActions && (
                         <>
-                        {/* Запущенную и завершённую кампанию править нельзя. */}
-                        {c.status !== 'active' && c.status !== 'completed' && (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="h-9 w-9 shrink-0 px-0"
-                            onClick={() => setModal({ open: true, initial: c })}
-                            aria-label={`Редактировать кампанию ${c.name}`}
-                            title="Редактировать"
-                          >
-                            <Pencil size={16} />
-                          </Button>
-                        )}
+                        {/* Админ правит кампанию в любом статусе. */}
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-9 w-9 shrink-0 px-0"
+                          onClick={() => setModal({ open: true, initial: c })}
+                          aria-label={`Редактировать кампанию ${c.name}`}
+                          title="Редактировать"
+                        >
+                          <Pencil size={16} />
+                        </Button>
                         {/* Удаление кампании временно скрыто.
                             Запущенную и завершённую кампанию удалять нельзя.
                         {c.status !== 'active' && c.status !== 'completed' && (
@@ -752,11 +772,12 @@ export default function Campaigns() {
         onClose={() => setContractModal(null)}
       />
 
-      {money && (
+      {moneyCampaign && (
         <MoneyPopover
-          anchor={money.anchor}
-          campaign={money.campaign}
+          anchorEl={money.el}
+          campaign={moneyCampaign}
           onSave={saveMoney}
+          onEditPayment={editPayment}
           onClose={() => setMoney(null)}
         />
       )}

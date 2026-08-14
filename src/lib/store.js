@@ -85,8 +85,14 @@ function normalizeDatabase(database) {
   const advertisers = (database.advertisers ?? []).map((advertiser) => ({
       ...advertiser,
       legalName: advertiser.legalName || SEED_LEGAL_NAMES.get(advertiser.id) || '',
-      // Логотип — статика из сида: путь мог смениться вместе с файлом.
-      logo: SEED_LOGOS.get(advertiser.id) ?? advertiser.logo ?? null,
+      // Сидовые логотипы обновляем из сида (путь мог смениться вместе с
+      // файлом), а загруженный в интерфейсе — оставляем как есть.
+      logo:
+        advertiser.logo === undefined ||
+        (typeof advertiser.logo === 'string' &&
+          advertiser.logo.startsWith('/logos/'))
+          ? SEED_LOGOS.get(advertiser.id) ?? advertiser.logo ?? null
+          : advertiser.logo,
       // Реквизиты, договоры и сканы появились позже — добираем их из сида.
       requisites: advertiser.requisites ?? {
         ...(REQUISITES_BY_ADVERTISER[advertiser.id] ?? {}),
@@ -117,7 +123,11 @@ function normalizeDatabase(database) {
   return {
     advertisers,
     channels: database.channels ?? [],
-    campaigns: (database.campaigns ?? []).map((campaign) => {
+    campaigns: (database.campaigns ?? []).map((rawCampaign) => {
+      // История поступлений появилась позже — в старых записях её нет.
+      const campaign = rawCampaign.payments
+        ? rawCampaign
+        : { ...rawCampaign, payments: [] }
       const normalizedCampaign = normalizeCampaignStatus(campaign)
       const demoStatus = DEMO_CAMPAIGN_STATUSES[campaign.id]
       const withStatus =

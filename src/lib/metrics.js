@@ -12,6 +12,19 @@ export const cpm = (c) =>
 
 export const pacing = (c) => (c.budget ? (c.spent / c.budget) * 100 : 0)
 
+/**
+ * Сколько срока кампании прошло: от даты старта до даты окончания.
+ * По нему показываем процент в статусе — он про ход кампании, а не про деньги.
+ */
+export function timeProgress(c) {
+  if (!c?.startDate || !c?.endDate) return 0
+  const start = new Date(c.startDate).getTime()
+  const end = new Date(c.endDate).getTime()
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 0
+  const passed = ((Date.now() - start) / (end - start)) * 100
+  return Math.min(100, Math.max(0, passed))
+}
+
 /** Суммарные показатели по списку кампаний. */
 export function aggregate(campaigns) {
   const t = campaigns.reduce(
@@ -44,6 +57,8 @@ export const STATUS = {
   reviewing: { label: 'Рассматривается', tone: 'warning' },
   active: { label: 'Активен', tone: 'success' },
   completed: { label: 'Завершен', tone: 'danger' },
+  // Кампания отработала, но деньги ещё не пришли.
+  awaiting_payment: { label: 'Ожидает оплату', tone: 'danger' },
   archived: { label: 'В архиве', tone: 'muted' },
 }
 

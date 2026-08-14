@@ -39,7 +39,7 @@ export function Avatar({
           src={src}
           alt={name}
           loading="lazy"
-          className={cn('h-full w-full object-cover', logoPadding[size])}
+          className={cn('h-full w-full object-cover rounded-xl', logoPadding[size])}
         />
       </span>
     )

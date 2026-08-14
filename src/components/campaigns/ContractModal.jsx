@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Download, FileText, Trash2 } from 'lucide-react'
+import { Download, FileText, Film, Trash2 } from 'lucide-react'
 import { useData } from '@/context/DataContext.jsx'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
@@ -15,6 +15,8 @@ import { uid } from '@/lib/id.js'
 
 const emptyContract = () => ({
   number: '',
+  // Рекламная кампания, под которую заключён договор.
+  campaignName: '',
   legalName: '',
   package: '',
   leagues: [],
@@ -22,6 +24,8 @@ const emptyContract = () => ({
   end: '',
   paymentDate: `${new Date().getFullYear()}-08-31`,
   file: null,
+  // Ролик договора — его подставляем в кампании по этому договору.
+  creative: null,
 })
 
 /** Строка «поле — значение» для режима просмотра. */
@@ -76,9 +80,14 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
       return
     }
 
+    const payload = {
+      ...form,
+      number,
+      campaignName: (form.campaignName ?? '').trim(),
+    }
     const next = creating
-      ? [...contracts, { ...form, id: uid('ctr'), number }]
-      : contracts.map((c) => (c.id === contract.id ? { ...form, number } : c))
+      ? [...contracts, { ...payload, id: uid('ctr') }]
+      : contracts.map((c) => (c.id === contract.id ? payload : c))
 
     update('advertisers', advertiser.id, { contracts: next })
     toast.success(creating ? 'Договор добавлен' : 'Договор обновлён')
@@ -134,6 +143,7 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
       {isAdvertiser || !canEdit ? (
         <dl className="space-y-2">
           <Row label="Номер договора" value={form.number} />
+          <Row label="Рекламная кампания" value={form.campaignName} />
           <Row label="Пакет" value={PACKAGES[form.package]?.label} />
           <Row
             label="Лиги"
@@ -160,47 +170,8 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
         </dl>
       ) : (
         <div className="space-y-4">
+          {/* Срок договора идёт первым — с него заполняют карточку. */}
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Номер договора" required error={error}>
-              <Input
-                value={form.number}
-                onChange={(e) => set('number', e.target.value)}
-                placeholder="Например, Д-2026/114"
-              />
-            </Field>
-            <Field label="Пакет">
-              <Select
-                value={form.package}
-                onChange={(e) => set('package', e.target.value)}
-              >
-                <option value="">— не выбран —</option>
-                {Object.entries(PACKAGES).map(([key, meta]) => (
-                  <option key={key} value={key}>
-                    {meta.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-
-          <Field label="Наименование юр. лица">
-            <Input
-              value={form.legalName}
-              onChange={(e) => set('legalName', e.target.value)}
-              placeholder='ООО «Пример»'
-            />
-          </Field>
-
-          <Field label="Лиги" hint="Можно выбрать несколько.">
-            <MultiSelect
-              options={LEAGUES}
-              value={form.leagues}
-              onChange={(leagues) => set('leagues', leagues)}
-              placeholder="— не выбраны —"
-            />
-          </Field>
-
-          <div className="grid gap-4 sm:grid-cols-3">
             <Field label="Начало">
               <Input
                 type="date"
@@ -217,24 +188,77 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
                 onChange={(e) => set('end', e.target.value)}
               />
             </Field>
-            <Field label="Сроки оплаты">
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Номер договора" required error={error}>
               <Input
-                type="date"
-                value={form.paymentDate}
-                onChange={(e) => set('paymentDate', e.target.value)}
+                value={form.number}
+                onChange={(e) => set('number', e.target.value)}
+                placeholder="Например, Д-2026/114"
+              />
+            </Field>
+            <Field label="Файл договора">
+              <FilePicker
+                accept=".pdf,.doc,.docx,image/*"
+                emptyLabel="Загрузить договор"
+                downloadLabel="Скачать договор"
+                name={form.file?.name}
+                url={form.file?.url}
+                onPick={(file) => set('file', file)}
               />
             </Field>
           </div>
 
-          <Field label="Файл договора">
-            <FilePicker
-              accept=".pdf,.doc,.docx,image/*"
-              emptyLabel="Загрузить договор"
-              name={form.file?.name}
-              url={form.file?.url}
-              onPick={(file) => set('file', file)}
-            />
-          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Под какую рекламную кампанию заключён договор. */}
+            <Field label="Название рекламной кампании">
+              <Input
+                value={form.campaignName ?? ''}
+                onChange={(e) => set('campaignName', e.target.value)}
+                placeholder="Например, Кондиционеры — лето"
+              />
+            </Field>
+            {/* Ролик договора подставляется в кампании этого договора. */}
+            <Field label="Рекламный ролик">
+              <FilePicker
+                accept="video/*"
+                icon={Film}
+                emptyLabel="Загрузить ролик"
+                downloadLabel="Скачать ролик"
+                name={form.creative?.name}
+                url={form.creative?.url}
+                onPick={(creative) => set('creative', creative)}
+              />
+            </Field>
+          </div>
+
+          {/* Юр. лицо подставляется из карточки бренда, сроки оплаты живут
+              в самом договоре — в форме их не спрашиваем. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Пакет">
+              <Select
+                value={form.package}
+                onChange={(e) => set('package', e.target.value)}
+              >
+                <option value="">— не выбран —</option>
+                {Object.entries(PACKAGES).map(([key, meta]) => (
+                  <option key={key} value={key}>
+                    {meta.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Лиги" hint="Можно выбрать несколько.">
+              <MultiSelect
+                options={LEAGUES}
+                value={form.leagues}
+                onChange={(leagues) => set('leagues', leagues)}
+                placeholder="— не выбраны —"
+              />
+            </Field>
+          </div>
+
         </div>
       )}
     </Modal>

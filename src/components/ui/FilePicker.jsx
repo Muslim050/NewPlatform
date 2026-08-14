@@ -18,6 +18,8 @@ export function FilePicker({
   onPick,
   accept,
   emptyLabel = 'Выбрать файл',
+  // Подпись отдельной кнопки скачивания под полем — если файл уже загружен.
+  downloadLabel,
   icon: Icon = FileText,
   className,
 }) {
@@ -43,59 +45,72 @@ export function FilePicker({
   // Кнопки «скачать» и «убрать» держим соседями поля выбора, а не внутри него:
   // ссылка внутри button — невалидная вложенность.
   return (
-    <div
-      className={cn(
-        'flex h-11 w-full items-center gap-1 rounded-xl border pr-2 transition-colors',
-        name
-          ? 'border-line bg-surface hover:border-indigo-300'
-          : 'border-dashed border-line bg-surface hover:border-indigo-300 hover:bg-indigo-50',
-        className,
-      )}
-    >
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        onChange={pick}
-        className="hidden"
-      />
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        title={name || emptyLabel}
+    // min-w-0 — чтобы длинное имя файла обрезалось, а не растягивало поле.
+    <div className={cn('min-w-0 space-y-2', className)}>
+      <div
         className={cn(
-          'flex h-full min-w-0 flex-1 items-center gap-2 rounded-xl pl-3.5 text-left text-sm focus-ring',
-          name ? 'text-ink' : 'text-ink-soft',
+          'flex h-11 w-full items-center gap-1 rounded-xl border pr-2 transition-colors',
+          name
+            ? 'border-line bg-surface hover:border-indigo-300'
+            : 'border-dashed border-line bg-surface hover:border-indigo-300 hover:bg-indigo-50',
         )}
       >
-        {name ? (
-          <Icon size={16} className="shrink-0 text-indigo-800" />
-        ) : (
-          <Paperclip size={16} className="shrink-0 text-ink-muted" />
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          onChange={pick}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          title={name || emptyLabel}
+          className={cn(
+            'flex h-full min-w-0 flex-1 items-center gap-2 rounded-xl pl-3.5 text-left text-sm focus-ring',
+            name ? 'text-ink' : 'text-ink-soft',
+          )}
+        >
+          {name ? (
+            <Icon size={16} className="shrink-0 text-indigo-800" />
+          ) : (
+            <Paperclip size={16} className="shrink-0 text-ink-muted" />
+          )}
+          <span className="min-w-0 flex-1 truncate">{name || emptyLabel}</span>
+        </button>
+        {name && url && !downloadLabel && (
+          <a
+            href={url}
+            download={name}
+            aria-label="Скачать файл"
+            title="Скачать файл"
+            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-indigo-800 focus-ring"
+          >
+            <Download size={14} />
+          </a>
         )}
-        <span className="min-w-0 flex-1 truncate">{name || emptyLabel}</span>
-      </button>
-      {name && url && (
+        {name && (
+          <button
+            type="button"
+            aria-label="Убрать файл"
+            title="Убрать файл"
+            onClick={() => onPick(null)}
+            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      {downloadLabel && name && url && (
         <a
           href={url}
           download={name}
-          aria-label="Скачать файл"
-          title="Скачать файл"
-          className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-indigo-800 focus-ring"
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-line bg-paper/55 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
         >
-          <Download size={14} />
+          <Download size={15} className="text-indigo-800" />
+          {downloadLabel}
         </a>
-      )}
-      {name && (
-        <button
-          type="button"
-          aria-label="Убрать файл"
-          title="Убрать файл"
-          onClick={() => onPick(null)}
-          className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring"
-        >
-          <X size={14} />
-        </button>
       )}
     </div>
   )

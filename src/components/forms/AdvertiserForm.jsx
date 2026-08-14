@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Building2, FileText, Plus, Trash2 } from 'lucide-react'
+import {
+  FileText,
+  Film,
+  Image as ImageIcon,
+  Plus,
+  Trash2,
+} from 'lucide-react'
+import { Logo } from '@/components/Logo.jsx'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
@@ -27,7 +34,6 @@ const PALETTE = [
   '#FFD106',
   '#0EA5E9',
   '#12A150',
-  '#F7C900',
   '#E5484D',
   '#8B5CF6',
   '#F59E0B',
@@ -44,7 +50,20 @@ const emptyForm = {
   legalName: '',
   requisites: '',
   color: PALETTE[0],
+  // Логотип бренда: { name, url } либо null.
+  logo: null,
   contracts: [],
+}
+
+/** В базе логотип хранится ссылкой — в форме к нему добавляем имя файла. */
+const logoToFile = (logo) => {
+  if (!logo) return null
+  // У загруженного файла ссылка вида data:/blob: — имени в ней нет.
+  const inline = logo.startsWith('data:') || logo.startsWith('blob:')
+  return {
+    name: inline ? 'Логотип бренда' : logo.split('/').pop() || 'Логотип',
+    url: logo,
+  }
 }
 
 const REQUISITES_LABELS = {
@@ -73,6 +92,8 @@ const requisitesToText = (requisites) => {
 const newContract = (legalName = '') => ({
   id: uid('ctr'),
   number: '',
+  // Рекламная кампания, под которую заключён договор.
+  campaignName: '',
   legalName,
   package: '',
   leagues: [],
@@ -80,6 +101,8 @@ const newContract = (legalName = '') => ({
   end: '',
   paymentDate: `${new Date().getFullYear()}-08-31`,
   file: null,
+  // Ролик договора — подставляется в кампании по этому договору.
+  creative: null,
 })
 
 export function AdvertiserForm({ open, onClose, initial }) {
@@ -105,6 +128,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
             legalName: initial.legalName || '',
             requisites: requisitesToText(initial.requisites),
             color: initial.color,
+            logo: logoToFile(initial.logo),
             contracts: (initial.contracts ?? []).map((contract) => ({
               ...contract,
               leagues: [...(contract.leagues ?? [])],
@@ -155,12 +179,14 @@ export function AdvertiserForm({ open, onClose, initial }) {
       legalName: form.legalName.trim(),
       requisites: form.requisites.trim(),
       color: form.color,
+      logo: form.logo?.url ?? null,
       // Договоры без номера не сохраняем — из них нечего выбирать в кампании.
       contracts: form.contracts
         .filter((contract) => contract.number.trim())
         .map((contract) => ({
           ...contract,
           number: contract.number.trim(),
+          campaignName: (contract.campaignName ?? '').trim(),
           legalName: contract.legalName.trim(),
         })),
     }
@@ -179,9 +205,9 @@ export function AdvertiserForm({ open, onClose, initial }) {
     <Modal
       open={open}
       onClose={onClose}
-      icon={Building2}
+      logo={<Logo size={40} withWord={false} />}
       title={editing ? 'Редактировать рекламодателя' : 'Новый рекламодатель'}
-      description="Карточка бренда с контактами и балансом."
+      description="Карточка бренда с контактами."
       size="lg"
       footer={
         <>
@@ -232,8 +258,8 @@ export function AdvertiserForm({ open, onClose, initial }) {
 
         </div>
 
-        {/* Подставляется в договор кампании как наименование юр. лица. */}
-        <Field label="Юр. лицо">
+        {/* Подставляется в договоры бренда и в кампании. */}
+        <Field label="Наименование юр. лица">
           <Input
             value={form.legalName}
             onChange={(e) => set('legalName', e.target.value)}
@@ -251,22 +277,53 @@ export function AdvertiserForm({ open, onClose, initial }) {
           />
         </Field>
 
-        <Field label="Цвет бренда">
-          <div className="flex flex-wrap gap-2 pt-1">
-            {PALETTE.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => set('color', c)}
-                className={cn(
-                  'h-8 w-8 rounded-full ring-2 ring-offset-2 ring-offset-surface transition-all',
-                  form.color === c ? 'ring-ink/40 scale-110' : 'ring-transparent',
-                )}
-                style={{ background: c }}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Цвет бренда">
+            <div className="flex flex-wrap gap-2 pt-1">
+              {PALETTE.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => set('color', c)}
+                  className={cn(
+                    'h-8 w-8 rounded-full ring-2 ring-offset-2 ring-offset-surface transition-all',
+                    form.color === c
+                      ? 'ring-ink/40 scale-110'
+                      : 'ring-transparent',
+                  )}
+                  style={{ background: c }}
+                />
+              ))}
+            </div>
+          </Field>
+
+          {/* Логотип показывается вместо инициалов в карточках и таблицах. */}
+          <Field
+            label="Логотип рекламодателя"
+            hint="PNG или JPG, лучше квадратный."
+          >
+            <div className="flex items-center gap-3">
+              {form.logo?.url && (
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
+                  <img
+                    src={form.logo.url}
+                    alt=""
+                    className="h-full w-full object-contain p-1"
+                  />
+                </span>
+              )}
+              <FilePicker
+                accept="image/*"
+                icon={ImageIcon}
+                emptyLabel="Загрузить логотип"
+                name={form.logo?.name}
+                url={form.logo?.url}
+                onPick={(logo) => set('logo', logo)}
+                className="min-w-0 flex-1"
               />
-            ))}
-          </div>
-        </Field>
+            </div>
+          </Field>
+        </div>
       </div>
 
       <div className={cn('space-y-3', tab !== 'contracts' && 'hidden')}>
@@ -303,53 +360,8 @@ export function AdvertiserForm({ open, onClose, initial }) {
               </Button>
             </div>
 
+            {/* Срок договора идёт первым — с него заполняют карточку. */}
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Номер договора" required>
-                <Input
-                  value={contract.number}
-                  onChange={(e) =>
-                    setContract(contract.id, { number: e.target.value })
-                  }
-                  placeholder="Например, Д-2026/114"
-                />
-              </Field>
-              <Field label="Пакет">
-                <Select
-                  value={contract.package}
-                  onChange={(e) =>
-                    setContract(contract.id, { package: e.target.value })
-                  }
-                >
-                  <option value="">— не выбран —</option>
-                  {Object.entries(PACKAGES).map(([key, meta]) => (
-                    <option key={key} value={key}>
-                      {meta.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-
-            <Field label="Наименование юр. лица">
-              <Input
-                value={contract.legalName}
-                onChange={(e) =>
-                  setContract(contract.id, { legalName: e.target.value })
-                }
-                placeholder='ООО «Пример»'
-              />
-            </Field>
-
-            <Field label="Лиги" hint="Можно выбрать несколько.">
-              <MultiSelect
-                options={LEAGUES}
-                value={contract.leagues}
-                onChange={(leagues) => setContract(contract.id, { leagues })}
-                placeholder="— не выбраны —"
-              />
-            </Field>
-
-            <div className="grid gap-4 sm:grid-cols-3">
               <Field label="Начало">
                 <Input
                   type="date"
@@ -370,26 +382,83 @@ export function AdvertiserForm({ open, onClose, initial }) {
                   }
                 />
               </Field>
-              <Field label="Сроки оплаты">
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Номер договора" required>
                 <Input
-                  type="date"
-                  value={contract.paymentDate}
+                  value={contract.number}
                   onChange={(e) =>
-                    setContract(contract.id, { paymentDate: e.target.value })
+                    setContract(contract.id, { number: e.target.value })
                   }
+                  placeholder="Например, Д-2026/114"
+                />
+              </Field>
+              <Field label="Файл договора">
+                <FilePicker
+                  accept=".pdf,.doc,.docx,image/*"
+                  emptyLabel="Загрузить договор"
+                  downloadLabel="Скачать договор"
+                  name={contract.file?.name}
+                  url={contract.file?.url}
+                  onPick={(file) => setContract(contract.id, { file })}
                 />
               </Field>
             </div>
 
-            <Field label="Файл договора">
-              <FilePicker
-                accept=".pdf,.doc,.docx,image/*"
-                emptyLabel="Загрузить договор"
-                name={contract.file?.name}
-                url={contract.file?.url}
-                onPick={(file) => setContract(contract.id, { file })}
-              />
-            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Под какую рекламную кампанию заключён договор. */}
+              <Field label="Название рекламной кампании">
+                <Input
+                  value={contract.campaignName ?? ''}
+                  onChange={(e) =>
+                    setContract(contract.id, { campaignName: e.target.value })
+                  }
+                  placeholder="Например, Кондиционеры — лето"
+                />
+              </Field>
+              {/* Ролик договора подставляется в кампании по этому договору. */}
+              <Field label="Рекламный ролик">
+                <FilePicker
+                  accept="video/*"
+                  icon={Film}
+                  emptyLabel="Загрузить ролик"
+                  downloadLabel="Скачать ролик"
+                  name={contract.creative?.name}
+                  url={contract.creative?.url}
+                  onPick={(creative) => setContract(contract.id, { creative })}
+                />
+              </Field>
+            </div>
+
+            {/* Юр. лицо и сроки оплаты берём из карточки бренда и договора —
+                в самой форме договора их не спрашиваем. */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Пакет">
+                <Select
+                  value={contract.package}
+                  onChange={(e) =>
+                    setContract(contract.id, { package: e.target.value })
+                  }
+                >
+                  <option value="">— не выбран —</option>
+                  {Object.entries(PACKAGES).map(([key, meta]) => (
+                    <option key={key} value={key}>
+                      {meta.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Лиги" hint="Можно выбрать несколько.">
+                <MultiSelect
+                  options={LEAGUES}
+                  value={contract.leagues}
+                  onChange={(leagues) => setContract(contract.id, { leagues })}
+                  placeholder="— не выбраны —"
+                />
+              </Field>
+            </div>
+
           </div>
         ))}
 

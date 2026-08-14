@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react'
 import {
   BarChart3,
   Building2,
+  Download,
   CalendarClock,
   CalendarDays,
   CalendarRange,
@@ -13,16 +15,25 @@ import {
   Trophy,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext.jsx'
-import { PACKAGES, STATUS, leagueLabel, statusLabel } from '@/lib/metrics.js'
+import {
+  PACKAGES,
+  STATUS,
+  leagueLabel,
+  statusLabel,
+  timeProgress,
+} from '@/lib/metrics.js'
 import {
   formatDate,
   formatDateTime,
+  formatMoney,
+  formatMoneyCompact,
   formatPct,
 } from '@/lib/format.js'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Tooltip } from '@/components/ui/Tooltip.jsx'
 import { Button } from '@/components/ui/Button.jsx'
 import { Progress } from '@/components/ui/Progress.jsx'
+import { cn } from '@/lib/cn.js'
 
 const STATUS_UI = {
   sent: {
@@ -50,6 +61,12 @@ const STATUS_UI = {
     dot: 'bg-red-500',
     value: 'border-red-200 bg-surface text-red-700',
   },
+  // Ждём оплату — заливка красная, текст светлый.
+  awaiting_payment: {
+    shell: 'border-red-500 bg-red-500 text-red-50',
+    dot: 'bg-red-100',
+    value: 'border-red-300/60 bg-red-400/40 text-red-50',
+  },
 }
 
 export function CampaignStatusPill({ status, pacing, createdAt }) {
@@ -63,12 +80,31 @@ export function CampaignStatusPill({ status, pacing, createdAt }) {
       ? `Отправлено: ${formatDateTime(createdAt)}`
       : null
 
+  // Ожидание оплаты подсвечиваем пульсацией — на неё нужно среагировать.
+  const awaiting = status === 'awaiting_payment'
+
   return (
     <Tooltip label={sentAt} className="max-w-full">
       <span
-        className={`inline-flex max-w-full items-center gap-2 rounded-xl border px-2.5 py-1.5 text-[12px] font-semibold ${ui.shell}`}
+        className={cn(
+          'inline-flex max-w-full items-center gap-2 rounded-xl border px-2.5 py-1.5 text-[12px] font-semibold',
+          ui.shell,
+          awaiting && 'animate-pulse',
+        )}
       >
-        <span className={`h-2 w-2 shrink-0 rounded-full ${ui.dot}`} />
+        <span className="relative flex h-2 w-2 shrink-0">
+          {awaiting && (
+            <span
+              className={cn(
+                'absolute inline-flex h-full w-full animate-ping rounded-full opacity-70',
+                ui.dot,
+              )}
+            />
+          )}
+          <span
+            className={cn('relative inline-flex h-2 w-2 rounded-full', ui.dot)}
+          />
+        </span>
         <span className="truncate">{label}</span>
         {status === 'active' && (
           <span
@@ -124,28 +160,65 @@ function CreativeTile({ url }) {
   )
 }
 
-/** Плитка договора — тот же формат, что у метрик, но текст поменьше. */
-function ContractTile({ icon: Icon, label, value }) {
-  return (
-    <div className="rounded-2xl border border-line bg-paper/55 p-4">
+/**
+ * Плитка договора — тот же формат, что у метрик, но текст поменьше.
+ * file — скан договора: тогда плитка становится ссылкой на скачивание.
+ */
+function ContractTile({ icon: Icon, label, value, file }) {
+  const body = (
+    <>
       <div className="flex items-center justify-between gap-3">
         <span className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
           {label}
         </span>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900">
+        <span
+          className={cn(
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900',
+            file && 'transition-transform group-hover:scale-105',
+          )}
+        >
           <Icon size={16} />
         </span>
       </div>
       <p className="mt-3 break-words text-[15px] font-semibold leading-snug text-ink">
         {value}
       </p>
-    </div>
+      {file && (
+        <p className="mt-1 flex items-center gap-1.5 text-[12px] font-medium text-indigo-800">
+          <Download size={13} className="shrink-0" />
+          Скачать договор
+        </p>
+      )}
+    </>
+  )
+
+  if (file) {
+    return (
+      <a
+        href={file.url}
+        download={file.name}
+        title={file.name}
+        className="group rounded-2xl border border-line bg-paper/55 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+      >
+        {body}
+      </a>
+    )
+  }
+
+  return (
+    <div className="rounded-2xl border border-line bg-paper/55 p-4">{body}</div>
   )
 }
 
 /** Плитки с условиями договора — встают в общую сетку карточки. */
-function ContractTiles({ campaign }) {
+function ContractTiles({ campaign, advertiser }) {
   const { isAdvertiser } = useAuth()
+  // Скан договора: у кампании свой либо общий из карточки бренда.
+  const contractFile =
+    campaign.contractFile ||
+    advertiser?.contracts?.find((c) => c.number === campaign.contractNumber)
+      ?.file ||
+    null
   const tiles = [
     { label: 'Пакет', icon: Package, value: PACKAGES[campaign.package]?.label },
     {
@@ -159,6 +232,8 @@ function ContractTiles({ campaign }) {
       label: 'Номер договора',
       icon: FileText,
       value: campaign.contractNumber,
+      // Есть скан — по клику скачивается прямо отсюда.
+      file: contractFile,
     },
     // Юр. лицо и освоение бюджета — внутренняя кухня, рекламодателю не нужны.
     {
@@ -175,9 +250,13 @@ function ContractTiles({ campaign }) {
           : null,
     },
     {
+      // Рекламодателю вместо сроков оплаты показываем прогресс оплаты.
       label: 'Сроки оплаты',
       icon: CalendarClock,
-      value: campaign.paymentDate ? formatDate(campaign.paymentDate) : null,
+      value:
+        !isAdvertiser && campaign.paymentDate
+          ? formatDate(campaign.paymentDate)
+          : null,
     },
   ].filter((tile) => tile.value)
 
@@ -186,27 +265,6 @@ function ContractTiles({ campaign }) {
       {tiles.map((tile) => (
         <ContractTile key={tile.label} {...tile} />
       ))}
-      {campaign.contractFile && (
-        <a
-          href={campaign.contractFile.url}
-          download={campaign.contractFile.name}
-          title={campaign.contractFile.name}
-          className="group rounded-2xl border border-line bg-paper/55 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
-              Файл договора
-            </span>
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900 transition-transform group-hover:scale-105">
-              <FileText size={16} />
-            </span>
-          </div>
-          <p className="mt-3 flex items-center gap-1.5 text-[15px] font-semibold text-ink">
-            <span className="truncate">Скачать</span>
-            <ExternalLink size={14} className="shrink-0 text-ink-muted" />
-          </p>
-        </a>
-      )}
     </>
   )
 }
@@ -219,9 +277,16 @@ export function CampaignPreviewModal({
   onOpenStats,
 }) {
   const { isAdvertiser } = useAuth()
+  const [showPayments, setShowPayments] = useState(false)
   const pacing = campaign?.budget
     ? (campaign.spent / campaign.budget) * 100
     : 0
+  const payments = campaign?.payments ?? []
+
+  // Открыли другую кампанию — историю снова прячем.
+  useEffect(() => {
+    setShowPayments(false)
+  }, [campaign?.id])
 
   return (
     <Modal
@@ -239,7 +304,8 @@ export function CampaignPreviewModal({
           </Button>
           {/* Статистика есть только у запущенных и завершённых кампаний. */}
           {(campaign?.status === 'active' ||
-            campaign?.status === 'completed') && (
+            campaign?.status === 'completed' ||
+            campaign?.status === 'awaiting_payment') && (
             <Button variant="primary" onClick={onOpenStats}>
               <BarChart3 size={16} />
               Открыть статистику
@@ -265,7 +331,7 @@ export function CampaignPreviewModal({
               </div>
               <CampaignStatusPill
                 status={campaign.status}
-                pacing={pacing}
+                pacing={timeProgress(campaign)}
                 createdAt={campaign.createdAt}
               />
             </div>
@@ -273,28 +339,65 @@ export function CampaignPreviewModal({
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             <CreativeTile url={campaign.creativeUrl} />
-            <ContractTiles campaign={campaign} />
+            <ContractTiles campaign={campaign} advertiser={advertiser} />
 
-            {/* Освоение бюджета шире остальных — занимает две плитки. */}
-            {!isAdvertiser && (
-            <div className="col-span-2 rounded-2xl border border-line bg-paper/55 p-4">
+            {/* Плитка оплаты: по клику раскрывается история выплат. */}
+            <button
+              type="button"
+              onClick={() => setShowPayments((v) => !v)}
+              title="История выплат"
+              className="group rounded-2xl border border-line bg-paper/55 p-4 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+            >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
-                  Освоение бюджета
+                  {isAdvertiser ? 'Бюджет / Оплачено' : 'Освоение бюджета'}
                 </span>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900 transition-transform group-hover:scale-105">
                   <Gauge size={16} />
                 </span>
               </div>
-              <p className="mt-3 text-[15px] font-semibold text-ink tnum">
-                {formatPct(pacing, 0)}
+              <p className="mt-3 flex items-baseline gap-1.5 text-[15px] font-semibold text-ink tnum">
+                {formatMoneyCompact(campaign.spent)}
+                <span className="text-[12px] font-medium text-ink-muted">
+                  из {formatMoneyCompact(campaign.budget)}
+                </span>
               </p>
-              <Progress value={pacing} className="mt-2 h-2" />
-            </div>
-            )}
+              <Progress
+                value={pacing}
+                label={formatPct(pacing, 0)}
+                className="mt-2"
+              />
+            </button>
           </div>
 
-
+          {showPayments && (
+            <div className="mt-3 rounded-2xl border border-line bg-paper/55 p-4">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
+                История выплат
+              </p>
+              <div className="mt-3 max-h-[220px] space-y-1.5 overflow-y-auto">
+                {payments.length === 0 ? (
+                  <p className="rounded-xl bg-surface px-3 py-3 text-center text-[12px] text-ink-muted">
+                    Поступлений пока не было.
+                  </p>
+                ) : (
+                  payments.map((payment) => (
+                    <div
+                      key={payment.id}
+                      className="flex items-center justify-between gap-2 rounded-xl bg-surface px-3 py-2"
+                    >
+                      <span className="text-[12px] text-ink-muted tnum">
+                        {formatDateTime(payment.createdAt)}
+                      </span>
+                      <span className="shrink-0 text-[13px] font-semibold text-emerald-700 tnum">
+                        + {formatMoney(payment.amount)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </Modal>
