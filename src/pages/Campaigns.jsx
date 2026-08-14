@@ -281,11 +281,38 @@ export default function Campaigns() {
       .length,
   }
 
+  // Пустые статусы в фильтрах не показываем — только «Все» остаётся всегда.
+  const statusItems = [
+    { value: 'all', label: 'Все', count: counts.all },
+    ...(isAdvertiser
+      ? []
+      : [
+          { value: 'sent', label: 'Отправленные', count: counts.sent },
+          { value: 'received', label: 'Полученные', count: counts.received },
+          {
+            value: 'reviewing',
+            label: 'Рассматриваются',
+            count: counts.reviewing,
+          },
+        ]),
+    { value: 'active', label: 'Активные', count: counts.active },
+    { value: 'completed', label: 'Завершенные', count: counts.completed },
+    {
+      value: 'awaiting_payment',
+      label: 'Ожидают оплату',
+      count: counts.awaiting_payment,
+    },
+  ].filter((item) => item.value === 'all' || item.count > 0)
+  // Выбранный статус мог обнулиться после смены фильтров — тогда «Все».
+  const activeStatus = statusItems.some((item) => item.value === status)
+    ? status
+    : 'all'
+
   const query = q.trim().toLowerCase()
   const filtered = scoped
     .filter(
       (c) =>
-        (status === 'all' || c.status === status) &&
+        (activeStatus === 'all' || c.status === activeStatus) &&
         c.name.toLowerCase().includes(query),
     )
     .sort(
@@ -308,6 +335,17 @@ export default function Campaigns() {
   const moneyCampaign = money
     ? campaigns.find((c) => c.id === money.id) ?? null
     : null
+
+  /**
+   * Смена бренда — это новый контекст: договоры у него свои, а период
+   * возвращаем к текущему месяцу, чтобы не смотреть чужой отчёт.
+   */
+  const selectBrand = (id) => {
+    setBrandId(id)
+    setContract(ALL_CONTRACTS)
+    setYear(new Date().getFullYear())
+    setMonth(new Date().getMonth())
+  }
 
   const saveMoney = ({ budget, spent, amount, paidAt }) => {
     const history = moneyCampaign.payments ?? []
@@ -366,41 +404,9 @@ export default function Campaigns() {
         </div>
         <div className="flex flex-wrap items-center gap-3 sm:justify-end">
           <SegmentTabs
-          value={status}
-          onChange={setStatus}
-          items={[
-            { value: 'all', label: 'Все', count: counts.all },
-            ...(isAdvertiser
-              ? []
-              : [
-                  {
-                    value: 'sent',
-                    label: 'Отправленные',
-                    count: counts.sent,
-                  },
-                  {
-                    value: 'received',
-                    label: 'Полученные',
-                    count: counts.received,
-                  },
-                  {
-                    value: 'reviewing',
-                    label: 'Рассматриваются',
-                    count: counts.reviewing,
-                  },
-                ]),
-            { value: 'active', label: 'Активные', count: counts.active },
-            {
-              value: 'completed',
-              label: 'Завершенные',
-              count: counts.completed,
-            },
-            {
-              value: 'awaiting_payment',
-              label: 'Ожидают оплату',
-              count: counts.awaiting_payment,
-            },
-          ]}
+            value={activeStatus}
+            onChange={setStatus}
+            items={statusItems}
           />
           {isAdvertiser && (
             <Button
@@ -421,7 +427,7 @@ export default function Campaigns() {
         <BrandTabs
           items={brands}
           value={activeBrand}
-          onChange={setBrandId}
+          onChange={selectBrand}
           className="mb-4"
         />
       )}
@@ -539,19 +545,19 @@ export default function Campaigns() {
                     )}
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                      <span className="w-5 shrink-0 text-[12px] text-ink-muted tnum">
+                      <span className="relative w-5 shrink-0 text-[12px] text-ink-muted tnum">
                         {index + 1}
+                        {/* Точка над номером — статус кампании. */}
+                        {STATUS_MARKS[c.status] && (
+                          <span
+                            className={cn(
+                              'absolute -top-[6px] right-[1px] h-2.5 w-2.5 animate-pulse rounded-full',
+                              STATUS_MARKS[c.status],
+                            )}
+                            title={statusLabel(c.status)}
+                          />
+                        )}
                       </span>
-                      {/* Полоска после номера — статус кампании. */}
-                      {STATUS_MARKS[c.status] && (
-                        <span
-                          className={cn(
-                            'h-5 w-2.5 shrink-0 animate-pulse rounded-full',
-                            STATUS_MARKS[c.status],
-                          )}
-                          title={statusLabel(c.status)}
-                        />
-                      )}
                       {isAdmin && adv && (
                         <Avatar
                           name={adv.name}

@@ -44,7 +44,7 @@ function Row({ label, value }) {
  * площадке — правка, добавление и удаление.
  */
 export function ContractModal({ open, contract, advertiser, onClose }) {
-  const { update } = useData()
+  const { advertisers, update } = useData()
   const { isAdvertiser, canEdit } = useAuth()
   const toast = useToast()
   const confirm = useConfirm()
@@ -72,11 +72,18 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
       return
     }
     const contracts = advertiser.contracts ?? []
-    const duplicate = contracts.some(
-      (c) => c.id !== contract?.id && c.number.trim() === number,
+    // Номер уникален по всей базе: иначе один договор всплывает у двух брендов.
+    const owner = advertisers.find((brand) =>
+      (brand.contracts ?? []).some(
+        (c) => c.id !== contract?.id && c.number.trim() === number,
+      ),
     )
-    if (duplicate) {
-      setError('Такой номер у бренда уже есть')
+    if (owner) {
+      setError(
+        owner.id === advertiser.id
+          ? 'Такой номер у бренда уже есть'
+          : `Такой номер уже занят брендом ${owner.name}`,
+      )
       return
     }
 
