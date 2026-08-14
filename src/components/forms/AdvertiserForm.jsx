@@ -56,6 +56,24 @@ const emptyForm = {
   contracts: [],
 }
 
+/** Слепок договоров — по нему понимаем, менялся ли раздел «Договоры». */
+const contractsFingerprint = (contracts = []) =>
+  JSON.stringify(
+    contracts.map((contract) => ({
+      id: contract.id,
+      number: (contract.number ?? '').trim(),
+      campaignName: (contract.campaignName ?? '').trim(),
+      legalName: (contract.legalName ?? '').trim(),
+      package: contract.package ?? '',
+      leagues: [...(contract.leagues ?? [])],
+      start: contract.start ?? '',
+      end: contract.end ?? '',
+      paymentDate: contract.paymentDate ?? '',
+      file: contract.file?.url ?? null,
+      creative: contract.creative?.url ?? null,
+    })),
+  )
+
 /** В базе логотип хранится ссылкой — в форме к нему добавляем имя файла. */
 const logoToFile = (logo) => {
   if (!logo) return null
@@ -206,7 +224,15 @@ export function AdvertiserForm({ open, onClose, initial }) {
 
     if (editing) {
       update('advertisers', initial.id, payload)
-      toast.success(`Карточка бренда ${payload.name} сохранена`)
+      // Про договоры говорим отдельно — их правят чаще всего остального.
+      const contractsChanged =
+        contractsFingerprint(payload.contracts) !==
+        contractsFingerprint(initial.contracts)
+      toast.success(
+        contractsChanged
+          ? `Раздел «Договоры» у рекламодателя ${payload.name} успешно обновлён`
+          : `Карточка бренда ${payload.name} сохранена`,
+      )
       // Карточку не закрываем: правки часто идут подряд — договоры, реквизиты.
       setSaved(true)
       return
