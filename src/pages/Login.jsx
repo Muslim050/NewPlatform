@@ -186,6 +186,17 @@ export default function Login() {
       return
     }
 
+    // Наблюдатель: тот же обзор, что у админа, но без права менять данные.
+    if (login_ === 'viewer' && password === 'viewer') {
+      login({
+        role: 'viewer',
+        name: 'viewer',
+        email: 'viewer@setantasports.com',
+      })
+      navigate('/app')
+      return
+    }
+
     if (login_ === 'adv' && password === 'adv') {
       const a = advertisers[0]
       login({

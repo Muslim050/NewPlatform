@@ -162,7 +162,7 @@ function brandsOf(campaigns, advertiserById) {
 }
 
 export default function Campaigns() {
-  const { user, isAdmin, isAdvertiser } = useAuth()
+  const { user, isAdmin, isAdvertiser, canEdit } = useAuth()
   const navigate = useNavigate()
   const { advertiserById, channelById, remove, update } = useData()
   const campaigns = useScopedCampaigns()
@@ -188,7 +188,8 @@ export default function Campaigns() {
   // Колонка «Статистика» временно скрыта и у админа.
   // const showStats = !isAdvertiser
   const showStats = false
-  const showActions = !isAdvertiser
+  // Наблюдателю таблица доступна целиком, но без кнопок правки.
+  const showActions = !isAdvertiser && canEdit
 
   // Вкладки брендов: только те, у кого есть кампании. Рекламодателю не нужны —
   // он и так видит лишь свой бренд.
@@ -406,7 +407,7 @@ export default function Campaigns() {
               Открыть договор
             </Button>
           )}
-          {!isAdvertiser && (
+          {!isAdvertiser && canEdit && (
             <Button
               size="sm"
               variant="secondary"
@@ -599,7 +600,7 @@ export default function Campaigns() {
                       <div className="hidden md:block">
                         <button
                           type="button"
-                          disabled={c.status === 'completed'}
+                          disabled={c.status === 'completed' || !canEdit}
                           onClick={(e) =>
                             setMoney({
                               campaign: c,
@@ -607,9 +608,11 @@ export default function Campaigns() {
                             })
                           }
                           title={
-                            c.status === 'completed'
-                              ? 'Завершённую кампанию менять нельзя'
-                              : 'Изменить суммы и внести поступление'
+                            !canEdit
+                              ? 'Бюджет и прибыль'
+                              : c.status === 'completed'
+                                ? 'Завершённую кампанию менять нельзя'
+                                : 'Изменить суммы и внести поступление'
                           }
                           className="group w-full rounded-lg px-1 py-0.5 text-left transition-colors enabled:hover:bg-ink/[0.04] disabled:cursor-default focus-ring"
                         >
@@ -620,7 +623,7 @@ export default function Campaigns() {
                             <span className="ml-auto font-medium text-ink tnum">
                               {formatMoneyCompact(c.spent)}
                             </span>
-                            {c.status !== 'completed' && (
+                            {c.status !== 'completed' && canEdit && (
                               <Pencil
                                 size={12}
                                 aria-hidden="true"

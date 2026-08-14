@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Search, Pencil, Plus, Trash2, Building2, Mail } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext.jsx'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
@@ -14,6 +15,7 @@ import { DropdownMenu } from '@/components/ui/DropdownMenu.jsx'
 import { AdvertiserForm } from '@/components/forms/AdvertiserForm.jsx'
 
 export default function Advertisers() {
+  const { canEdit } = useAuth()
   const { advertisers, campaigns, remove } = useData()
   const toast = useToast()
   const confirm = useConfirm()
@@ -61,14 +63,16 @@ export default function Advertisers() {
             className="h-11 w-full rounded-xl border border-line bg-surface pl-10 pr-3.5 text-sm text-ink placeholder:text-ink-muted focus-ring focus-visible:border-indigo-300"
           />
         </div>
-        <Button
-          variant="primary"
-          className="shrink-0"
-          onClick={() => setModal({ open: true, initial: null })}
-        >
-          <Plus size={18} />
-          Новый рекламодатель
-        </Button>
+        {canEdit && (
+          <Button
+            variant="primary"
+            className="shrink-0"
+            onClick={() => setModal({ open: true, initial: null })}
+          >
+            <Plus size={18} />
+            Новый рекламодатель
+          </Button>
+        )}
       </div>
 
       {filtered.length === 0 ? (
@@ -78,13 +82,15 @@ export default function Advertisers() {
             title="Рекламодателей нет"
             description="Список рекламодателей пока пуст."
             action={
-              <Button
-                variant="secondary"
-                onClick={() => setModal({ open: true, initial: null })}
-              >
-                <Plus size={16} />
-                Добавить
-              </Button>
+              canEdit ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => setModal({ open: true, initial: null })}
+                >
+                  <Plus size={16} />
+                  Добавить
+                </Button>
+              ) : null
             }
           />
         </Card>
@@ -117,21 +123,23 @@ export default function Advertisers() {
                         </p>
                       </div>
                     </div>
-                    <DropdownMenu
-                      items={[
-                        {
-                          label: 'Изменить',
-                          icon: Pencil,
-                          onClick: () => setModal({ open: true, initial: a }),
-                        },
-                        {
-                          label: 'Удалить',
-                          icon: Trash2,
-                          tone: 'danger',
-                          onClick: () => del(a),
-                        },
-                      ]}
-                    />
+                    {canEdit && (
+                      <DropdownMenu
+                        items={[
+                          {
+                            label: 'Изменить',
+                            icon: Pencil,
+                            onClick: () => setModal({ open: true, initial: a }),
+                          },
+                          {
+                            label: 'Удалить',
+                            icon: Trash2,
+                            tone: 'danger',
+                            onClick: () => del(a),
+                          },
+                        ]}
+                      />
+                    )}
                   </div>
 
                   <div className="mt-3 flex items-center gap-2">

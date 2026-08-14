@@ -16,7 +16,7 @@ import { DropdownMenu } from '@/components/ui/DropdownMenu.jsx'
 import { ChannelForm } from '@/components/forms/ChannelForm.jsx'
 
 export default function Channels() {
-  const { isAdmin } = useAuth()
+  const { canEdit } = useAuth()
   const { channels, campaigns, remove } = useData()
   const toast = useToast()
   const confirm = useConfirm()
@@ -49,7 +49,7 @@ export default function Channels() {
         title="Площадки"
         subtitle="Инвентарь для размещения — каналы, форматы и охваты."
       >
-        {isAdmin && (
+        {canEdit && (
           <Button
             variant="primary"
             onClick={() => setModal({ open: true, initial: null })}
@@ -89,7 +89,7 @@ export default function Channels() {
               <span className="hidden w-20 text-right sm:block">CPM</span>
               <span className="hidden w-40 md:block">Заполняемость</span>
               <span className="w-24">Статус</span>
-              {isAdmin && <span className="w-9" />}
+              {canEdit && <span className="w-9" />}
             </div>
 
             <div className="divide-y divide-line">
@@ -143,7 +143,7 @@ export default function Channels() {
                       </Badge>
                     </div>
 
-                    {isAdmin && (
+                    {canEdit && (
                       <DropdownMenu
                         items={[
                           {

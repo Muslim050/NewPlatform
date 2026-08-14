@@ -24,13 +24,19 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
+  // viewer — тот же админский обзор, но без права что-либо менять.
+  const role = user?.role
+
   const value = {
     user,
     login,
     logout,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin',
-    isAdvertiser: user?.role === 'advertiser',
+    isAdmin: role === 'admin' || role === 'viewer',
+    isAdvertiser: role === 'advertiser',
+    isViewer: role === 'viewer',
+    // Единая проверка на любое изменение данных.
+    canEdit: !!role && role !== 'viewer',
   }
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>

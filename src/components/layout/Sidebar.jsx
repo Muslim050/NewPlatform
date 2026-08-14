@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { Eye } from 'lucide-react'
 import { NAV } from '@/lib/nav.js'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useData } from '@/context/DataContext.jsx'
@@ -7,7 +8,7 @@ import { Avatar } from '@/components/ui/Avatar.jsx'
 import { cn } from '@/lib/cn.js'
 
 export function Sidebar({ onNavigate, collapsed = false }) {
-  const { user } = useAuth()
+  const { user, isViewer } = useAuth()
   const { advertiserById } = useData()
   const items = NAV.filter((n) => !n.hidden && n.roles.includes(user.role))
   const adv = user.advertiserId ? advertiserById(user.advertiserId) : null
@@ -99,9 +100,17 @@ export function Sidebar({ onNavigate, collapsed = false }) {
             <p className="truncate text-[13px] font-semibold text-ink">
               {adv ? adv.name : user.name}
             </p>
-            <p className="truncate text-[11px] text-ink-muted">
-              {adv ? adv.email : user.email}
-            </p>
+            {/* Наблюдателю сразу видно, что правки недоступны. */}
+            {isViewer ? (
+              <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-ink/[0.06] px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
+                <Eye size={11} />
+                Только просмотр
+              </span>
+            ) : (
+              <p className="truncate text-[11px] text-ink-muted">
+                {adv ? adv.email : user.email}
+              </p>
+            )}
           </div>
         )}
       </div>

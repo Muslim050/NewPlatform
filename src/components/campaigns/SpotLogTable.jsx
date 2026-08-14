@@ -67,7 +67,9 @@ export function rowsFromSheet(sheet) {
 }
 
 export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
-  const { isAdvertiser } = useAuth()
+  const { isAdvertiser, isViewer, canEdit } = useAuth()
+  // Рекламодателю и наблюдателю таблица доступна только на просмотр.
+  const readOnly = isAdvertiser || !canEdit
   const toast = useToast()
   const [rows, setRows] = useState(() => loadRows(logKey))
   const [isDragging, setIsDragging] = useState(false)
@@ -140,7 +142,7 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
   const onDrop = (e) => {
     e.preventDefault()
     setIsDragging(false)
-    if (isAdvertiser) return
+    if (readOnly) return
     importFile(e.dataTransfer.files?.[0])
   }
 
@@ -148,7 +150,7 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
     <Card
       className="relative overflow-hidden"
       onDragOver={(e) => {
-        if (isAdvertiser) return
+        if (readOnly) return
         e.preventDefault()
         setIsDragging(true)
       }}
@@ -168,7 +170,7 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
           importFile(file)
         }}
       />
-      {isDragging && !isAdvertiser && (
+      {isDragging && !readOnly && (
         <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-2xl border-2 border-dashed border-indigo-400 bg-indigo-50/85 backdrop-blur-[1px]">
           <p className="flex items-center gap-2 text-sm font-medium text-indigo-900">
             <FileSpreadsheet size={18} />
@@ -187,8 +189,9 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
           </h3>
           <p className="mt-1 text-[13px] text-ink-muted">{subtitle}</p>
         </div>
-        {!isAdvertiser && (
-          <div className="flex flex-wrap items-center gap-2">
+        {/* Наблюдателю оставляем только выгрузку — она ничего не меняет. */}
+        <div className="flex flex-wrap items-center gap-2">
+          {!readOnly && (
             <Button
               size="sm"
               variant="secondary"
@@ -198,6 +201,8 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
               <Upload size={15} />
               {isImporting ? 'Загружаем…' : 'Импорт Excel'}
             </Button>
+          )}
+          {(!readOnly || isViewer) && (
             <Button
               size="sm"
               variant="secondary"
@@ -207,21 +212,25 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
               <Download size={15} />
               Скачать
             </Button>
-            <Button size="sm" onClick={save} disabled={!isDirty}>
-              {justSaved ? <Check size={15} /> : <Save size={15} />}
-              {justSaved ? 'Сохранено' : 'Сохранить'}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => apply([])}
-              disabled={!rows.length}
-            >
-              <Trash2 size={15} />
-              Очистить
-            </Button>
-          </div>
-        )}
+          )}
+          {!readOnly && (
+            <>
+              <Button size="sm" onClick={save} disabled={!isDirty}>
+                {justSaved ? <Check size={15} /> : <Save size={15} />}
+                {justSaved ? 'Сохранено' : 'Сохранить'}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => apply([])}
+                disabled={!rows.length}
+              >
+                <Trash2 size={15} />
+                Очистить
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="max-h-[560px] overflow-auto">
@@ -249,7 +258,7 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
                     Таблица пустая
                   </p>
                   <p className="mt-1 text-[13px] text-ink-muted">
-                    {isAdvertiser
+                    {readOnly
                       ? 'Данные появятся после загрузки отчёта.'
                       : `Перетащите сюда .xlsx — возьмём из него лист «${sheetName}».`}
                   </p>

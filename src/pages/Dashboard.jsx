@@ -542,7 +542,7 @@ function AudienceBreakdown() {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, isAdvertiser } = useAuth()
   const firstName = user.name.split(' ')[0]
 
   return (
@@ -550,9 +550,9 @@ export default function Dashboard() {
       <PageHeader
         title={`Здравствуйте, ${firstName}`}
         subtitle={
-          user.role === 'admin'
-            ? 'Сводка медиаразмещений и социальных сетей.'
-            : 'Сводка по вашим медиаразмещениям.'
+          isAdvertiser
+            ? 'Сводка по вашим медиаразмещениям.'
+            : 'Сводка медиаразмещений и социальных сетей.'
         }
       >
 

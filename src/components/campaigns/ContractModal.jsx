@@ -41,7 +41,7 @@ function Row({ label, value }) {
  */
 export function ContractModal({ open, contract, advertiser, onClose }) {
   const { update } = useData()
-  const { isAdvertiser } = useAuth()
+  const { isAdvertiser, canEdit } = useAuth()
   const toast = useToast()
   const confirm = useConfirm()
   const [form, setForm] = useState(emptyContract)
@@ -114,16 +114,16 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
       size="lg"
       footer={
         <>
-          {!isAdvertiser && !creating && (
+          {canEdit && !isAdvertiser && !creating && (
             <Button variant="danger" onClick={remove} className="mr-auto">
               <Trash2 size={16} />
               Удалить
             </Button>
           )}
           <Button variant="ghost" onClick={onClose}>
-            {isAdvertiser ? 'Закрыть' : 'Отмена'}
+            {isAdvertiser || !canEdit ? "Закрыть" : "Отмена"}
           </Button>
-          {!isAdvertiser && (
+          {canEdit && !isAdvertiser && (
             <Button variant="primary" onClick={save}>
               {creating ? 'Добавить' : 'Сохранить'}
             </Button>
@@ -131,7 +131,7 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
         </>
       }
     >
-      {isAdvertiser ? (
+      {isAdvertiser || !canEdit ? (
         <dl className="space-y-2">
           <Row label="Номер договора" value={form.number} />
           <Row label="Пакет" value={PACKAGES[form.package]?.label} />

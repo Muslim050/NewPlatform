@@ -242,7 +242,9 @@ export function CampaignTabs({ value, onChange }) {
 }
 
 export function EditableSpotTable({ tableKey }) {
-  const { isAdvertiser } = useAuth();
+  const { isAdvertiser, isViewer, canEdit } = useAuth()
+  // Рекламодателю и наблюдателю таблица доступна только на просмотр.
+  const readOnly = isAdvertiser || !canEdit
   const toast = useToast();
   const [rows, setRows] = useState(() => loadRows(tableKey));
   const [pendingScrollRowId, setPendingScrollRowId] = useState(null);
@@ -396,7 +398,7 @@ export function EditableSpotTable({ tableKey }) {
   const onDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    if (isAdvertiser) return;
+    if (readOnly) return;
     importFile(e.dataTransfer.files?.[0]);
   };
 
@@ -414,7 +416,7 @@ export function EditableSpotTable({ tableKey }) {
   };
 
   const onDragOver = (e) => {
-    if (isAdvertiser) return;
+    if (readOnly) return;
     e.preventDefault();
     setIsDragging(true);
   };
@@ -439,7 +441,7 @@ export function EditableSpotTable({ tableKey }) {
           importFile(file);
         }}
       />
-      {isDragging && !isAdvertiser && (
+      {isDragging && !readOnly && (
         <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-2xl border-2 border-dashed border-indigo-400 bg-indigo-50/85 backdrop-blur-[1px]">
           <p className="flex items-center gap-2 text-sm font-medium text-indigo-900">
             <FileSpreadsheet size={18} />
@@ -457,26 +459,31 @@ export function EditableSpotTable({ tableKey }) {
           </h3>
           <p className="mt-1 text-[13px] text-ink-muted">{meta.subtitle}</p>
         </div>
-        {/* Рекламодатель видит медиаплан только для чтения. */}
-        {!isAdvertiser && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={isEditing ? cancelEditing : beginEditing}
-            >
-              {isEditing ? <X size={15} /> : <Settings2 size={15} />}
-              {isEditing ? "Отменить" : "Редактировать"}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isImporting}
-            >
-              <Upload size={15} />
-              {isImporting ? "Загружаем…" : "Импорт Excel"}
-            </Button>
+        {/* Рекламодатель и наблюдатель видят медиаплан только для чтения,
+            но выгрузка отчёта доступна наблюдателю — это не правка. */}
+        <div className="flex flex-wrap items-center gap-2">
+          {!readOnly && (
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={isEditing ? cancelEditing : beginEditing}
+              >
+                {isEditing ? <X size={15} /> : <Settings2 size={15} />}
+                {isEditing ? "Отменить" : "Редактировать"}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isImporting}
+              >
+                <Upload size={15} />
+                {isImporting ? "Загружаем…" : "Импорт Excel"}
+              </Button>
+            </>
+          )}
+          {(!readOnly || isViewer) && (
             <Button
               size="sm"
               variant="secondary"
@@ -486,27 +493,31 @@ export function EditableSpotTable({ tableKey }) {
               <Download size={15} />
               Скачать
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={addRow}
-              disabled={!isEditing}
-            >
-              <Plus size={15} />
-              Добавить строку
-            </Button>
-            <Button
-              size="sm"
-              onClick={saveChanges}
-              disabled={!isEditing || !isDirty}
-            >
-              {saveState === "saved" ? <Check size={15} /> : <Save size={15} />}
-              {saveState === "saved"
-                ? "Изменения сохранены"
-                : "Сохранить изменения"}
-            </Button>
-          </div>
-        )}
+          )}
+          {!readOnly && (
+            <>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={addRow}
+                disabled={!isEditing}
+              >
+                <Plus size={15} />
+                Добавить строку
+              </Button>
+              <Button
+                size="sm"
+                onClick={saveChanges}
+                disabled={!isEditing || !isDirty}
+              >
+                {saveState === "saved" ? <Check size={15} /> : <Save size={15} />}
+                {saveState === "saved"
+                  ? "Изменения сохранены"
+                  : "Сохранить изменения"}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -553,7 +564,7 @@ export function EditableSpotTable({ tableKey }) {
                     Таблица пустая
                   </p>
                   <p className="mt-1 text-[13px] text-ink-muted">
-                    {isAdvertiser
+                    {readOnly
                       ? "Размещения появятся после загрузки медиаплана."
                       : "Перетащите сюда файл .xlsx — строки подставятся автоматически."}
                   </p>

@@ -42,7 +42,7 @@ export default function App() {
         <Route
           path="advertisers"
           element={
-            <Protected roles={['admin']}>
+            <Protected roles={['admin', 'viewer']}>
               <Advertisers />
             </Protected>
           }
@@ -50,7 +50,7 @@ export default function App() {
         <Route
           path="overview"
           element={
-            <Protected roles={['admin']}>
+            <Protected roles={['admin', 'viewer']}>
               <Dashboard />
             </Protected>
           }
