@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Download, FileText, Film, Trash2 } from 'lucide-react'
+import { Check, Download, FileText, Film, Trash2 } from 'lucide-react'
 import { useData } from '@/context/DataContext.jsx'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
@@ -50,9 +50,13 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
   const confirm = useConfirm()
   const [form, setForm] = useState(emptyContract)
   const [error, setError] = useState('')
+  // Подтверждение прямо на кнопке: тост в углу легко не заметить.
+  const [saved, setSaved] = useState(false)
 
   const creating = !contract
 
+  // Заполняем форму при открытии. Зависимости — по id, иначе сохранение
+  // обновляет бренд в сторе и форма тут же сбрасывается сама на себя.
   useEffect(() => {
     if (!open) return
     setForm(
@@ -61,7 +65,16 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
         : { ...emptyContract(), legalName: advertiser?.legalName || '' },
     )
     setError('')
-  }, [open, contract, advertiser])
+    setSaved(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, contract?.id, advertiser?.id])
+
+  // Держим «Сохранено» на экране секунду и закрываем карточку.
+  useEffect(() => {
+    if (!saved) return
+    const timer = setTimeout(onClose, 900)
+    return () => clearTimeout(timer)
+  }, [saved, onClose])
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }))
 
@@ -97,8 +110,12 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
       : contracts.map((c) => (c.id === contract.id ? payload : c))
 
     update('advertisers', advertiser.id, { contracts: next })
-    toast.success(creating ? 'Договор добавлен' : 'Договор обновлён')
-    onClose()
+    toast.success(
+      creating
+        ? `Договор ${number} добавлен бренду ${advertiser.name}`
+        : `Договор ${number} сохранён`,
+    )
+    setSaved(true)
   }
 
   const remove = async () => {
@@ -140,8 +157,17 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
             {isAdvertiser || !canEdit ? "Закрыть" : "Отмена"}
           </Button>
           {canEdit && !isAdvertiser && (
-            <Button variant="primary" onClick={save}>
-              {creating ? 'Добавить' : 'Сохранить'}
+            <Button variant="primary" onClick={save} disabled={saved}>
+              {saved ? (
+                <>
+                  <Check size={16} />
+                  {creating ? 'Договор добавлен' : 'Сохранено'}
+                </>
+              ) : creating ? (
+                'Добавить'
+              ) : (
+                'Сохранить'
+              )}
             </Button>
           )}
         </>

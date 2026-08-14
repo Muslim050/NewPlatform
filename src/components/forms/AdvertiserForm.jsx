@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  Check,
   FileText,
   Film,
   Image as ImageIcon,
@@ -112,6 +113,14 @@ export function AdvertiserForm({ open, onClose, initial }) {
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
   const [tab, setTab] = useState('main')
+  // Подтверждение на кнопке: карточка после сохранения остаётся открытой.
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    if (!saved) return
+    const timer = setTimeout(() => setSaved(false), 1600)
+    return () => clearTimeout(timer)
+  }, [saved])
 
   useEffect(() => {
     if (!open) return
@@ -137,7 +146,11 @@ export function AdvertiserForm({ open, onClose, initial }) {
         : emptyForm,
     )
     setErrors({})
-  }, [open, initial])
+    setSaved(false)
+    // Зависимости — по id: после сохранения бренд в сторе обновится, и форма
+    // иначе сбросила бы несохранённые правки сама на себя.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initial?.id])
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -193,11 +206,14 @@ export function AdvertiserForm({ open, onClose, initial }) {
 
     if (editing) {
       update('advertisers', initial.id, payload)
-      toast.success('Рекламодатель обновлён')
-    } else {
-      create('advertisers', payload)
-      toast.success('Рекламодатель добавлен')
+      toast.success(`Карточка бренда ${payload.name} сохранена`)
+      // Карточку не закрываем: правки часто идут подряд — договоры, реквизиты.
+      setSaved(true)
+      return
     }
+
+    create('advertisers', payload)
+    toast.success(`Рекламодатель ${payload.name} добавлен`)
     onClose()
   }
 
@@ -212,10 +228,19 @@ export function AdvertiserForm({ open, onClose, initial }) {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
-            Отмена
+            {editing ? 'Закрыть' : 'Отмена'}
           </Button>
-          <Button variant="primary" onClick={submit}>
-            {editing ? 'Сохранить' : 'Добавить'}
+          <Button variant="primary" onClick={submit} disabled={saved}>
+            {saved ? (
+              <>
+                <Check size={16} />
+                Сохранено
+              </>
+            ) : editing ? (
+              'Сохранить'
+            ) : (
+              'Добавить'
+            )}
           </Button>
         </>
       }
@@ -462,10 +487,17 @@ export function AdvertiserForm({ open, onClose, initial }) {
           </div>
         ))}
 
-        <Button variant="secondary" onClick={addContract}>
-          <Plus size={16} />
-          Добавить договор
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="secondary" onClick={addContract}>
+            <Plus size={16} />
+            Добавить договор
+          </Button>
+          {/* Договоры живут в карточке бренда — сохраняются вместе с ней. */}
+          <p className="text-[12px] text-ink-muted">
+            Договоры сохранятся вместе с карточкой — нажмите «
+            {editing ? 'Сохранить' : 'Добавить'}» внизу.
+          </p>
+        </div>
       </div>
     </Modal>
   )
