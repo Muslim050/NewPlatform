@@ -67,6 +67,11 @@ const STATUS_UI = {
     dot: 'bg-red-100',
     value: 'border-red-300/60 bg-red-400/40 text-red-50',
   },
+  paid: {
+    shell: 'border-emerald-500 bg-emerald-500 text-emerald-50',
+    dot: 'bg-emerald-100',
+    value: 'border-emerald-300/60 bg-emerald-400/40 text-emerald-50',
+  },
 }
 
 export function CampaignStatusPill({ status, pacing, createdAt }) {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus,
@@ -12,6 +12,7 @@ import {
   CalendarPlus,
   CalendarCheck,
   CalendarClock,
+  X,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useData } from '@/context/DataContext.jsx'
@@ -61,6 +62,7 @@ const STATUS_ORDER = {
   active: 3,
   completed: 4,
   awaiting_payment: 5,
+  paid: 6,
 }
 
 // Метка статуса перед названием: цветная полоска у кампаний, по которым
@@ -183,6 +185,8 @@ export default function Campaigns() {
   const confirm = useConfirm()
 
   const [q, setQ] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const searchRef = useRef(null)
   const [status, setStatus] = useState('all')
   const [brandId, setBrandId] = useState(ALL_BRANDS)
   const [contract, setContract] = useState(ALL_CONTRACTS)
@@ -194,6 +198,22 @@ export default function Campaigns() {
   const [preview, setPreview] = useState(null)
   // Правка сумм в поповере у ячейки «Бюджет / Прибыль» (только админ).
   const [money, setMoney] = useState(null)
+
+  // Поповер поиска закрываем кликом вне и по Escape.
+  useEffect(() => {
+    if (!searchOpen) return
+    const onDown = (e) =>
+      searchRef.current &&
+      !searchRef.current.contains(e.target) &&
+      setSearchOpen(false)
+    const onKey = (e) => e.key === 'Escape' && setSearchOpen(false)
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [searchOpen])
 
   // Бюджет виден всем, но правит суммы только админ: рекламодателю по клику
   // открывается история выплат.
@@ -279,6 +299,7 @@ export default function Campaigns() {
     completed: scoped.filter((c) => c.status === 'completed').length,
     awaiting_payment: scoped.filter((c) => c.status === 'awaiting_payment')
       .length,
+    paid: scoped.filter((c) => c.status === 'paid').length,
   }
 
   // Пустые статусы в фильтрах не показываем — только «Все» остаётся всегда.
@@ -302,6 +323,7 @@ export default function Campaigns() {
       label: 'Ожидают оплату',
       count: counts.awaiting_payment,
     },
+    { value: 'paid', label: 'Оплаченные', count: counts.paid },
   ].filter((item) => item.value === 'all' || item.count > 0)
   // Выбранный статус мог обнулиться после смены фильтров — тогда «Все».
   const activeStatus = statusItems.some((item) => item.value === status)
@@ -389,18 +411,58 @@ export default function Campaigns() {
     <div>
       {/* Поиск, фильтр статусов и создание кампании — одной строкой */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search
-            size={17}
-            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted"
-          />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+        {/* Поиск спрятан за иконку — строка фильтров остаётся свободной. */}
+        <div className="relative shrink-0" ref={searchRef}>
+          <button
+            type="button"
+            onClick={() => setSearchOpen((v) => !v)}
             aria-label="Поиск кампании"
-            placeholder="Поиск по названию…"
-            className="h-11 w-full rounded-xl border border-line bg-surface pl-10 pr-3.5 text-sm text-ink placeholder:text-ink-muted focus-ring focus-visible:border-indigo-300"
-          />
+            aria-expanded={searchOpen}
+            title="Поиск по названию"
+            className={cn(
+              'relative flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface text-ink-soft transition-colors hover:border-indigo-300 hover:text-ink focus-ring',
+              (searchOpen || query) && 'border-indigo-300 text-ink',
+            )}
+          >
+            <Search size={18} />
+            {/* Поиск активен, но окно закрыто — показываем метку. */}
+            {query && !searchOpen && (
+              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-indigo-500 ring-2 ring-paper" />
+            )}
+          </button>
+
+          {searchOpen && (
+            <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-2xl border border-line bg-surface p-3 shadow-lift">
+              <div className="relative">
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"
+                />
+                <input
+                  autoFocus
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Поиск по названию…"
+                  className="h-10 w-full rounded-xl border border-line bg-surface pl-9 pr-8 text-sm text-ink placeholder:text-ink-muted focus-ring focus-visible:border-indigo-300"
+                />
+                {q && (
+                  <button
+                    type="button"
+                    onClick={() => setQ('')}
+                    aria-label="Очистить поиск"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              {query && (
+                <p className="mt-2 text-[12px] text-ink-muted">
+                  Найдено: {filtered.length}
+                </p>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-3 sm:justify-end">
           <SegmentTabs
@@ -686,7 +748,8 @@ export default function Campaigns() {
                       <div className="flex justify-center">
                         {c.status === 'active' ||
                         c.status === 'completed' ||
-                        c.status === 'awaiting_payment' ? (
+                        c.status === 'awaiting_payment' ||
+                        c.status === 'paid' ? (
                           <Button
                             variant="secondary"
                             size="sm"

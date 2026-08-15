@@ -16,7 +16,7 @@ import { Field, Input, Select } from '@/components/ui/Field.jsx'
 import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { CreativeLink } from '@/components/campaigns/CreativePlayer.jsx'
 import { Logo } from '@/components/Logo.jsx'
-import { LEAGUES, PACKAGES, STATUS } from '@/lib/metrics.js'
+import { LEAGUES, PACKAGES, STATUS, statusLabel } from '@/lib/metrics.js'
 import { cn } from '@/lib/cn.js'
 
 // Договор храним прямо в базе (localStorage), поэтому ограничиваем размер.
@@ -220,7 +220,16 @@ export function CampaignForm({ open, onClose, initial }) {
 
     if (editing) {
       update('campaigns', initial.id, payload)
-      toast.success('Кампания обновлена')
+      // Смена статуса — событие само по себе, о нём говорим отдельно.
+      if (payload.status !== initial.status) {
+        toast.success(
+          `«${payload.name}»: ${statusLabel(initial.status)} → ${statusLabel(
+            payload.status,
+          )}`,
+        )
+      } else {
+        toast.success('Кампания обновлена')
+      }
     } else {
       create('campaigns', {
         ...payload,

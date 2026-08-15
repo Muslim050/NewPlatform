@@ -59,6 +59,8 @@ export const STATUS = {
   completed: { label: 'Завершен', tone: 'danger' },
   // Кампания отработала, но деньги ещё не пришли.
   awaiting_payment: { label: 'Ожидает оплату', tone: 'danger' },
+  // Деньги пришли — кампания закрыта полностью.
+  paid: { label: 'Оплачен', tone: 'success' },
   archived: { label: 'В архиве', tone: 'muted' },
 }
 
