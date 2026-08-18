@@ -15,7 +15,7 @@ export function Logo({ size = 32, withWord = true, className }) {
         </svg>
       </div>
       {withWord && (
-        <span className="flex min-w-0 flex-col font-display uppercase text-ink">
+        <span className="flex min-w-0 flex-col font-display-cond uppercase text-ink">
           <span
             className="whitespace-nowrap font-bold leading-[0.95] tracking-[-0.02em]"
             style={{ fontSize: Math.max(20, size * 0.34) }}

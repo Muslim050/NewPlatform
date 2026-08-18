@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/cn.js'
 
 export const MONTHS_SHORT = [
@@ -59,7 +59,8 @@ const arrowClass =
 
 /**
  * Фильтр периода: слева выбор года стрелками, справа 12 месяцев.
- * Отдельной вкладки «Все» нет — повторный клик по месяцу снимает фильтр.
+ * Отдельной вкладки «Все» нет: фильтр снимает крестик справа (или повторный
+ * клик по выбранному месяцу).
  * years: доступные годы, counts: сколько кампаний попадает в каждый месяц.
  */
 export function MonthTabs({
@@ -151,6 +152,20 @@ export function MonthTabs({
           )
         })}
       </div>
+
+      {/* Пока месяц выбран, рядом висит крестик: по повторному клику по
+          вкладке догадываются не все. */}
+      {value != null && (
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          aria-label="Показать все месяцы"
+          title="Показать все месяцы"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink-muted transition-colors hover:border-ink/25 hover:text-ink focus-ring"
+        >
+          <X size={16} />
+        </button>
+      )}
     </div>
   )
 }

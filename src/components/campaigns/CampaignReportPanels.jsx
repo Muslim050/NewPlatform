@@ -9,9 +9,11 @@ import {
   Timer,
   Tv,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext.jsx";
 import { formatNumber, formatPct } from "@/lib/format.js";
 import { Card } from "@/components/ui/Card.jsx";
 import { DonutChart } from "@/components/charts/DonutChart.jsx";
+import { cn } from "@/lib/cn.js";
 
 const CHANNELS = [
   {
@@ -129,6 +131,9 @@ function ChannelMetric({ label, value, unit, accent = "coral" }) {
 }
 
 function ChannelPanel({ channel }) {
+  // Наблюдателю просмотры не показываем — как и в таблице размещений.
+  const { isViewer } = useAuth();
+
   return (
     <div className="rounded-3xl border border-line bg-surface/90 p-4 shadow-soft sm:p-5">
       <div className="flex items-center gap-3">
@@ -164,13 +169,15 @@ function ChannelPanel({ channel }) {
           value={channel.liveSeconds}
           unit="секунд"
         />
-        <div className="col-span-2">
-          <ChannelMetric
-            label="TV Live Ads Views"
-            value={channel.liveViews}
-            unit="просмотров"
-          />
-        </div>
+        {!isViewer && (
+          <div className="col-span-2">
+            <ChannelMetric
+              label="TV Live Ads Views"
+              value={channel.liveViews}
+              unit="просмотров"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -312,6 +319,13 @@ function TotalMetric({ item }) {
 }
 
 export function TotalStatisticsReport() {
+  // Наблюдателю не показываем просмотры, устройства и географию —
+  // остаётся эфирная сводка и социальные сети.
+  const { isViewer } = useAuth();
+  const metrics = isViewer
+    ? TOTAL_METRICS.filter((item) => item.label !== "Просмотры Live Ads")
+    : TOTAL_METRICS;
+
   return (
     <div>
       <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">
@@ -320,22 +334,43 @@ export function TotalStatisticsReport() {
         <ReportHeader
           eyebrow="Total statistics"
           title="Общая статистика размещений"
-          subtitle="Сводка эфира, социальных сетей, устройств и географии аудитории."
+          subtitle={
+            isViewer
+              ? "Сводка эфира и социальных сетей."
+              : "Сводка эфира, социальных сетей, устройств и географии аудитории."
+          }
         />
-        <div className="relative mt-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-          {TOTAL_METRICS.map((item) => (
+        <div
+          className={cn(
+            "relative mt-6 grid grid-cols-2 gap-3",
+            isViewer ? "lg:grid-cols-4" : "lg:grid-cols-5",
+          )}
+        >
+          {metrics.map((item) => (
             <TotalMetric key={item.label} item={item} />
           ))}
         </div>
       </section>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[0.72fr_0.95fr_1.1fr]">
+      <div
+        className={cn(
+          "mt-4 grid gap-4",
+          !isViewer && "xl:grid-cols-[0.72fr_0.95fr_1.1fr]",
+        )}
+      >
         <Card className="p-5">
           <h4 className="font-display text-base font-semibold text-ink">
             Социальные сети
           </h4>
           <p className="text-[12px] text-ink-muted">Instagram и Telegram</p>
-          <div className="mt-4 space-y-3">
+          {/* У наблюдателя карточка одна на всю ширину — раскладываем каналы
+              в две колонки, чтобы не тянуть их в высоту. */}
+          <div
+            className={cn(
+              "mt-4",
+              isViewer ? "grid gap-3 sm:grid-cols-2" : "space-y-3",
+            )}
+          >
             {SOCIAL_CHANNELS.map((channel) => {
               const Icon = channel.icon;
               return (
@@ -378,91 +413,95 @@ export function TotalStatisticsReport() {
           </div>
         </Card>
 
-        <Card className="p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h4 className="font-display text-base font-semibold text-ink">
-                Распределение устройств
-              </h4>
-              <p className="text-[12px] text-ink-muted">Device share</p>
+        {!isViewer && (
+          <Card className="p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h4 className="font-display text-base font-semibold text-ink">
+                  Распределение устройств
+                </h4>
+                <p className="text-[12px] text-ink-muted">Device share</p>
+              </div>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-900">
+                <MonitorSmartphone size={18} />
+              </span>
             </div>
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-900">
-              <MonitorSmartphone size={18} />
-            </span>
-          </div>
-          <div className="mt-5 flex flex-col items-center gap-5">
-            <DonutChart
-              data={DEVICE_SHARE}
-              size={190}
-              thickness={22}
-              centerValue="66%"
-              centerLabel="Smart TV"
-            />
-            <div className="w-full space-y-2">
-              {DEVICE_SHARE.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center gap-2 text-sm"
-                >
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-ink-soft">{item.label}</span>
-                  <span className="ml-auto font-semibold text-ink tnum">
-                    {formatPct(item.value, 0)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <div className="flex items-start justify-between gap-3 border-b border-line p-5 pb-4">
-            <div>
-              <h4 className="font-display text-base font-semibold text-ink">
-                География аудитории
-              </h4>
-              <p className="text-[12px] text-ink-muted">City viewers</p>
-            </div>
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-900">
-              <MapPin size={18} />
-            </span>
-          </div>
-          <div className="max-h-[470px] overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 z-10 bg-paper/95 backdrop-blur">
-                <tr className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-                  <th className="w-10 py-2.5 pl-5 text-left">№</th>
-                  <th className="py-2.5 pl-2.5 pr-5 text-left">Город</th>
-                  <th className="px-5 py-2.5 text-right">Зрители</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {CITY_SHARE.map((city, index) => (
-                  <tr key={city.name} className="hover:bg-ink/[0.015]">
-                    <td className="py-2.5 pl-5 text-[12px] text-ink-muted tnum">
-                      {index + 1}
-                    </td>
-                    <td className="py-2.5 pl-2.5 pr-5 font-medium text-ink-soft">
-                      {city.name}
-                    </td>
-                    <td className="relative px-5 py-2.5 text-right">
-                      <span
-                        className="absolute inset-y-1.5 right-3 rounded-md bg-indigo-100"
-                        style={{ width: `${Math.max(city.value, 4)}%` }}
-                      />
-                      <span className="relative font-semibold text-ink tnum">
-                        {formatPct(city.value, 2)}
-                      </span>
-                    </td>
-                  </tr>
+            <div className="mt-5 flex flex-col items-center gap-5">
+              <DonutChart
+                data={DEVICE_SHARE}
+                size={190}
+                thickness={22}
+                centerValue="66%"
+                centerLabel="Smart TV"
+              />
+              <div className="w-full space-y-2">
+                {DEVICE_SHARE.map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-ink-soft">{item.label}</span>
+                    <span className="ml-auto font-semibold text-ink tnum">
+                      {formatPct(item.value, 0)}
+                    </span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {!isViewer && (
+          <Card className="overflow-hidden">
+            <div className="flex items-start justify-between gap-3 border-b border-line p-5 pb-4">
+              <div>
+                <h4 className="font-display text-base font-semibold text-ink">
+                  География аудитории
+                </h4>
+                <p className="text-[12px] text-ink-muted">City viewers</p>
+              </div>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-900">
+                <MapPin size={18} />
+              </span>
+            </div>
+            <div className="max-h-[470px] overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 z-10 bg-paper/95 backdrop-blur">
+                  <tr className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+                    <th className="w-10 py-2.5 pl-5 text-left">№</th>
+                    <th className="py-2.5 pl-2.5 pr-5 text-left">Город</th>
+                    <th className="px-5 py-2.5 text-right">Зрители</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {CITY_SHARE.map((city, index) => (
+                    <tr key={city.name} className="hover:bg-ink/[0.015]">
+                      <td className="py-2.5 pl-5 text-[12px] text-ink-muted tnum">
+                        {index + 1}
+                      </td>
+                      <td className="py-2.5 pl-2.5 pr-5 font-medium text-ink-soft">
+                        {city.name}
+                      </td>
+                      <td className="relative px-5 py-2.5 text-right">
+                        <span
+                          className="absolute inset-y-1.5 right-3 rounded-md bg-indigo-100"
+                          style={{ width: `${Math.max(city.value, 4)}%` }}
+                        />
+                        <span className="relative font-semibold text-ink tnum">
+                          {formatPct(city.value, 2)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );

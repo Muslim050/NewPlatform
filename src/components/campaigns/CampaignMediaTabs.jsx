@@ -30,17 +30,19 @@ const CAMPAIGN_TABS = [
   { value: "ss2uzb", label: "SS2", group: "UZB TV" },
   { value: "promo1", label: "SS1", group: "Event promo" },
   { value: "promo2", label: "SS2", group: "Event promo" },
-  { value: "channels", label: "Total Spot statistic" },
+  { value: "channels", label: "Spot statistic" },
   { value: "social", label: "Social media" },
   { value: "stats", label: "Total statistics" },
 ];
 
-/** Соседние вкладки с одинаковым group собираем в одну секцию. */
+/** Соседние вкладки с одинаковым group собираем в одну секцию.
+ *  Вкладки без группы тоже идут одной секцией — общей сводкой. */
 function groupTabs(tabs) {
   return tabs.reduce((groups, tab) => {
     const last = groups[groups.length - 1];
-    if (tab.group && last?.name === tab.group) last.items.push(tab);
-    else groups.push({ name: tab.group ?? null, items: [tab] });
+    const name = tab.group ?? null;
+    if (last && last.name === name) last.items.push(tab);
+    else groups.push({ name, items: [tab] });
     return groups;
   }, []);
 }
@@ -76,6 +78,16 @@ const COLUMNS = [
   { key: "post", label: "Post", className: "min-w-[62px]", live: true },
   { key: "views", label: "Просмотры", className: "min-w-[112px]", live: true },
 ];
+
+/** Из ячейки достаём число: там строка, иногда с пробелами и запятой. */
+const toNumber = (value) => {
+  const digits = String(value ?? "")
+    .replace(/\s/g, "")
+    .replace(",", ".")
+    .replace(/[^\d.-]/g, "");
+  const number = Number(digits);
+  return Number.isFinite(number) ? number : 0;
+};
 
 // Заголовки, которые узнаём в загружаемом файле.
 const HEADER_ALIASES = {
@@ -208,7 +220,7 @@ export function CampaignTabs({ value, onChange }) {
       type="button"
       onClick={() => onChange(tab.value)}
       className={cn(
-        "rounded-xl px-4 py-2.5 text-[13px] font-medium transition-colors focus-ring",
+        "rounded-xl px-4 h-[29px] text-[13px] font-medium transition-colors focus-ring",
         value === tab.value
           ? "bg-indigo-500 text-ink shadow-soft"
           : "text-ink-muted hover:bg-paper hover:text-ink",
@@ -221,21 +233,34 @@ export function CampaignTabs({ value, onChange }) {
   return (
     <div className="mb-4 overflow-x-auto rounded-2xl border border-line bg-surface p-1.5 shadow-soft">
       <div className="flex min-w-max items-center gap-1.5">
-        {groupTabs(CAMPAIGN_TABS).map((group) =>
-          group.name ? (
+        {groupTabs(CAMPAIGN_TABS).map((group) => {
+          // Группа с открытой вкладкой подсвечивается целиком — сразу видно,
+          // в каком блоке находишься.
+          const opened = group.items.some((tab) => tab.value === value);
+          return (
             <div
-              key={group.name}
-              className="flex items-center gap-1.5 rounded-xl bg-paper/80 py-1 pl-3 pr-1"
+              key={group.name ?? "summary"}
+              className={cn(
+                "flex items-center gap-1.5 rounded-xl border p-2  transition-colors bg-paper",
+                opened
+                  ? "border-indigo-500 bg-indigo-50 shadow-[0_0_0_3px_rgba(255,209,6,0.28)]"
+                  : group.name
+                    ? "border-ink/15 bg-paper"
+                    : // Сводные вкладки без своей группы — на сером фоне.
+                      "border-ink/15 bg-ink/[0.05]",
+              )}
             >
-              <span className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-                {group.name}
-              </span>
+              {/* Название группы — тёмной плашкой: активная вкладка жёлтая,
+                  поэтому группу метим контрастом, а не цветом. */}
+              {group.name && (
+                <span className="whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-paper">
+                  {group.name}
+                </span>
+              )}
               {group.items.map(renderTab)}
             </div>
-          ) : (
-            group.items.map(renderTab)
-          ),
-        )}
+          );
+        })}
       </div>
     </div>
   );
@@ -402,14 +427,21 @@ export function EditableSpotTable({ tableKey }) {
     importFile(e.dataTransfer.files?.[0]);
   };
 
+  // Наблюдателю просмотры не показываем — колонки нет ни в таблице,
+  // ни в итогах, ни в выгрузке.
+  const columns = isViewer
+    ? COLUMNS.filter((column) => column.key !== "views")
+    : COLUMNS;
+  const sumColumns = columns.filter((column) => column.live);
+
   /** Выгрузка текущего медиаплана в .xlsx. */
   const download = async () => {
     const { buildXlsx, downloadBlob } = await import("@/lib/xlsx.js");
     const blob = buildXlsx({
       sheetName: tableKey === "spot2" ? "Live spot S2" : "Live spot S1",
       rows: [
-        COLUMNS.map((column) => column.label),
-        ...rows.map((row) => COLUMNS.map((column) => row[column.key])),
+        columns.map((column) => column.label),
+        ...rows.map((row) => columns.map((column) => row[column.key])),
       ],
     });
     downloadBlob(blob, `${meta.title}.xlsx`);
@@ -420,6 +452,15 @@ export function EditableSpotTable({ tableKey }) {
     e.preventDefault();
     setIsDragging(true);
   };
+
+  // Итоги по числовым колонкам — считаем по текущим строкам.
+  const totals = sumColumns.reduce((acc, column) => {
+    acc[column.key] = rows.reduce(
+      (sum, row) => sum + toNumber(row[column.key]),
+      0,
+    );
+    return acc;
+  }, {});
 
   return (
     <Card
@@ -530,7 +571,7 @@ export function EditableSpotTable({ tableKey }) {
           <thead>
             <tr className="bg-indigo-500 text-[11px] font-semibold uppercase tracking-wider text-ink">
               <th className="w-12 px-2 py-3 text-center">№</th>
-              {COLUMNS.map((column) => (
+              {columns.map((column) => (
                 <th
                   key={column.key}
                   className={cn(
@@ -553,7 +594,7 @@ export function EditableSpotTable({ tableKey }) {
             {!rows.length && (
               <tr>
                 <td
-                  colSpan={COLUMNS.length + (isEditing ? 2 : 1)}
+                  colSpan={columns.length + (isEditing ? 2 : 1)}
                   className="px-4 py-12 text-center"
                 >
                   <FileSpreadsheet
@@ -598,7 +639,7 @@ export function EditableSpotTable({ tableKey }) {
                     </button>
                   )}
                 </td>
-                {COLUMNS.map((column) => (
+                {columns.map((column) => (
                   <td
                     key={column.key}
                     className={cn(
@@ -647,15 +688,23 @@ export function EditableSpotTable({ tableKey }) {
           <tfoot>
             <tr className="border-t border-line bg-paper/70 font-semibold text-ink">
               <td colSpan={6} className="px-4 py-3 text-right text-[12px]">
-                Итого размещений
+                Итого: {rows.length} размещений · {rows.length * 4} вставок
               </td>
-              <td className="px-2 py-3 text-center tnum">{rows.length}</td>
-              <td className="px-2 py-3 text-center tnum">{rows.length}</td>
-              <td className="px-2 py-3 text-center tnum">{rows.length}</td>
-              <td className="px-2 py-3 text-center tnum">{rows.length}</td>
-              <td className="px-2 py-3 text-center text-[12px] tnum">
-                {rows.length * 4} вставок
-              </td>
+              {/* Под каждой числовой колонкой — её сумма. */}
+              {sumColumns.map((column) => (
+                <td
+                  key={column.key}
+                  className="border-l border-line px-2 py-3 text-center tnum"
+                >
+                  {totals[column.key].toLocaleString("ru-RU")}
+                  {/* Просмотры — не хронометраж, подписываем отдельно. */}
+                  {column.key === "views" && (
+                    <span className="mt-0.5 block text-[10px] font-medium uppercase tracking-wider text-ink-muted">
+                      Итого просмотров
+                    </span>
+                  )}
+                </td>
+              ))}
               {isEditing && <td />}
             </tr>
           </tfoot>

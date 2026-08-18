@@ -10,7 +10,7 @@ import { Field, Input, Select } from '@/components/ui/Field.jsx'
 import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { FilePicker } from '@/components/ui/FilePicker.jsx'
 import { LEAGUES, PACKAGES, leagueLabel } from '@/lib/metrics.js'
-import { formatDate } from '@/lib/format.js'
+import { formatDate, formatDateTime } from '@/lib/format.js'
 import { uid } from '@/lib/id.js'
 
 const emptyContract = () => ({
@@ -40,8 +40,8 @@ function Row({ label, value }) {
 }
 
 /**
- * Карточка договора бренда: рекламодателю — только просмотр,
- * площадке — правка, добавление и удаление.
+ * Карточка договора бренда: площадка ведёт условия договора, рекламодатель —
+ * название рекламной кампании и ролик. Наблюдателю — только просмотр.
  */
 export function ContractModal({ open, contract, advertiser, onClose }) {
   const { advertisers, update } = useData()
@@ -54,6 +54,9 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
   const [saved, setSaved] = useState(false)
 
   const creating = !contract
+  // Условия договора ведёт площадка, кампанию с роликом — рекламодатель.
+  const canEditTerms = canEdit && !isAdvertiser
+  const canEditCampaign = canEdit && isAdvertiser && !creating
 
   // Заполняем форму при открытии. Зависимости — по id, иначе сохранение
   // обновляет бренд в сторе и форма тут же сбрасывается сама на себя.
@@ -79,6 +82,25 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }))
 
   const save = () => {
+    const contractsNow = advertiser.contracts ?? []
+    // Рекламодатель ведёт только название кампании и ролик — остальные
+    // условия договора трогать не даём.
+    if (canEditCampaign) {
+      const next = contractsNow.map((c) =>
+        c.id === contract.id
+          ? {
+              ...c,
+              campaignName: (form.campaignName ?? '').trim(),
+              creative: form.creative,
+            }
+          : c,
+      )
+      update('advertisers', advertiser.id, { contracts: next })
+      toast.success(`Договор ${contract.number} сохранён`)
+      setSaved(true)
+      return
+    }
+
     const number = form.number.trim()
     if (!number) {
       setError('Укажите номер договора')
@@ -147,16 +169,16 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
       size="lg"
       footer={
         <>
-          {canEdit && !isAdvertiser && !creating && (
+          {canEditTerms && !creating && (
             <Button variant="danger" onClick={remove} className="mr-auto">
               <Trash2 size={16} />
               Удалить
             </Button>
           )}
           <Button variant="ghost" onClick={onClose}>
-            {isAdvertiser || !canEdit ? "Закрыть" : "Отмена"}
+            {canEditTerms || canEditCampaign ? 'Отмена' : 'Закрыть'}
           </Button>
-          {canEdit && !isAdvertiser && (
+          {(canEditTerms || canEditCampaign) && (
             <Button variant="primary" onClick={save} disabled={saved}>
               {saved ? (
                 <>
@@ -173,10 +195,13 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
         </>
       }
     >
-      {isAdvertiser || !canEdit ? (
+      {!canEditTerms ? (
         <dl className="space-y-2">
           <Row label="Номер договора" value={form.number} />
-          <Row label="Рекламная кампания" value={form.campaignName} />
+          {/* Название кампании рекламодатель правит ниже, дублировать не нужно. */}
+          {!canEditCampaign && (
+            <Row label="Рекламная кампания" value={form.campaignName} />
+          )}
           <Row label="Пакет" value={PACKAGES[form.package]?.label} />
           <Row
             label="Лиги"
@@ -198,6 +223,61 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
                 <span className="min-w-0 flex-1 truncate">{form.file.name}</span>
                 <Download size={15} className="shrink-0 text-ink-muted" />
               </a>
+              {form.file.addedAt && (
+                <p className="mt-1 text-[11px] text-ink-muted tnum">
+                  Добавлен {formatDateTime(form.file.addedAt)}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Ролик — тем, кто его не правит, показываем ссылкой с датой. */}
+          {!canEditCampaign && form.creative && (
+            <div className="pt-2">
+              <a
+                href={form.creative.url}
+                download={form.creative.name}
+                className="flex items-center gap-2 rounded-xl border border-line bg-paper/55 px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+              >
+                <Film size={16} className="shrink-0 text-indigo-800" />
+                <span className="min-w-0 flex-1 truncate">
+                  {form.creative.name}
+                </span>
+                <Download size={15} className="shrink-0 text-ink-muted" />
+              </a>
+              {form.creative.addedAt && (
+                <p className="mt-1 text-[11px] text-ink-muted tnum">
+                  Добавлен {formatDateTime(form.creative.addedAt)}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Рекламодатель заполняет кампанию и ролик прямо здесь. */}
+          {canEditCampaign && (
+            <div className="mt-4 space-y-4 rounded-2xl border border-line bg-paper/40 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                Заполняет рекламодатель
+              </p>
+              <Field label="Название рекламной кампании">
+                <Input
+                  value={form.campaignName ?? ''}
+                  onChange={(e) => set('campaignName', e.target.value)}
+                  placeholder="Например, Кондиционеры — лето"
+                />
+              </Field>
+              <Field label="Рекламный ролик">
+                <FilePicker
+                  accept="video/*"
+                  icon={Film}
+                  emptyLabel="Загрузить ролик"
+                  downloadLabel="Скачать ролик"
+                  name={form.creative?.name}
+                  url={form.creative?.url}
+                  addedAt={form.creative?.addedAt}
+                  onPick={(creative) => set('creative', creative)}
+                />
+              </Field>
             </div>
           )}
         </dl>
@@ -238,33 +318,42 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
                 downloadLabel="Скачать договор"
                 name={form.file?.name}
                 url={form.file?.url}
+                addedAt={form.file?.addedAt}
                 onPick={(file) => set('file', file)}
               />
             </Field>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            {/* Под какую рекламную кампанию заключён договор. */}
-            <Field label="Название рекламной кампании">
-              <Input
-                value={form.campaignName ?? ''}
-                onChange={(e) => set('campaignName', e.target.value)}
-                placeholder="Например, Кондиционеры — лето"
-              />
-            </Field>
-            {/* Ролик договора подставляется в кампании этого договора. */}
-            <Field label="Рекламный ролик">
-              <FilePicker
-                accept="video/*"
-                icon={Film}
-                emptyLabel="Загрузить ролик"
-                downloadLabel="Скачать ролик"
-                name={form.creative?.name}
-                url={form.creative?.url}
-                onPick={(creative) => set('creative', creative)}
-              />
-            </Field>
-          </div>
+          {/* Название рекламной кампании и ролик заполняет рекламодатель —
+              в форме площадки их нет, но значения показываем справкой. */}
+          {(form.campaignName || form.creative) && (
+            <div className="rounded-2xl border border-line bg-paper/40 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                От рекламодателя
+              </p>
+              <dl className="mt-2 space-y-2">
+                <Row label="Рекламная кампания" value={form.campaignName} />
+              </dl>
+              {form.creative && (
+                <a
+                  href={form.creative.url}
+                  download={form.creative.name}
+                  className="mt-2 flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+                >
+                  <Film size={16} className="shrink-0 text-indigo-800" />
+                  <span className="min-w-0 flex-1 truncate">
+                    {form.creative.name}
+                  </span>
+                  <Download size={15} className="shrink-0 text-ink-muted" />
+                </a>
+              )}
+              {form.creative?.addedAt && (
+                <p className="mt-1 text-[11px] text-ink-muted tnum">
+                  Ролик добавлен {formatDateTime(form.creative.addedAt)}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Юр. лицо подставляется из карточки бренда, сроки оплаты живут
               в самом договоре — в форме их не спрашиваем. */}

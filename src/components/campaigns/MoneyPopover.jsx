@@ -25,14 +25,17 @@ const toDateTimeInput = (date) => {
 }
 
 /**
- * Правка сумм кампании: к оплате, оплачено и разовое поступление,
- * которое прибавляется к оплаченному. Вторая вкладка — история поступлений
+ * Правка сумм договора: сумма договора, оплачено и разовое поступление,
+ * которое прибавляется к оплаченному. Вторая вкладка — история выплат
  * с датой и временем каждого платежа.
  * Рисуется порталом с position: fixed — иначе таблица его обрежет.
  */
 export function MoneyPopover({
   anchorEl,
-  campaign,
+  title,
+  budget: budgetValue = 0,
+  spent = 0,
+  payments = [],
   onSave,
   onEditPayment,
   onClose,
@@ -42,22 +45,19 @@ export function MoneyPopover({
   const [anchor, setAnchor] = useState(() => anchorEl.getBoundingClientRect())
   const { canEdit, isAdvertiser } = useAuth()
   // Суммы правит только админ; рекламодателю и наблюдателю — история выплат.
-  // Завершённую кампанию не правим, но историю по ней смотреть можно.
-  const editable =
-    canEdit && !isAdvertiser && campaign.status !== 'completed'
-  const payments = campaign.payments ?? []
+  const editable = canEdit && !isAdvertiser
 
   const [tab, setTab] = useState(editable ? 'pay' : 'history')
-  const [budget, setBudget] = useState(groupDigits(campaign.budget))
-  const [paid, setPaid] = useState(groupDigits(campaign.spent))
+  const [budget, setBudget] = useState(groupDigits(budgetValue))
+  const [paid, setPaid] = useState(groupDigits(spent))
   const [income, setIncome] = useState('')
   const [paidAt, setPaidAt] = useState(() => toDateTimeInput(new Date()))
 
   // Поповер остаётся открытым после сохранения — подтягиваем свежие суммы.
   useEffect(() => {
-    setBudget(groupDigits(campaign.budget))
-    setPaid(groupDigits(campaign.spent))
-  }, [campaign.budget, campaign.spent])
+    setBudget(groupDigits(budgetValue))
+    setPaid(groupDigits(spent))
+  }, [budgetValue, spent])
 
   // Следим за ячейкой покадрово: событий scroll недостаточно — таблица может
   // ехать и от прокрутки контейнера, и от перерисовки строк.
@@ -155,7 +155,7 @@ export function MoneyPopover({
             </span>
           </p>
           <p className="mt-0.5 truncate text-[13px] font-medium text-ink">
-            {campaign.name}
+            {title}
           </p>
         </div>
         <button
@@ -266,11 +266,12 @@ export function MoneyPopover({
                 Поступлений пока не было.
               </p>
             ) : (
-              payments.map((payment) => (
+              payments.map((payment, index) => (
                 <div
                   key={payment.id}
                   className="flex items-center justify-between gap-2 rounded-xl bg-paper/70 px-2 py-1.5"
                 >
+                  <div className='text-[10px] text-ink-muted'>{index + 1}</div>
                   {/* Дату и время выплаты можно поправить прямо в истории. */}
                   {editable ? (
                     <input
@@ -296,7 +297,7 @@ export function MoneyPopover({
           <div className="mt-3 flex items-center justify-between rounded-xl bg-paper/70 px-3 py-2 text-[12px]">
             <span className="text-ink-muted">Всего оплачено </span>
             <span className="font-semibold text-ink tnum">
-              {formatMoney(campaign.spent)}
+              {formatMoney(spent)}
             </span>
           </div>
 

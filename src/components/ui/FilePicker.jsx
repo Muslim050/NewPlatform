@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { Download, FileText, Paperclip, X } from 'lucide-react'
 import { cn } from '@/lib/cn.js'
+import { formatDateTime } from '@/lib/format.js'
 import { useToast } from '@/components/ui/Toast.jsx'
 
 // Файлы храним прямо в базе (localStorage), поэтому ограничиваем размер.
@@ -10,11 +11,13 @@ const MAX_INLINE_SIZE = 2 * 1024 * 1024
  * Поле выбора файла: клик по нему открывает системный диалог.
  * Небольшие файлы кладём в базу как data-URL, крупные держим ссылкой на сессию —
  * иначе они не помещаются в localStorage.
- * onPick получает { name, url } либо null, если файл убрали.
+ * onPick получает { name, url, addedAt } либо null, если файл убрали.
+ * addedAt — момент загрузки: показываем его подписью под полем.
  */
 export function FilePicker({
   name,
   url,
+  addedAt,
   onPick,
   accept,
   emptyLabel = 'Выбрать файл',
@@ -31,14 +34,25 @@ export function FilePicker({
     // Сбрасываем input, иначе повторный выбор того же файла не сработает.
     e.target.value = ''
     if (!picked) return
+    // Дату загрузки фиксируем сразу — она едет вместе с файлом.
+    const addedNow = new Date().toISOString()
     if (picked.size <= MAX_INLINE_SIZE) {
       const reader = new FileReader()
-      reader.onload = () => onPick({ name: picked.name, url: String(reader.result) })
+      reader.onload = () =>
+        onPick({
+          name: picked.name,
+          url: String(reader.result),
+          addedAt: addedNow,
+        })
       reader.onerror = () => toast.error('Не удалось прочитать файл')
       reader.readAsDataURL(picked)
       return
     }
-    onPick({ name: picked.name, url: URL.createObjectURL(picked) })
+    onPick({
+      name: picked.name,
+      url: URL.createObjectURL(picked),
+      addedAt: addedNow,
+    })
     toast.info('Файл больше 2 МБ — ссылка на него живёт до перезагрузки страницы')
   }
 
@@ -101,6 +115,13 @@ export function FilePicker({
           </button>
         )}
       </div>
+
+      {/* Когда файл загрузили — видно всем, кто открывает карточку. */}
+      {name && addedAt && (
+        <p className="text-[11px] text-ink-muted tnum">
+          Добавлен {formatDateTime(addedAt)}
+        </p>
+      )}
 
       {downloadLabel && name && url && (
         <a

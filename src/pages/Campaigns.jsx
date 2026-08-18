@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus,
@@ -9,6 +9,7 @@ import {
   BarChart3,
   FileText,
   FolderOpen,
+  Download,
   CalendarPlus,
   CalendarCheck,
   CalendarClock,
@@ -22,6 +23,7 @@ import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import {
   formatDateNumeric,
+  formatDateTime,
   formatMoneyCompact,
   formatPct,
 } from '@/lib/format.js'
@@ -31,12 +33,14 @@ import { Progress } from '@/components/ui/Progress.jsx'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
+import { Tooltip } from '@/components/ui/Tooltip.jsx'
 import { CampaignForm } from '@/components/forms/CampaignForm.jsx'
 import { BrandTabs } from '@/components/campaigns/BrandTabs.jsx'
 import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
 import { MediaReport } from '@/components/campaigns/MediaReport.jsx'
 import { MoneyPopover } from '@/components/campaigns/MoneyPopover.jsx'
 import { ContractModal } from '@/components/campaigns/ContractModal.jsx'
+import { StatusPopover } from '@/components/campaigns/StatusPopover.jsx'
 import { cn } from '@/lib/cn.js'
 import { uid } from '@/lib/id.js'
 import {
@@ -46,13 +50,13 @@ import {
 
 // Раскладка строки: у рекламодателя нет колонок бюджета и статистики, а из
 // действий — только «Открыть». У админа колонок больше, поэтому промежутки уже.
-// Колонка «Статистика» временно скрыта, поэтому её ширины (76px и 88px)
+// Колонки «Статистика» и «Номер договора» временно скрыты, поэтому их ширины
 // убраны из шаблона — при возврате колонки вернуть их перед «Действиями».
 // Первая колонка тянется — иначе справа от «Действий» остаётся пустое поле.
 const GRID_ADMIN =
-  'md:gap-2.5 md:grid-cols-[minmax(180px,1fr)_146px_112px_96px_124px_88px] 2xl:grid-cols-[minmax(200px,1fr)_150px_132px_104px_140px_96px]'
+  'md:gap-2.5 md:grid-cols-[minmax(180px,1fr)_146px_112px_88px] 2xl:grid-cols-[minmax(200px,1fr)_150px_132px_96px]'
 const GRID_ADVERTISER =
-  'md:gap-3 md:grid-cols-[minmax(180px,1fr)_150px_112px_110px_124px_56px] 2xl:grid-cols-[minmax(200px,1fr)_164px_132px_120px_140px_56px]'
+  'md:gap-3 md:grid-cols-[minmax(180px,1fr)_150px_112px_56px] 2xl:grid-cols-[minmax(200px,1fr)_164px_132px_56px]'
 
 // Порядок группировки строк — как в фильтрах над таблицей.
 const STATUS_ORDER = {
@@ -74,6 +78,39 @@ const STATUS_MARKS = {
 }
 
 const ALL_BRANDS = 'all'
+// Статус оплаты договора: денег ждём или они уже пришли. Неоплаченный
+// договор красный и пульсирует — его видно в потоке карточек.
+const CONTRACT_PAYMENT = {
+  awaiting: {
+    label: 'Ожидает оплату',
+    card: 'border-danger/60 bg-danger/[0.1] hover:border-danger/70 hover:bg-danger/10 animate-pulse-ring',
+    badge: 'bg-danger/20 text-danger',
+    caption: 'text-danger',
+    pencil: 'text-danger',
+    pulse: true,
+  },
+  paid: {
+    label: 'Оплачено',
+    card: 'border-success/35 bg-success/[0.07] hover:border-success/60 hover:bg-success/10',
+    badge: 'bg-success/10 text-success',
+    caption: 'text-success',
+    pencil: 'text-success',
+    pulse: false,
+  },
+}
+const PAYMENT_OPTIONS = [
+  {
+    value: 'awaiting',
+    label: CONTRACT_PAYMENT.awaiting.label,
+    badge: CONTRACT_PAYMENT.awaiting.badge,
+  },
+  {
+    value: 'paid',
+    label: CONTRACT_PAYMENT.paid.label,
+    badge: CONTRACT_PAYMENT.paid.badge,
+  },
+]
+
 const ALL_CONTRACTS = 'all'
 const MONTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
@@ -185,8 +222,6 @@ export default function Campaigns() {
   const confirm = useConfirm()
 
   const [q, setQ] = useState('')
-  const [searchOpen, setSearchOpen] = useState(false)
-  const searchRef = useRef(null)
   const [status, setStatus] = useState('all')
   const [brandId, setBrandId] = useState(ALL_BRANDS)
   const [contract, setContract] = useState(ALL_CONTRACTS)
@@ -198,26 +233,11 @@ export default function Campaigns() {
   const [preview, setPreview] = useState(null)
   // Правка сумм в поповере у ячейки «Бюджет / Прибыль» (только админ).
   const [money, setMoney] = useState(null)
+  // Карточка, у которой открыт поповер со сменой статуса оплаты.
+  const [statusAnchor, setStatusAnchor] = useState(null)
 
-  // Поповер поиска закрываем кликом вне и по Escape.
-  useEffect(() => {
-    if (!searchOpen) return
-    const onDown = (e) =>
-      searchRef.current &&
-      !searchRef.current.contains(e.target) &&
-      setSearchOpen(false)
-    const onKey = (e) => e.key === 'Escape' && setSearchOpen(false)
-    document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [searchOpen])
-
-  // Бюджет виден всем, но правит суммы только админ: рекламодателю по клику
-  // открывается история выплат.
-  const showBudget = true
+  // Суммы переехали на договор — в таблице кампаний колонки бюджета нет.
+  const showBudget = false
   const canEditMoney = canEdit && !isAdvertiser
   // Колонка «Статистика» временно скрыта и у админа.
   // const showStats = !isAdvertiser
@@ -284,6 +304,17 @@ export default function Campaigns() {
   // Отчёт открываем только по закрытым месяцам; за текущий — список кампаний.
   const showMonthReport =
     activeMonth != null && !isCurrentMonth(activeYear, activeMonth)
+
+  // Договор, открытый сейчас: по нему ведутся суммы и выплаты.
+  const selectedContract =
+    activeContract === ALL_CONTRACTS
+      ? null
+      : (contractBrand?.contracts ?? []).find(
+          (c) => c.number === activeContract,
+        ) ?? null
+  const contractPacing = selectedContract?.budget
+    ? ((selectedContract.spent ?? 0) / selectedContract.budget) * 100
+    : 0
 
   const scoped =
     activeMonth == null
@@ -352,10 +383,10 @@ export default function Campaigns() {
       })
     : []
 
-  // Кампанию для поповера берём из актуального списка: он остаётся открытым
-  // после сохранения и должен показывать свежие суммы и историю.
-  const moneyCampaign = money
-    ? campaigns.find((c) => c.id === money.id) ?? null
+  // Договор для поповера берём из актуального бренда: поповер остаётся
+  // открытым после сохранения и должен показывать свежие суммы и историю.
+  const moneyContract = money
+    ? (contractBrand?.contracts ?? []).find((c) => c.id === money.id) ?? null
     : null
 
   /**
@@ -369,17 +400,69 @@ export default function Campaigns() {
     setMonth(new Date().getMonth())
   }
 
+  /** Сохраняем суммы договора внутри карточки бренда. */
+  const patchContract = (contractId, patch) => {
+    const next = (contractBrand.contracts ?? []).map((c) =>
+      c.id === contractId ? { ...c, ...patch } : c,
+    )
+    update('advertisers', contractBrand.id, { contracts: next })
+  }
+
   const saveMoney = ({ budget, spent, amount, paidAt }) => {
-    const history = moneyCampaign.payments ?? []
-    // Поступление уходит в историю с выбранными датой и временем.
-    const payments = amount
-      ? [{ id: uid('pay'), amount, createdAt: paidAt }, ...history].sort(
-          (a, b) => (a.createdAt < b.createdAt ? 1 : -1),
-        )
-      : history
-    update('campaigns', moneyCampaign.id, { budget, spent, payments })
+    const history = moneyContract.payments ?? []
+    // В историю пишем весь прирост оплаченного, а не только поле
+    // «Поступление»: первую оплату часто вбивают прямо в «Оплачено»,
+    // и это тоже платёж.
+    const gained = spent - (moneyContract.spent ?? 0)
+    const payments =
+      gained > 0
+        ? [
+            { id: uid('pay'), amount: gained, createdAt: paidAt },
+            ...history,
+          ].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+        : history
+    patchContract(moneyContract.id, { budget, spent, payments })
     // Поповер намеренно не закрываем — можно внести следующее поступление.
-    toast.success(amount ? 'Поступление внесено' : 'Суммы обновлены')
+    toast.success(
+      gained > 0
+        ? `Поступление по договору ${moneyContract.number} внесено`
+        : `Суммы договора ${moneyContract.number} обновлены`,
+    )
+  }
+
+  /** Статус оплаты договора: по умолчанию деньги ещё ждём. */
+  const paymentStatus =
+    selectedContract?.paymentStatus === 'paid' ? 'paid' : 'awaiting'
+  // Когда поставили текущий статус. У договоров без этой даты берём свежую
+  // запись истории с тем же статусом: смену могли оформить задним числом,
+  // и наверху списка окажется чужая.
+  const paymentChangedAt =
+    selectedContract?.paymentStatusAt ??
+    selectedContract?.paymentLog?.find((e) => e.status === paymentStatus)
+      ?.createdAt ??
+    null
+
+  const savePaymentStatus = (next, changedAt) => {
+    // Каждую смену статуса записываем: кто, когда и на что поменял.
+    // Дату выбирают в поповере — смену можно оформить и задним числом.
+    const entry = {
+      id: uid('st'),
+      status: next,
+      createdAt: changedAt ?? new Date().toISOString(),
+      by: user?.name ?? null,
+    }
+    const log = [entry, ...(selectedContract.paymentLog ?? [])].sort((a, b) =>
+      a.createdAt < b.createdAt ? 1 : -1,
+    )
+    patchContract(selectedContract.id, {
+      paymentStatus: next,
+      paymentStatusAt: entry.createdAt,
+      paymentLog: log,
+    })
+    setStatusAnchor(null)
+    toast.success(
+      `Договор ${selectedContract.number}: ${CONTRACT_PAYMENT[next].label}`,
+    )
   }
 
   /** Правка даты и времени уже внесённой выплаты. */
@@ -387,12 +470,12 @@ export default function Campaigns() {
     if (!localValue) return
     const createdAt = new Date(localValue)
     if (Number.isNaN(createdAt.getTime())) return
-    const payments = (moneyCampaign.payments ?? []).map((payment) =>
+    const payments = (moneyContract.payments ?? []).map((payment) =>
       payment.id === paymentId
         ? { ...payment, createdAt: createdAt.toISOString() }
         : payment,
     )
-    update('campaigns', moneyCampaign.id, { payments })
+    patchContract(moneyContract.id, { payments })
   }
 
   const del = async (c) => {
@@ -411,57 +494,38 @@ export default function Campaigns() {
     <div>
       {/* Поиск, фильтр статусов и создание кампании — одной строкой */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Поиск спрятан за иконку — строка фильтров остаётся свободной. */}
-        <div className="relative shrink-0" ref={searchRef}>
-          <button
-            type="button"
-            onClick={() => setSearchOpen((v) => !v)}
+        {/* Поиск всегда на виду: поле открыто, крестик очищает запрос. */}
+        <div className="relative w-full shrink-0 sm:w-[210px]">
+          <Search
+            size={16}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"
+          />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === 'Escape' && setQ('')}
             aria-label="Поиск кампании"
-            aria-expanded={searchOpen}
-            title="Поиск по названию"
+            placeholder="Поиск по названию…"
             className={cn(
-              'relative flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface text-ink-soft transition-colors hover:border-indigo-300 hover:text-ink focus-ring',
-              (searchOpen || query) && 'border-indigo-300 text-ink',
+              'h-11 w-full rounded-xl border border-line bg-surface pl-9 pr-9 text-sm text-ink transition-colors placeholder:text-ink-muted hover:border-indigo-300 focus-ring focus-visible:border-indigo-300',
+              query && 'border-indigo-300',
             )}
-          >
-            <Search size={18} />
-            {/* Поиск активен, но окно закрыто — показываем метку. */}
-            {query && !searchOpen && (
-              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-indigo-500 ring-2 ring-paper" />
-            )}
-          </button>
-
-          {searchOpen && (
-            <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-2xl border border-line bg-surface p-3 shadow-lift">
-              <div className="relative">
-                <Search
-                  size={16}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"
-                />
-                <input
-                  autoFocus
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Поиск по названию…"
-                  className="h-10 w-full rounded-xl border border-line bg-surface pl-9 pr-8 text-sm text-ink placeholder:text-ink-muted focus-ring focus-visible:border-indigo-300"
-                />
-                {q && (
-                  <button
-                    type="button"
-                    onClick={() => setQ('')}
-                    aria-label="Очистить поиск"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-              {query && (
-                <p className="mt-2 text-[12px] text-ink-muted">
-                  Найдено: {filtered.length}
-                </p>
-              )}
-            </div>
+          />
+          {q && (
+            <button
+              type="button"
+              onClick={() => setQ('')}
+              aria-label="Очистить поиск"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring"
+            >
+              <X size={14} />
+            </button>
+          )}
+          {/* Сколько кампаний осталось после поиска — подписью под полем. */}
+          {query && (
+            <p className="absolute left-1 top-full mt-1 text-[12px] text-ink-muted">
+              Найдено: {filtered.length}
+            </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3 sm:justify-end">
@@ -494,11 +558,13 @@ export default function Campaigns() {
         />
       )}
 
-      {/* Договоры выбранного бренда — фильтр, просмотр и добавление */}
+      {/* Договоры выбранного бренда — фильтр, файл, просмотр и добавление.
+          Кнопки без подписей, поэтому у каждой своя подсказка. */}
       {contractBrand && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {contracts.length > 0 && (
             <SegmentTabs
+              tone="soft"
               value={activeContract}
               onChange={(value) =>
                 setContract(value === activeContract ? ALL_CONTRACTS : value)
@@ -507,45 +573,163 @@ export default function Campaigns() {
             />
           )}
           {activeContract !== ALL_CONTRACTS && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() =>
-                setContractModal({
-                  contract: contractBrand.contracts.find(
-                    (c) => c.number === activeContract,
-                  ),
-                })
-              }
-            >
-              <FileText size={15} />
-              Открыть договор
-            </Button>
+            <Tooltip label="Открыть договор">
+              <Button
+                size="sm"
+                variant="secondary"
+                aria-label="Открыть договор"
+                onClick={() =>
+                  setContractModal({
+                    contract: contractBrand.contracts.find(
+                      (c) => c.number === activeContract,
+                    ),
+                  })
+                }
+              >
+                <FileText size={15} />
+              </Button>
+            </Tooltip>
+          )}
+          {/* Файл договора качаем прямо из строки — без захода в карточку. */}
+          {selectedContract?.file?.url && (
+            <Tooltip label={`Скачать договор — ${selectedContract.file.name}`}>
+              <a
+                href={selectedContract.file.url}
+                download={selectedContract.file.name}
+                aria-label="Скачать договор"
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-line bg-surface px-3.5 text-ink transition-all duration-200 hover:border-indigo-300 hover:bg-indigo-50 active:scale-[0.98] focus-ring"
+              >
+                <Download size={15} />
+              </a>
+            </Tooltip>
           )}
           {!isAdvertiser && canEdit && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => setContractModal({ contract: null })}
-            >
-              <Plus size={15} />
-              Договор
-            </Button>
+            <Tooltip label="Добавить договор">
+              <Button
+                size="sm"
+                variant="secondary"
+                aria-label="Добавить договор"
+                onClick={() => setContractModal({ contract: null })}
+              >
+                <Plus size={15} />
+              </Button>
+            </Tooltip>
           )}
         </div>
       )}
 
-      {/* Период выбранного договора: год слева, 12 месяцев */}
+      {/* Деньги договора, статус оплаты и период — одной строкой. */}
       {showMonths && (
-        <MonthTabs
-          className="mb-4"
-          year={activeYear}
-          years={years}
-          onYearChange={setYear}
-          value={activeMonth}
-          onChange={setMonth}
-          counts={monthCounts}
-        />
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          {selectedContract && (
+            <div className="flex shrink-0 items-stretch gap-2">
+              <button
+                type="button"
+                onClick={(e) =>
+                  setMoney({ id: selectedContract.id, el: e.currentTarget })
+                }
+                title={
+                  canEditMoney
+                    ? 'Изменить суммы договора и внести поступление'
+                    : 'История выплат по договору'
+                }
+                className="group w-[210px] shrink-0 rounded-xl border border-indigo-200 bg-indigo-50/60 px-3 py-1.5 text-left transition-colors hover:border-indigo-400 hover:bg-indigo-50 focus-ring"
+              >
+                <span className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-900">
+                    Бюджет / Прибыль
+                  </span>
+                  {canEditMoney && (
+                    <Pencil
+                      size={12}
+                      aria-hidden="true"
+                      className="ml-auto shrink-0 text-indigo-800 opacity-0 transition-opacity group-hover:opacity-100"
+                    />
+                  )}
+                </span>
+                <span className="mt-0.5 flex items-center gap-1.5 text-[12px]">
+                  <span className="text-ink-muted tnum">
+                    {formatMoneyCompact(selectedContract.budget ?? 0)}
+                  </span>
+                  <span className="ml-auto font-medium text-ink tnum">
+                    {formatMoneyCompact(selectedContract.spent ?? 0)}
+                  </span>
+                </span>
+                <Progress
+                  value={contractPacing}
+                  label={formatPct(contractPacing, 0)}
+                  className="mt-1"
+                />
+              </button>
+
+              {/* Статус оплаты договора — меняется в поповере по карандашу. */}
+              <button
+                type="button"
+                disabled={!canEditMoney}
+                onClick={(e) => setStatusAnchor(e.currentTarget)}
+                title={canEditMoney ? 'Изменить статус оплаты' : undefined}
+                className={cn(
+                  'group flex shrink-0 flex-col justify-center rounded-xl border px-3 py-1.5 text-left transition-colors focus-ring',
+                  CONTRACT_PAYMENT[paymentStatus].card,
+                )}
+              >
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className={cn(
+                      'text-[10px] font-semibold uppercase tracking-wider',
+                      CONTRACT_PAYMENT[paymentStatus].caption,
+                    )}
+                  >
+                    Статус
+                  </span>
+                  {/* Дата последней смены — рекламодателю карточка нужна
+                      именно как справка. */}
+                  {paymentChangedAt && (
+                    <span
+                      className="shrink-0 text-[10px] text-black tnum"
+                      title="Дата и время последней смены статуса"
+                    >
+                      {formatDateTime(paymentChangedAt)}
+                    </span>
+                  )}
+                  {canEditMoney && (
+                    <Pencil
+                      size={12}
+                      aria-hidden="true"
+                      className={cn(
+                        'ml-auto shrink-0 opacity-0 transition-opacity group-hover:opacity-100',
+                        CONTRACT_PAYMENT[paymentStatus].pencil,
+                      )}
+                    />
+                  )}
+                </span>
+                <span
+                  className={cn(
+                    'mt-1 inline-flex w-full items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-medium',
+                    CONTRACT_PAYMENT[paymentStatus].badge,
+                  )}
+                >
+                  <span className="relative flex h-1.5 w-1.5">
+                    {CONTRACT_PAYMENT[paymentStatus].pulse && (
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-70" />
+                    )}
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+                  </span>
+                  {CONTRACT_PAYMENT[paymentStatus].label}
+                </span>
+              </button>
+            </div>
+          )}
+
+          <MonthTabs
+            year={activeYear}
+            years={years}
+            onYearChange={setYear}
+            value={activeMonth}
+            onChange={setMonth}
+            counts={monthCounts}
+          />
+        </div>
       )}
 
       {/* Выбран закрытый месяц — вместо списка кампаний показываем статистику */}
@@ -585,7 +769,6 @@ export default function Campaigns() {
               </span>
               <span >Статус</span>
               <span >Период</span>
-              <span>Номер договора</span>
               {showBudget && (
                 <span className="flex justify-center">
                   {isAdvertiser ? 'Бюджет / Оплачено' : 'Бюджет / Прибыль'}
@@ -661,8 +844,7 @@ export default function Campaigns() {
                       />
                     </div>
 
-                    {/* Период — дата под датой: так колонка узкая и ничего
-                        не наезжает на номер договора. */}
+                    {/* Период — дата под датой: так колонка остаётся узкой. */}
                     <div className="hidden min-w-0 md:block">
                       <p
                         className="flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-ink-soft tnum"
@@ -686,21 +868,6 @@ export default function Campaigns() {
                         />
                         {formatDateNumeric(c.endDate)}
                       </p>
-                    </div>
-
-                    <div className="hidden min-w-0 md:block">
-                      {c.contractNumber ? (
-                        <p
-                          className="truncate text-[12px] font-medium text-ink-soft tnum"
-                          title={`Договор ${c.contractNumber}`}
-                        >
-                          {c.contractNumber}
-                        </p>
-                      ) : (
-                        <span className="text-sm text-ink-muted" aria-hidden="true">
-                          —
-                        </span>
-                      )}
                     </div>
 
                     {showBudget && (
@@ -841,13 +1008,28 @@ export default function Campaigns() {
         onClose={() => setContractModal(null)}
       />
 
-      {moneyCampaign && (
+      {moneyContract && (
         <MoneyPopover
           anchorEl={money.el}
-          campaign={moneyCampaign}
+          title={`Договор ${moneyContract.number}`}
+          budget={moneyContract.budget ?? 0}
+          spent={moneyContract.spent ?? 0}
+          payments={moneyContract.payments ?? []}
           onSave={saveMoney}
           onEditPayment={editPayment}
           onClose={() => setMoney(null)}
+        />
+      )}
+
+      {statusAnchor && selectedContract && (
+        <StatusPopover
+          anchorEl={statusAnchor}
+          title={`Договор ${selectedContract.number}`}
+          value={paymentStatus}
+          options={PAYMENT_OPTIONS}
+          history={selectedContract.paymentLog ?? []}
+          onSave={savePaymentStatus}
+          onClose={() => setStatusAnchor(null)}
         />
       )}
 

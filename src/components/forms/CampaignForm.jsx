@@ -35,6 +35,8 @@ const emptyForm = {
   // Ролик приходит из выбранной рекламной кампании — дефолта нет.
   creativeUrl: '',
   creativeName: '',
+  // Когда ролик загрузили — показываем это рядом с полем и в карточке.
+  creativeAddedAt: '',
   contractNumber: '',
   package: '',
   leagues: [],
@@ -115,6 +117,7 @@ export function CampaignForm({ open, onClose, initial }) {
         channelIds: [...initial.channelIds],
         creativeUrl: initial.creativeUrl || '',
         creativeName: initial.creativeName || '',
+        creativeAddedAt: initial.creativeAddedAt || '',
         contractNumber: initial.contractNumber || '',
         package: initial.package || '',
         leagues: [...(initial.leagues || [])],
@@ -149,7 +152,11 @@ export function CampaignForm({ open, onClose, initial }) {
       ...f,
       name,
       ...(creative
-        ? { creativeUrl: creative.url, creativeName: creative.name }
+        ? {
+            creativeUrl: creative.url,
+            creativeName: creative.name,
+            creativeAddedAt: creative.addedAt || '',
+          }
         : null),
     }))
   }
@@ -207,6 +214,7 @@ export function CampaignForm({ open, onClose, initial }) {
       channelIds: form.channelIds,
       creativeUrl: form.creativeUrl.trim(),
       creativeName: form.creativeName,
+      creativeAddedAt: form.creativeAddedAt,
       // Условия договора — и при создании, и при редактировании.
       contractNumber: form.contractNumber.trim(),
       package: form.package,
@@ -324,32 +332,30 @@ export function CampaignForm({ open, onClose, initial }) {
             )}
           </Field>
 
+          {/* Название кампании вписывают руками. Совпало с названием из
+              договора — вместе с ним подтянется ролик. */}
           <Field
             label="Рекламная кампания"
             required
             error={errors.name}
             hint={
-              selectedContract && !selectedContract.campaignName
-                ? 'В договоре кампания не указана — впишите название.'
+              selectedContract?.campaignName
+                ? `В договоре указана: ${selectedContract.campaignName}`
                 : undefined
             }
           >
-            {selectedContract?.campaignName ? (
-              <Select
-                value={form.name}
-                onChange={(e) => selectCampaign(e.target.value)}
-              >
-                <option value="">— выберите кампанию —</option>
-                <option value={selectedContract.campaignName}>
-                  {selectedContract.campaignName}
-                </option>
-              </Select>
-            ) : (
-              <Input
-                value={form.name}
-                onChange={(e) => set('name', e.target.value)}
-                placeholder="Например, Летняя распродажа"
-              />
+            <Input
+              list={
+                selectedContract?.campaignName ? 'contract-campaigns' : undefined
+              }
+              value={form.name}
+              onChange={(e) => selectCampaign(e.target.value)}
+              placeholder="Например, Летняя распродажа"
+            />
+            {selectedContract?.campaignName && (
+              <datalist id="contract-campaigns">
+                <option value={selectedContract.campaignName} />
+              </datalist>
             )}
           </Field>
         </div>
@@ -413,11 +419,13 @@ export function CampaignForm({ open, onClose, initial }) {
                 removable={isAdmin}
                 name={form.creativeName || fileNameFromUrl(form.creativeUrl)}
                 url={form.creativeUrl}
+                addedAt={form.creativeAddedAt}
                 onPick={(picked) =>
                   setForm((f) => ({
                     ...f,
                     creativeUrl: picked?.url || '',
                     creativeName: picked?.name || '',
+                    creativeAddedAt: picked?.addedAt || '',
                   }))
                 }
               />

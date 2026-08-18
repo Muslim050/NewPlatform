@@ -124,7 +124,7 @@ export function CampaignStatusPill({ status, pacing, createdAt }) {
 }
 
 /** Плитка ролика — по клику видео открывается в новой вкладке. */
-function CreativeTile({ url }) {
+function CreativeTile({ url, addedAt }) {
   if (!url) {
     return (
       <div className="rounded-2xl border border-dashed border-line p-4">
@@ -161,6 +161,12 @@ function CreativeTile({ url }) {
         Смотреть
         <ExternalLink size={15} className="text-ink-muted" />
       </p>
+      {/* Когда ролик загрузили — видно прямо в карточке кампании. */}
+      {addedAt && (
+        <p className="mt-1 text-[11px] text-ink-muted tnum">
+          Добавлен {formatDateTime(addedAt)}
+        </p>
+      )}
     </a>
   )
 }
@@ -343,7 +349,10 @@ export function CampaignPreviewModal({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <CreativeTile url={campaign.creativeUrl} />
+            <CreativeTile
+              url={campaign.creativeUrl}
+              addedAt={campaign.creativeAddedAt}
+            />
             <ContractTiles campaign={campaign} advertiser={advertiser} />
 
             {/* Плитка оплаты: по клику раскрывается история выплат. */}

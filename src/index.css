@@ -2,6 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Шрифты Setanta Sports: заголовки — фирменная Setantica 2023
+   (Light Semi Cond и Regular Reg), текст — Noto Sans. Setantica юникейсная,
+   поэтому в наборном тексте её не используем. Файлы лежат в /public/fonts,
+   интернет не нужен. Диапазон font-weight: 100 900 у Setantica отключает
+   искусственную жирность — начертаний с другим весом в семействе нет. */
+@font-face {
+  font-family: 'Setantica';
+  src: url('/fonts/Setantica2023-RegularReg.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Setantica Cond';
+  src: url('/fonts/Setantica2023-LightSemiCond.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans';
+  src: url('/fonts/NotoSans-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans';
+  src: url('/fonts/NotoSans-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans';
+  src: url('/fonts/NotoSans-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans';
+  src: url('/fonts/NotoSans-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     --ring: 255 209 6;
@@ -90,5 +138,19 @@
   /* Числовые таблицы — моноширинные цифры для ровных колонок */
   .tnum {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Пульсирующая подсветка рамки — для того, что ждёт действия. */
+  @keyframes pulse-ring {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.32);
+    }
+    50% {
+      box-shadow: 0 0 0 6px rgba(229, 72, 77, 0);
+    }
+  }
+  .animate-pulse-ring {
+    animation: pulse-ring 2s ease-in-out infinite;
   }
 }

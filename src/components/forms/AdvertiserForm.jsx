@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   Check,
+  Download,
   FileText,
   Film,
   Image as ImageIcon,
@@ -17,6 +18,7 @@ import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { FilePicker } from '@/components/ui/FilePicker.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { LEAGUES, PACKAGES } from '@/lib/metrics.js'
+import { formatDateTime } from '@/lib/format.js'
 import { uid } from '@/lib/id.js'
 import { cn } from '@/lib/cn.js'
 
@@ -452,34 +454,48 @@ export function AdvertiserForm({ open, onClose, initial }) {
                   downloadLabel="Скачать договор"
                   name={contract.file?.name}
                   url={contract.file?.url}
+                  addedAt={contract.file?.addedAt}
                   onPick={(file) => setContract(contract.id, { file })}
                 />
               </Field>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {/* Под какую рекламную кампанию заключён договор. */}
-              <Field label="Название рекламной кампании">
-                <Input
-                  value={contract.campaignName ?? ''}
-                  onChange={(e) =>
-                    setContract(contract.id, { campaignName: e.target.value })
-                  }
-                  placeholder="Например, Кондиционеры — лето"
-                />
-              </Field>
-              {/* Ролик договора подставляется в кампании по этому договору. */}
-              <Field label="Рекламный ролик">
-                <FilePicker
-                  accept="video/*"
-                  icon={Film}
-                  emptyLabel="Загрузить ролик"
-                  downloadLabel="Скачать ролик"
-                  name={contract.creative?.name}
-                  url={contract.creative?.url}
-                  onPick={(creative) => setContract(contract.id, { creative })}
-                />
-              </Field>
+            {/* Название рекламной кампании и ролик заполняет рекламодатель
+                в своей карточке договора — здесь только показываем. */}
+            <div className="rounded-2xl border border-line bg-paper/40 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                От рекламодателя
+              </p>
+              <p className="mt-2 text-[13px]">
+                <span className="text-ink-muted">Рекламная кампания: </span>
+                <span className="font-medium text-ink">
+                  {contract.campaignName || 'не заполнена'}
+                </span>
+              </p>
+              {contract.creative ? (
+                <>
+                  <a
+                    href={contract.creative.url}
+                    download={contract.creative.name}
+                    className="mt-2 flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+                  >
+                    <Film size={16} className="shrink-0 text-indigo-800" />
+                    <span className="min-w-0 flex-1 truncate">
+                      {contract.creative.name}
+                    </span>
+                    <Download size={15} className="shrink-0 text-ink-muted" />
+                  </a>
+                  {contract.creative.addedAt && (
+                    <p className="mt-1 text-[11px] text-ink-muted tnum">
+                      Ролик добавлен {formatDateTime(contract.creative.addedAt)}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="mt-2 text-[13px] text-ink-muted">
+                  Ролик не загружен
+                </p>
+              )}
             </div>
 
             {/* Юр. лицо и сроки оплаты берём из карточки бренда и договора —

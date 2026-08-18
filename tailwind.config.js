@@ -44,9 +44,13 @@ export default {
         danger: '#E5484D',
       },
       fontFamily: {
-        display: ['"Space Grotesk"', 'Inter', 'system-ui', 'sans-serif'],
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['"Space Mono"', 'ui-monospace', 'monospace'],
+        // Заголовки — фирменная Setantica 2023 (Regular Reg), крупные
+        // заголовки и логотип — её узкое начертание Light Semi Cond,
+        // наборный текст — Noto Sans.
+        display: ['Setantica', 'system-ui', 'sans-serif'],
+        'display-cond': ['"Setantica Cond"', 'Setantica', 'system-ui', 'sans-serif'],
+        sans: ['"Noto Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {
         'display-xl': ['clamp(2.6rem, 5vw, 4rem)', { lineHeight: '1.02', letterSpacing: '-0.03em' }],

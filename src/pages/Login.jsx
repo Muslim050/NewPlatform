@@ -226,7 +226,7 @@ export default function Login() {
           <Logo size={40} />
 
           <div className="mt-10">
-            <h1 className="text-display-md text-ink text-base">
+            <h1 className="font-display-cond text-display-md text-ink text-base">
               С возвращением
             </h1>
 
