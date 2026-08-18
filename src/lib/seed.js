@@ -1005,10 +1005,14 @@ const seenByAdvertiser = new Map()
  */
 export function creativeAddedAtFor(campaign, index = 0) {
   if (!campaign.creativeUrl || !campaign.startDate) return null
+  // Разброс считаем от id кампании — время выходит разным, но стабильным.
+  const salt =
+    index +
+    [...String(campaign.id)].reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
   const date = new Date(`${campaign.startDate}T00:00:00`)
-  date.setDate(date.getDate() - (3 + (index % 5)))
-  const hours = 10 + (index % 8)
-  const minutes = (index * 13) % 60
+  date.setDate(date.getDate() - (2 + (salt % 6)))
+  const hours = 9 + (salt % 9)
+  const minutes = (salt * 7) % 60
   return (
     `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
     `T${pad(hours)}:${pad(minutes)}:00`
