@@ -13,6 +13,10 @@ const SEED_LEGAL_NAMES = new Map(ADVERTISERS.map((a) => [a.id, a.legalName]))
 const SEED_LOGOS = new Map(ADVERTISERS.map((a) => [a.id, a.logo]))
 // Время создания демо-кампаний: в старых базах даты сохранены без времени.
 const SEED_CREATED_AT = new Map(CAMPAIGNS.map((c) => [c.id, c.createdAt]))
+// Дата загрузки ролика появилась позже — в старых базах её добираем из сида.
+const SEED_CREATIVE_ADDED_AT = new Map(
+  CAMPAIGNS.map((c) => [c.id, c.creativeAddedAt]),
+)
 
 // Ключ версионируем: при смене набора демо-кампаний старая база в localStorage
 // заменяется свежим сидом.
@@ -100,10 +104,18 @@ function normalizeDatabase(database) {
       contracts: advertiser.contracts?.length
         ? advertiser.contracts.map((contract) => {
             // Скан договора мог появиться в сиде позже — подтягиваем по номеру.
-            if (contract.file) return contract
             const seed = (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).find(
               (c) => c.number === contract.number,
             )
+            if (contract.file) {
+              // Дата загрузки скана появилась позже самого скана.
+              return contract.file.addedAt || !seed?.file?.addedAt
+                ? contract
+                : {
+                    ...contract,
+                    file: { ...contract.file, addedAt: seed.file.addedAt },
+                  }
+            }
             return seed?.file ? { ...contract, file: { ...seed.file } } : contract
           })
         : (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).map((contract) => ({
@@ -142,9 +154,18 @@ function normalizeDatabase(database) {
           ? { ...withStatus, createdAt: seedCreatedAt }
           : withStatus
 
+      // Дату загрузки ролика дописываем только там, где её нет.
+      const seedCreativeAddedAt = SEED_CREATIVE_ADDED_AT.get(campaign.id)
+      const withCreative =
+        !withCreatedAt.creativeAddedAt &&
+        withCreatedAt.creativeUrl &&
+        seedCreativeAddedAt
+          ? { ...withCreatedAt, creativeAddedAt: seedCreativeAddedAt }
+          : withCreatedAt
+
       return shouldUpdateDemoStatuses
-        ? fillContract(withCreatedAt, contractNumbers)
-        : withCreatedAt
+        ? fillContract(withCreative, contractNumbers)
+        : withCreative
     }),
     campaignStatusLayoutVersion: CAMPAIGN_STATUS_LAYOUT_VERSION,
   }

@@ -178,7 +178,11 @@ const CONTRACT_TEMPLATES = [
 
 // Сканы договоров лежат в /public — в базе храним только имя и ссылку.
 const CONTRACT_FILES = {
-  adv_artel: { name: 'NDA_проект.docx', url: '/contracts/nda-artel.docx' },
+  adv_artel: {
+    name: 'NDA_проект.docx',
+    url: '/contracts/nda-artel.docx',
+    addedAt: '2026-05-20T11:40:00',
+  },
 }
 
 function contractsFor(advertiser, index) {
@@ -995,6 +999,22 @@ const ARTEL_MONTHLY = Array.from({ length: ARTEL_ORDERS }, (_, index) =>
 // (пакет, лиги, юр. лицо, срок, оплата) берём прямо из него.
 const seenByAdvertiser = new Map()
 
+/**
+ * Демо-дата загрузки ролика: за 3–7 дней до старта кампании, в рабочее время.
+ * Считается от полей самой кампании, поэтому одинакова при каждом запуске.
+ */
+export function creativeAddedAtFor(campaign, index = 0) {
+  if (!campaign.creativeUrl || !campaign.startDate) return null
+  const date = new Date(`${campaign.startDate}T00:00:00`)
+  date.setDate(date.getDate() - (3 + (index % 5)))
+  const hours = 10 + (index % 8)
+  const minutes = (index * 13) % 60
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(hours)}:${pad(minutes)}:00`
+  )
+}
+
 export const CAMPAIGNS = [...CAMPAIGN_BASE, ...ARTEL_MONTHLY].map((campaign) => {
   const contracts = CONTRACTS_BY_ADVERTISER[campaign.advertiserId] ?? []
   const seen = seenByAdvertiser.get(campaign.advertiserId) ?? 0
@@ -1006,10 +1026,14 @@ export const CAMPAIGNS = [...CAMPAIGN_BASE, ...ARTEL_MONTHLY].map((campaign) => 
   )
   const pool = fitting.length ? fitting : contracts
   const contract = pool[seen % (pool.length || 1)]
-  if (!contract) return campaign
+  const creativeAddedAt = creativeAddedAtFor(campaign, seen)
+  if (!contract) {
+    return creativeAddedAt ? { ...campaign, creativeAddedAt } : campaign
+  }
 
   return {
     ...campaign,
+    ...(creativeAddedAt ? { creativeAddedAt } : null),
     contractNumber: contract.number,
     legalName: contract.legalName,
     package: contract.package,

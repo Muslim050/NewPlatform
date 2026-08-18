@@ -294,6 +294,17 @@ export function CampaignPreviewModal({
     : 0
   const payments = campaign?.payments ?? []
 
+  // Дату загрузки ролика кампания хранит у себя, но у старых записей её нет —
+  // тогда берём её из договора, если ролик там тот же самый.
+  const contract = (advertiser?.contracts ?? []).find(
+    (c) => c.number === campaign?.contractNumber,
+  )
+  const creativeAddedAt =
+    campaign?.creativeAddedAt ||
+    (contract?.creative?.url && contract.creative.url === campaign?.creativeUrl
+      ? contract.creative.addedAt
+      : null)
+
   // Открыли другую кампанию — историю снова прячем.
   useEffect(() => {
     setShowPayments(false)
@@ -349,10 +360,7 @@ export function CampaignPreviewModal({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <CreativeTile
-              url={campaign.creativeUrl}
-              addedAt={campaign.creativeAddedAt}
-            />
+            <CreativeTile url={campaign.creativeUrl} addedAt={creativeAddedAt} />
             <ContractTiles campaign={campaign} advertiser={advertiser} />
 
             {/* Плитка оплаты: по клику раскрывается история выплат. */}
