@@ -134,7 +134,7 @@ export default function CampaignStats() {
       </section>
 
       {hasMediaTables ? (
-        <MediaReport />
+        <MediaReport scopeId={campaign.contractNumber || campaign.id} />
       ) : (
         <>
           <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">

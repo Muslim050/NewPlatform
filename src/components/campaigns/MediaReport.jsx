@@ -1,5 +1,9 @@
-import { useState } from 'react'
-import { CampaignTabs, EditableSpotTable } from './CampaignMediaTabs.jsx'
+import { useEffect, useState } from 'react'
+import {
+  CampaignTabs,
+  EditableSpotTable,
+  useCampaignTabs,
+} from './CampaignMediaTabs.jsx'
 import { SpotLogTable } from './SpotLogTable.jsx'
 import {
   ChannelSummaryReport,
@@ -7,52 +11,65 @@ import {
   TotalStatisticsReport,
 } from './CampaignReportPanels.jsx'
 
-// Логи выходов: вкладка → лист в загружаемом отчёте.
-const SPOT_LOGS = {
-  ss1uzb: {
-    sheetName: 'SS1 UZB',
-    title: 'SS1 UZB',
-    subtitle: 'Setanta Sports 1 · выходы роликов на UZB TV',
-  },
-  ss2uzb: {
-    sheetName: 'SS2 UZB',
-    title: 'SS2 UZB',
-    subtitle: 'Setanta Sports 2 · выходы роликов на UZB TV',
-  },
-  promo1: {
-    sheetName: 'Event Promo SS 1',
-    title: 'Event Promo SS1',
-    subtitle: 'Setanta Sports 1 · промо событий в эфире',
-  },
-  promo2: {
-    sheetName: 'Event Promo SS2',
-    title: 'Event Promo SS2',
-    subtitle: 'Setanta Sports 2 · промо событий в эфире',
-  },
-}
-
 /**
- * Медиаплан и отчёты: вкладки каналов и таблица выбранной вкладки.
- * Один и тот же блок открывается со страницы кампании и по месяцу в списке.
+ * Медиаплан и отчёты: вкладки категорий и таблица выбранной вкладки.
+ * Состав вкладок пользователь собирает сам, свой у каждого договора.
  */
-export function MediaReport({ className }) {
-  const [tab, setTab] = useState('spot1')
+export function MediaReport({ className, scopeId }) {
+  const [tab, setTab] = useState('channels')
+  const { groups, tabs, addCategory, removeCategory } = useCampaignTabs(scopeId)
+  const current = tabs.find((item) => item.value === tab)
+
+  // Договор сменился — открытая вкладка могла исчезнуть.
+  useEffect(() => {
+    if (!tabs.some((item) => item.value === tab)) setTab('channels')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeId])
+
+  // Категорию открываем сразу на её первом канале.
+  const createCategory = (name) => {
+    const created = addCategory(name)
+    if (created?.channels?.length) setTab(created.channels[0].id)
+  }
+
+  // Убрали категорию с открытой вкладкой — возвращаемся к сводке.
+  const dropCategory = (categoryId) => {
+    removeCategory(categoryId)
+    if (current?.categoryId === categoryId) setTab('channels')
+  }
 
   return (
     <div className={className}>
-      <CampaignTabs value={tab} onChange={setTab} />
+      <CampaignTabs
+        value={tab}
+        onChange={setTab}
+        groups={groups}
+        onAddCategory={createCategory}
+        onRemoveCategory={dropCategory}
+      />
 
-      {SPOT_LOGS[tab] ? (
-        <SpotLogTable logKey={tab} {...SPOT_LOGS[tab]} />
-      ) : tab === 'stats' ? (
+      {tab === 'stats' ? (
         <TotalStatisticsReport />
       ) : tab === 'channels' ? (
         <ChannelSummaryReport />
-      ) : tab === 'social' ? (
-        <SocialMediaReport />
-      ) : (
-        <EditableSpotTable key={tab} tableKey={tab} />
-      )}
+      ) : current?.kind === 'social' ? (
+        <SocialMediaReport channel={current.label} channelKey={tab} />
+      ) : current?.kind === 'log' ? (
+        <SpotLogTable
+          key={tab}
+          logKey={tab}
+          sheetName={current.label}
+          title={current.label}
+          subtitle={`${current.group} · выходы роликов`}
+        />
+      ) : current ? (
+        <EditableSpotTable
+          key={tab}
+          tableKey={tab}
+          title={`${current.group.toUpperCase()} — ${current.label.toUpperCase()}`}
+          subtitle={`${current.label} · размещения и расписание эфиров`}
+        />
+      ) : null}
     </div>
   )
 }

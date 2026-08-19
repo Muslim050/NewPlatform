@@ -54,6 +54,12 @@ const MONTH_FILLS = [
 // Месяцы, которые ещё не наступили, — серые и без кампаний.
 const FUTURE_FILL = 'bg-ink/[0.03] text-ink-muted/70 cursor-default'
 
+// Месяц со статусом оплаты перекрашивается: зелёный — оплачен, красный — ждём.
+const STATUS_FILLS = {
+  paid: 'bg-success/25 font-semibold text-success hover:bg-success/35',
+  awaiting: 'bg-danger/25 font-semibold text-danger hover:bg-danger/35',
+}
+
 const arrowClass =
   'flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted transition-colors focus-ring enabled:hover:bg-ink/[0.06] enabled:hover:text-ink-soft disabled:opacity-35'
 
@@ -61,7 +67,8 @@ const arrowClass =
  * Фильтр периода: слева выбор года стрелками, справа 12 месяцев.
  * Отдельной вкладки «Все» нет: фильтр снимает крестик справа (или повторный
  * клик по выбранному месяцу).
- * years: доступные годы, counts: сколько кампаний попадает в каждый месяц.
+ * years: доступные годы, counts: сколько кампаний попадает в каждый месяц,
+ * statuses: { [месяц]: 'paid' | 'awaiting' } — статус оплаты договора за месяц.
  */
 export function MonthTabs({
   year,
@@ -70,6 +77,7 @@ export function MonthTabs({
   value,
   onChange,
   counts,
+  statuses,
   className,
 }) {
   const index = years.indexOf(year)
@@ -114,6 +122,7 @@ export function MonthTabs({
         {MONTHS_SHORT.map((label, month) => {
           const active = value === month
           const count = counts?.[month] ?? 0
+          const status = statuses?.[month] ?? null
           // Прошедшие и текущий месяц — цветные, будущие — серые.
           const passed =
             year < currentYear ||
@@ -127,17 +136,23 @@ export function MonthTabs({
               disabled={!passed}
               title={
                 passed
-                  ? `${MONTHS_FULL[month]} ${year}`
+                  ? cn(
+                      `${MONTHS_FULL[month]} ${year}`,
+                      status === 'paid' && '· оплачен',
+                      status === 'awaiting' && '· ожидает оплату',
+                    )
                   : `${MONTHS_FULL[month]} ${year} — месяц ещё не наступил`
               }
               onClick={() => onChange(active ? null : month)}
               className={cn(
                 'flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[13px] font-medium transition-all focus-ring',
                 passed
-                  ? cn(
-                      MONTH_FILLS[month],
-                      'text-indigo-900 hover:brightness-[0.97]',
-                    )
+                  ? status
+                    ? STATUS_FILLS[status]
+                    : cn(
+                        MONTH_FILLS[month],
+                        'text-indigo-900 hover:brightness-[0.97]',
+                      )
                   : FUTURE_FILL,
                 active && 'font-semibold ring-2 ring-indigo-700',
               )}
@@ -161,7 +176,7 @@ export function MonthTabs({
           onClick={() => onChange(null)}
           aria-label="Показать все месяцы"
           title="Показать все месяцы"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink-muted transition-colors hover:border-ink/25 hover:text-ink focus-ring"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-danger/25 bg-danger text-white transition-colors hover:bg-danger/50 hover:text-white focus-ring"
         >
           <X size={16} />
         </button>

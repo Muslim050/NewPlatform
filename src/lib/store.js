@@ -4,6 +4,7 @@ import {
   CONTRACTS_BY_ADVERTISER,
   REQUISITES_BY_ADVERTISER,
   buildSeed,
+  paymentStatusesFor,
 } from './seed.js'
 import { uid } from './id.js'
 
@@ -82,6 +83,56 @@ const pickContractFields = (source) =>
     ]),
   )
 
+/**
+ * Статус оплаты теперь ставится на месяц договора. Записи старого формата —
+ * без `period` — выбрасываем: в истории они выглядели как «Без месяца» и
+ * ничего не красили. Договор при этом возвращается к статусу по умолчанию.
+ */
+function dropStatusesWithoutPeriod(contract) {
+  const log = contract.paymentLog ?? []
+  const kept = log.filter((entry) => entry.period)
+  if (kept.length === log.length) return contract
+
+  const next = { ...contract, paymentLog: kept }
+  // Текущий статус мог быть выставлен удалённой записью — пересобираем его
+  // по тому, что осталось.
+  const last = kept.reduce(
+    (newest, entry) =>
+      !newest || entry.createdAt > newest.createdAt ? entry : newest,
+    null,
+  )
+  if (last) {
+    next.paymentStatus = last.status
+    next.paymentStatusAt = last.createdAt
+  } else {
+    delete next.paymentStatus
+    delete next.paymentStatusAt
+  }
+  return next
+}
+
+/**
+ * Статусы оплаты по месяцам появились позже самих договоров — в базах,
+ * созданных раньше, их нет. Добираем демо-набор из сида, но только когда
+ * своих отметок ещё не ставили.
+ */
+function fillDemoStatuses(contract) {
+  const hasOwn =
+    Object.keys(contract.paymentStatusByPeriod ?? {}).length > 0 ||
+    (contract.paymentLog ?? []).length > 0
+  if (hasOwn) return contract
+
+  const demo = paymentStatusesFor(contract.id)
+  const last = demo.log[0]
+  return {
+    ...contract,
+    paymentStatusByPeriod: demo.byPeriod,
+    paymentLog: demo.log,
+    paymentStatus: last.status,
+    paymentStatusAt: last.createdAt,
+  }
+}
+
 function normalizeDatabase(database) {
   const shouldUpdateDemoStatuses =
     database.campaignStatusLayoutVersion !== CAMPAIGN_STATUS_LAYOUT_VERSION
@@ -102,7 +153,8 @@ function normalizeDatabase(database) {
         ...(REQUISITES_BY_ADVERTISER[advertiser.id] ?? {}),
       },
       contracts: advertiser.contracts?.length
-        ? advertiser.contracts.map((contract) => {
+        ? advertiser.contracts.map((raw) => {
+            const contract = fillDemoStatuses(dropStatusesWithoutPeriod(raw))
             // Скан договора мог появиться в сиде позже — подтягиваем по номеру.
             const seed = (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).find(
               (c) => c.number === contract.number,

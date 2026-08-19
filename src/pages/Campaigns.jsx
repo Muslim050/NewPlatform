@@ -40,7 +40,10 @@ import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
 import { MediaReport } from '@/components/campaigns/MediaReport.jsx'
 import { MoneyPopover } from '@/components/campaigns/MoneyPopover.jsx'
 import { ContractModal } from '@/components/campaigns/ContractModal.jsx'
-import { StatusPopover } from '@/components/campaigns/StatusPopover.jsx'
+import {
+  StatusPopover,
+  periodKey,
+} from '@/components/campaigns/StatusPopover.jsx'
 import { cn } from '@/lib/cn.js'
 import { uid } from '@/lib/id.js'
 import {
@@ -408,18 +411,28 @@ export default function Campaigns() {
     update('advertisers', contractBrand.id, { contracts: next })
   }
 
+  // История выплат идёт от первой к последней. Внутри одной минуты порядок
+  // держит seq — номер внесения: без него платежи, вбитые подряд, встают
+  // в случайном порядке.
+  const byPaymentDate = (a, b) => {
+    if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1
+    return (a.seq ?? 0) - (b.seq ?? 0)
+  }
+
   const saveMoney = ({ budget, spent, amount, paidAt }) => {
     const history = moneyContract.payments ?? []
     // В историю пишем весь прирост оплаченного, а не только поле
     // «Поступление»: первую оплату часто вбивают прямо в «Оплачено»,
     // и это тоже платёж.
     const gained = spent - (moneyContract.spent ?? 0)
+    const nextSeq =
+      history.reduce((max, payment) => Math.max(max, payment.seq ?? 0), 0) + 1
     const payments =
       gained > 0
         ? [
-            { id: uid('pay'), amount: gained, createdAt: paidAt },
             ...history,
-          ].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+            { id: uid('pay'), amount: gained, createdAt: paidAt, seq: nextSeq },
+          ].sort(byPaymentDate)
         : history
     patchContract(moneyContract.id, { budget, spent, payments })
     // Поповер намеренно не закрываем — можно внести следующее поступление.
@@ -430,38 +443,66 @@ export default function Campaigns() {
     )
   }
 
-  /** Статус оплаты договора: по умолчанию деньги ещё ждём. */
+  /** Статус оплаты договора ведётся по месяцам: ключ вида 2026-08. */
+  const statusByPeriod = selectedContract?.paymentStatusByPeriod ?? {}
+  // Карточка показывает статус выбранного месяца, а без месяца — последний.
+  const activePeriod =
+    activeMonth != null ? periodKey(activeYear, activeMonth) : null
+  const periodEntry = activePeriod ? statusByPeriod[activePeriod] : null
   const paymentStatus =
-    selectedContract?.paymentStatus === 'paid' ? 'paid' : 'awaiting'
-  // Когда поставили текущий статус. У договоров без этой даты берём свежую
-  // запись истории с тем же статусом: смену могли оформить задним числом,
-  // и наверху списка окажется чужая.
+    (periodEntry?.status ?? selectedContract?.paymentStatus) === 'paid'
+      ? 'paid'
+      : 'awaiting'
+  // Когда поставили этот статус. У договоров без даты берём свежую запись
+  // истории с тем же статусом: смену могли оформить задним числом, и наверху
+  // списка окажется чужая.
   const paymentChangedAt =
-    selectedContract?.paymentStatusAt ??
-    selectedContract?.paymentLog?.find((e) => e.status === paymentStatus)
-      ?.createdAt ??
-    null
+    periodEntry?.changedAt ??
+    (periodEntry
+      ? null
+      : (selectedContract?.paymentStatusAt ??
+        selectedContract?.paymentLog?.find((e) => e.status === paymentStatus)
+          ?.createdAt ??
+        null))
 
-  const savePaymentStatus = (next, changedAt) => {
-    // Каждую смену статуса записываем: кто, когда и на что поменял.
+  // Раскраска вкладок месяцев за показанный год.
+  const monthStatuses = MONTHS.reduce((acc, month) => {
+    const entry = statusByPeriod[periodKey(activeYear, month)]
+    if (entry?.status) acc[month] = entry.status
+    return acc
+  }, {})
+
+  const savePaymentStatus = (next, changedAt, period) => {
+    // Каждую смену статуса записываем: кто, когда, за какой месяц и на что.
     // Дату выбирают в поповере — смену можно оформить и задним числом.
+    const createdAt = changedAt ?? new Date().toISOString()
     const entry = {
       id: uid('st'),
       status: next,
-      createdAt: changedAt ?? new Date().toISOString(),
+      period,
+      createdAt,
       by: user?.name ?? null,
     }
     const log = [entry, ...(selectedContract.paymentLog ?? [])].sort((a, b) =>
       a.createdAt < b.createdAt ? 1 : -1,
     )
     patchContract(selectedContract.id, {
+      // Последний по времени статус держим и на самом договоре — им
+      // подписана карточка, когда месяц не выбран.
       paymentStatus: next,
-      paymentStatusAt: entry.createdAt,
+      paymentStatusAt: createdAt,
+      paymentStatusByPeriod: {
+        ...statusByPeriod,
+        [period]: { status: next, changedAt: createdAt },
+      },
       paymentLog: log,
     })
     setStatusAnchor(null)
+    const [year, month] = period.split('-')
     toast.success(
-      `Договор ${selectedContract.number}: ${CONTRACT_PAYMENT[next].label}`,
+      `Договор ${selectedContract.number}, ${MONTHS_FULL[
+        Number(month) - 1
+      ].toLowerCase()} ${year}: ${CONTRACT_PAYMENT[next].label}`,
     )
   }
 
@@ -470,12 +511,36 @@ export default function Campaigns() {
     if (!localValue) return
     const createdAt = new Date(localValue)
     if (Number.isNaN(createdAt.getTime())) return
-    const payments = (moneyContract.payments ?? []).map((payment) =>
-      payment.id === paymentId
-        ? { ...payment, createdAt: createdAt.toISOString() }
-        : payment,
-    )
+    const payments = (moneyContract.payments ?? [])
+      .map((payment) =>
+        payment.id === paymentId
+          ? { ...payment, createdAt: createdAt.toISOString() }
+          : payment,
+      )
+      .sort(byPaymentDate)
     patchContract(moneyContract.id, { payments })
+  }
+
+  /** Удаление выплаты: сумма вычитается из оплаченного по договору. */
+  const removePayment = async (paymentId) => {
+    const payment = (moneyContract.payments ?? []).find(
+      (item) => item.id === paymentId,
+    )
+    if (!payment) return
+    const ok = await confirm({
+      title: 'Удалить поступление?',
+      description: `${formatMoneyCompact(payment.amount)} · ${formatDateTime(payment.createdAt)}`,
+      body: 'Сумма вычтется из оплаченного по договору.',
+    })
+    if (!ok) return
+    const payments = (moneyContract.payments ?? []).filter(
+      (item) => item.id !== paymentId,
+    )
+    patchContract(moneyContract.id, {
+      payments,
+      spent: Math.max(0, (moneyContract.spent ?? 0) - payment.amount),
+    })
+    toast.info('Поступление удалено')
   }
 
   const del = async (c) => {
@@ -637,7 +702,8 @@ export default function Campaigns() {
               >
                 <span className="flex items-center gap-1.5">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-900">
-                    Бюджет / Прибыль
+                    {/* Прибыль — внутренняя цифра площадки. */}
+                    {isAdvertiser ? 'Бюджет / Оплачено' : 'Бюджет / Прибыль'}
                   </span>
                   {canEditMoney && (
                     <Pencil
@@ -662,12 +728,16 @@ export default function Campaigns() {
                 />
               </button>
 
-              {/* Статус оплаты договора — меняется в поповере по карандашу. */}
+              {/* Статус оплаты договора: площадка меняет, остальные смотрят
+                  историю смен. */}
               <button
                 type="button"
-                disabled={!canEditMoney}
                 onClick={(e) => setStatusAnchor(e.currentTarget)}
-                title={canEditMoney ? 'Изменить статус оплаты' : undefined}
+                title={
+                  canEditMoney
+                    ? 'Изменить статус оплаты'
+                    : 'История статуса оплаты'
+                }
                 className={cn(
                   'group flex shrink-0 flex-col justify-center rounded-xl border px-3 py-1.5 text-left transition-colors focus-ring',
                   CONTRACT_PAYMENT[paymentStatus].card,
@@ -728,6 +798,7 @@ export default function Campaigns() {
             value={activeMonth}
             onChange={setMonth}
             counts={monthCounts}
+            statuses={monthStatuses}
           />
         </div>
       )}
@@ -997,7 +1068,11 @@ export default function Campaigns() {
               Статистика за {MONTHS_FULL[activeMonth].toLowerCase()} {activeYear}
             </h2>
           </div>
-          <MediaReport key={`${activeYear}-${activeMonth}`} />
+          {/* Состав вкладок отчёта свой у каждого договора. */}
+          <MediaReport
+            key={`${selectedContract?.id ?? 'all'}-${activeYear}-${activeMonth}`}
+            scopeId={selectedContract?.id}
+          />
         </section>
       )}
 
@@ -1015,6 +1090,7 @@ export default function Campaigns() {
           budget={moneyContract.budget ?? 0}
           spent={moneyContract.spent ?? 0}
           payments={moneyContract.payments ?? []}
+          onRemovePayment={removePayment}
           onSave={saveMoney}
           onEditPayment={editPayment}
           onClose={() => setMoney(null)}
@@ -1028,6 +1104,10 @@ export default function Campaigns() {
           value={paymentStatus}
           options={PAYMENT_OPTIONS}
           history={selectedContract.paymentLog ?? []}
+          statusByPeriod={statusByPeriod}
+          period={activePeriod ?? periodKey(activeYear, new Date().getMonth())}
+          years={years}
+          readOnly={!canEditMoney}
           onSave={savePaymentStatus}
           onClose={() => setStatusAnchor(null)}
         />

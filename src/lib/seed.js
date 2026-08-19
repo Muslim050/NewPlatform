@@ -176,6 +176,8 @@ const CONTRACT_TEMPLATES = [
   },
 ]
 
+const pad = (n) => String(n).padStart(2, '0')
+
 // Сканы договоров лежат в /public — в базе храним только имя и ссылку.
 const CONTRACT_FILES = {
   adv_artel: {
@@ -185,18 +187,76 @@ const CONTRACT_FILES = {
   },
 }
 
+/**
+ * Демо-статусы оплаты по месяцам 2026 года: январь–май закрыты («Оплачено»),
+ * дальше статусы чередуются. Даты смен — пятое число своего месяца.
+ * Дальше августа не идём: будущие месяцы в фильтре недоступны, статус у них
+ * выглядел бы странно.
+ */
+const STATUS_YEAR = 2026
+const STATUS_LAST_MONTH = 7 // август
+
+export function paymentStatusesFor(contractId) {
+  const byPeriod = {}
+  const log = []
+  for (let month = 0; month <= STATUS_LAST_MONTH; month += 1) {
+    const period = `${STATUS_YEAR}-${pad(month + 1)}`
+    // Январь–май закрыты, дальше чередуем: оплачен — ждём — оплачен.
+    const closed = month < 5 || month % 2 === 0
+    // Сначала месяц ждал оплату, потом (если закрыт) деньги пришли.
+    const opened = `${period}-03T${pad(10 + (month % 5))}:${pad(
+      (month * 11) % 60,
+    )}:00`
+    const paidAt = `${period}-${pad(18 + (month % 6))}T${pad(
+      12 + (month % 5),
+    )}:${pad((month * 7) % 60)}:00`
+
+    log.push({
+      id: `st_${contractId}_${period}_awaiting`,
+      status: 'awaiting',
+      period,
+      createdAt: opened,
+      by: 'admin',
+    })
+    if (closed) {
+      log.push({
+        id: `st_${contractId}_${period}_paid`,
+        status: 'paid',
+        period,
+        createdAt: paidAt,
+        by: 'admin',
+      })
+    }
+    byPeriod[period] = closed
+      ? { status: 'paid', changedAt: paidAt }
+      : { status: 'awaiting', changedAt: opened }
+  }
+  // История — от новых к старым, как её пишет интерфейс.
+  log.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+  return { byPeriod, log }
+}
+
 function contractsFor(advertiser, index) {
-  return CONTRACT_TEMPLATES.map((template) => ({
-    id: `ctr_${advertiser.id.replace('adv_', '')}_${template.suffix}`,
-    number: `Д-2026/${index + 1}${template.suffix}`,
-    legalName: advertiser.legalName,
-    package: template.package,
-    leagues: [...template.leagues],
-    start: template.start,
-    end: template.end,
-    paymentDate: template.paymentDate,
-    file: CONTRACT_FILES[advertiser.id] ?? null,
-  }))
+  return CONTRACT_TEMPLATES.map((template) => {
+    const id = `ctr_${advertiser.id.replace('adv_', '')}_${template.suffix}`
+    const statuses = paymentStatusesFor(id)
+    const last = statuses.log[0]
+    return {
+      id,
+      number: `Д-2026/${index + 1}${template.suffix}`,
+      legalName: advertiser.legalName,
+      package: template.package,
+      leagues: [...template.leagues],
+      start: template.start,
+      end: template.end,
+      paymentDate: template.paymentDate,
+      file: CONTRACT_FILES[advertiser.id] ?? null,
+      paymentStatusByPeriod: statuses.byPeriod,
+      paymentStatus: last.status,
+      paymentStatusAt: last.createdAt,
+      paymentLog: statuses.log,
+    }
+  })
 }
 
 export const REQUISITES_BY_ADVERTISER = Object.fromEntries(
@@ -947,7 +1007,6 @@ const MONTHLY_CHANNELS = [
   ['ch_potok', 'ch_social', 'ch_mobile'],
 ]
 
-const pad = (n) => String(n).padStart(2, '0')
 
 /**
  * Заказ внутри текущего месяца. Статус согласован с датами: что закрылось

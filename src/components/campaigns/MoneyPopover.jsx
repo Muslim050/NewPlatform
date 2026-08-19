@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, X } from 'lucide-react'
+import { Plus, Trash2, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { formatDateTime, formatMoney, formatPct } from '@/lib/format.js'
 import { Button } from '@/components/ui/Button.jsx'
@@ -15,6 +15,8 @@ const groupDigits = (value) => {
   const digits = onlyDigits(value)
   return digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : ''
 }
+// Ноль в поле не показываем — его пришлось бы стирать перед вводом суммы.
+const amountField = (value) => (Number(value) ? groupDigits(value) : '')
 
 /** Дата со временем для input[type=datetime-local] — в местной зоне. */
 const toDateTimeInput = (date) => {
@@ -38,6 +40,7 @@ export function MoneyPopover({
   payments = [],
   onSave,
   onEditPayment,
+  onRemovePayment,
   onClose,
 }) {
   const ref = useRef(null)
@@ -48,15 +51,15 @@ export function MoneyPopover({
   const editable = canEdit && !isAdvertiser
 
   const [tab, setTab] = useState(editable ? 'pay' : 'history')
-  const [budget, setBudget] = useState(groupDigits(budgetValue))
-  const [paid, setPaid] = useState(groupDigits(spent))
+  const [budget, setBudget] = useState(amountField(budgetValue))
+  const [paid, setPaid] = useState(amountField(spent))
   const [income, setIncome] = useState('')
   const [paidAt, setPaidAt] = useState(() => toDateTimeInput(new Date()))
 
   // Поповер остаётся открытым после сохранения — подтягиваем свежие суммы.
   useEffect(() => {
-    setBudget(groupDigits(budgetValue))
-    setPaid(groupDigits(spent))
+    setBudget(amountField(budgetValue))
+    setPaid(amountField(spent))
   }, [budgetValue, spent])
 
   // Следим за ячейкой покадрово: событий scroll недостаточно — таблица может
@@ -195,6 +198,7 @@ export function MoneyPopover({
                 inputMode="numeric"
                 value={budget}
                 onChange={(e) => setBudget(groupDigits(e.target.value))}
+                placeholder="0"
                 className="h-9 text-[13px] tnum"
               />
             </Field>
@@ -204,6 +208,7 @@ export function MoneyPopover({
                 inputMode="numeric"
                 value={paid}
                 onChange={(e) => setPaid(groupDigits(e.target.value))}
+                placeholder="0"
                 className="h-9 text-[13px] tnum"
               />
             </Field>
@@ -289,6 +294,18 @@ export function MoneyPopover({
                   <span className="shrink-0 text-[13px] font-semibold text-emerald-700 tnum">
                     + {formatMoney(payment.amount)}
                   </span>
+                  {/* Ошибочное поступление можно убрать: сумма вернётся. */}
+                  {editable && onRemovePayment && (
+                    <button
+                      type="button"
+                      onClick={() => onRemovePayment(payment.id)}
+                      aria-label="Удалить поступление"
+                      title="Удалить поступление"
+                      className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-danger/10 hover:text-danger focus-ring"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
               ))
             )}

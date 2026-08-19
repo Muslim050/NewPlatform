@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Check,
   Download,
   FileSpreadsheet,
+  Pencil,
   Plus,
   Save,
   Settings2,
@@ -16,24 +18,227 @@ import { cn } from "@/lib/cn.js";
 import { Button } from "@/components/ui/Button.jsx";
 import { Card } from "@/components/ui/Card.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
+import { useConfirm } from "@/components/ui/Confirm.jsx";
 import { useToast } from "@/components/ui/Toast.jsx";
 
 const STORAGE_KEY = "setanta.campaign.live-spots.v4";
 const LEGACY_STORAGE_KEY = "setanta.campaign.live-spots.v1";
+// Категории и каналы, которые завёл пользователь: свой набор у каждого договора.
+const TABS_STORAGE_KEY = "setanta.campaign.custom-tabs.v2";
 
-// Две таблицы Live Spot отличаются только каналом — выносим общее в подпись
-// группы, чтобы не повторять «LIVE SPOT —» в каждой вкладке.
+// Постоянные вкладки: сводки по отчёту. Всё остальное собирается руками.
 const CAMPAIGN_TABS = [
-  { value: "spot1", label: "Setanta Sports 1", group: "Live spot" },
-  { value: "spot2", label: "Setanta Sports 2", group: "Live spot" },
-  { value: "ss1uzb", label: "SS1", group: "UZB TV" },
-  { value: "ss2uzb", label: "SS2", group: "UZB TV" },
-  { value: "promo1", label: "SS1", group: "Event promo" },
-  { value: "promo2", label: "SS2", group: "Event promo" },
-  { value: "channels", label: "Spot statistic" },
-  { value: "social", label: "Social media" },
-  { value: "stats", label: "Total statistics" },
+  { value: "channels", label: "Spot", group: "Statistic" },
+  { value: "stats", label: "Total", group: "Statistic" },
 ];
+
+// Что за таблица открывается на вкладке канала.
+export const CHANNEL_KINDS = [
+  {
+    value: "plan",
+    label: "Медиаплан",
+    hint: "Расписание прямых эфиров с хронометражом",
+  },
+  {
+    value: "log",
+    label: "Лог выходов",
+    hint: "Список выходов роликов из отчёта",
+  },
+  {
+    value: "social",
+    label: "Соцсеть",
+    hint: "Публикации и показы в Instagram или Telegram",
+  },
+];
+
+// Категории не придумывают и не наполняют вручную: выбирают из готового
+// списка, и внутри сразу два своих канала. id каналов совпадают с ключами
+// таблиц, поэтому к ним подтягиваются готовые медиапланы и логи.
+export const CATEGORY_PRESETS = [
+  {
+    name: "Live spot",
+    kind: "plan",
+    hint: "Медиапланы Setanta Sports 1 и 2",
+    channels: [
+      { id: "spot1", label: "Setanta Sports 1" },
+      { id: "spot2", label: "Setanta Sports 2" },
+    ],
+  },
+  {
+    name: "Standart spot",
+    kind: "log",
+    hint: "Логи выходов SS1 и SS2",
+    channels: [
+      { id: "ss1uzb", label: "SS1" },
+      { id: "ss2uzb", label: "SS2" },
+    ],
+  },
+  {
+    name: "Event promo",
+    kind: "log",
+    hint: "Логи промо SS1 и SS2",
+    channels: [
+      { id: "promo1", label: "SS1" },
+      { id: "promo2", label: "SS2" },
+    ],
+  },
+  {
+    name: "Social media",
+    kind: "social",
+    hint: "Отчёты Instagram и Telegram",
+    channels: [
+      { id: "social_ig", label: "Instagram" },
+      { id: "social_tg", label: "Telegram" },
+    ],
+  },
+  {
+    name: "OTT",
+    kind: "plan",
+    hint: "Медиаплан Live spot и лог Preroll",
+    channels: [
+      { id: "ott_live", label: "Live spot" },
+      { id: "ott_preroll", label: "Preroll", kind: "log" },
+    ],
+  },
+];
+
+/** Категория с её каналами — из пресета по названию. */
+function categoryFromPreset(name, categoryId) {
+  const preset = CATEGORY_PRESETS.find((item) => item.name === name);
+  if (!preset) return null;
+  return {
+    category: { id: categoryId, name: preset.name },
+    channels: preset.channels.map((channel) => ({
+      id: channel.id,
+      categoryId,
+      label: channel.label,
+      // У канала может быть свой тип таблицы: в OTT это план и лог.
+      kind: channel.kind ?? preset.kind,
+    })),
+  };
+}
+
+/** Набор вкладок из списка категорий — им же собран демо-договор. */
+function buildScope(names) {
+  return names.reduce(
+    (scope, name, index) => {
+      const built = categoryFromPreset(name, `cat_${index + 1}`);
+      if (!built) return scope;
+      return {
+        categories: [...scope.categories, built.category],
+        channels: [...scope.channels, ...built.channels],
+      };
+    },
+    { categories: [], channels: [] },
+  );
+}
+
+// Договор из демо-данных открывается с прежним набором вкладок.
+const DEMO_CATEGORIES = [
+  "Live spot",
+  "Standart spot",
+  "Event promo",
+  "Social media",
+];
+
+const DEMO_SCOPES = {
+  ctr_artel_02: () => buildScope(DEMO_CATEGORIES),
+  "Д-2026/102": () => buildScope(DEMO_CATEGORIES),
+};
+
+const emptyScope = (scopeId) =>
+  DEMO_SCOPES[scopeId]?.() ?? { categories: [], channels: [] };
+
+function loadCustomTabs(scopeId) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TABS_STORAGE_KEY) || "{}");
+    const scope = saved[scopeId];
+    if (!scope) return emptyScope(scopeId);
+    return {
+      categories: Array.isArray(scope.categories) ? scope.categories : [],
+      channels: Array.isArray(scope.channels) ? scope.channels : [],
+    };
+  } catch {
+    return emptyScope(scopeId);
+  }
+}
+
+function saveCustomTabs(scopeId, scope) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TABS_STORAGE_KEY) || "{}");
+    localStorage.setItem(
+      TABS_STORAGE_KEY,
+      JSON.stringify({ ...saved, [scopeId]: scope }),
+    );
+  } catch {
+    // Переполнилось хранилище — состав вкладок останется до перезагрузки.
+  }
+}
+
+/**
+ * Состав вкладок отчёта: постоянные сводки плюс категории и каналы, которые
+ * завёл пользователь. Набор свой у каждого договора (scopeId).
+ *
+ * groups: [{ name, id?, items: [tab] }] — в том числе пустые категории.
+ * tabs: плоский список вкладок, чтобы найти открытую.
+ */
+export function useCampaignTabs(scopeId = "default") {
+  const [scope, setScope] = useState(() => loadCustomTabs(scopeId));
+
+  // Сменили договор — подтягиваем его набор вкладок.
+  useEffect(() => {
+    setScope(loadCustomTabs(scopeId));
+  }, [scopeId]);
+
+  const update = (next) => {
+    setScope(next);
+    saveCustomTabs(scopeId, next);
+  };
+
+  const addCategory = (name) => {
+    const built = categoryFromPreset(name, uid("cat"));
+    if (!built) return null;
+    update({
+      categories: [...scope.categories, built.category],
+      channels: [...scope.channels, ...built.channels],
+    });
+    return { ...built.category, channels: built.channels };
+  };
+
+  const removeCategory = (categoryId) =>
+    update({
+      categories: scope.categories.filter((c) => c.id !== categoryId),
+      channels: scope.channels.filter((c) => c.categoryId !== categoryId),
+    });
+
+  const customGroups = scope.categories.map((category) => ({
+    id: category.id,
+    name: category.name,
+    items: scope.channels
+      .filter((channel) => channel.categoryId === category.id)
+      .map((channel) => ({
+        value: channel.id,
+        label: channel.label,
+        kind: channel.kind,
+        group: category.name,
+        categoryId: category.id,
+        custom: true,
+      })),
+  }));
+
+  const groups = [
+    { name: "Statistic", items: CAMPAIGN_TABS },
+    ...customGroups,
+  ];
+
+  return {
+    groups,
+    categories: scope.categories,
+    tabs: groups.flatMap((group) => group.items),
+    addCategory,
+    removeCategory,
+  };
+}
 
 /** Соседние вкладки с одинаковым group собираем в одну секцию.
  *  Вкладки без группы тоже идут одной секцией — общей сводкой. */
@@ -121,7 +326,9 @@ function columnMap(sheet) {
   for (const [index, row] of sheet.slice(0, 5).entries()) {
     const map = {};
     row.forEach((cell, column) => {
-      const text = String(cell ?? "").trim().toLowerCase();
+      const text = String(cell ?? "")
+        .trim()
+        .toLowerCase();
       if (!text) return;
       const found = Object.entries(HEADER_ALIASES).find(([, aliases]) =>
         aliases.includes(text),
@@ -165,7 +372,7 @@ function rowsFromSheet(sheet, tableKey) {
 }
 
 function cloneSeed(tableKey) {
-  return LIVE_SPOT_SEED[tableKey].map((row) => ({ ...row }));
+  return (LIVE_SPOT_SEED[tableKey] ?? []).map((row) => ({ ...row }));
 }
 
 function loadRows(tableKey) {
@@ -213,7 +420,65 @@ function persistRows(tableKey, rows) {
   }
 }
 
-export function CampaignTabs({ value, onChange }) {
+export function CampaignTabs({
+  value,
+  onChange,
+  groups = [],
+  onAddCategory,
+  onRemoveCategory,
+}) {
+  const { canEdit, isAdvertiser } = useAuth();
+  const confirm = useConfirm();
+  const toast = useToast();
+  // Собирать отчёт может только площадка.
+  const canAdd = Boolean(onAddCategory) && canEdit && !isAdvertiser;
+  // Крестики у категорий показываем только в режиме правки — по карандашу.
+  const [editing, setEditing] = useState(false);
+
+  const removeCategory = async (group) => {
+    const ok = await confirm({
+      title: "Убрать категорию?",
+      description: group.name,
+      body: "Вкладки категории исчезнут из отчёта. Загруженные таблицы останутся и вернутся, если добавить категорию снова.",
+    });
+    if (!ok) return;
+    onRemoveCategory(group.id);
+    toast.info(`Категория «${group.name}» убрана из отчёта`);
+  };
+
+  // Убрали последнюю категорию — из режима правки выходим сами.
+  useEffect(() => {
+    if (editing && !groups.some((group) => group.id)) setEditing(false);
+  }, [editing, groups]);
+  // anchor — прямоугольник кнопки: меню рисуется порталом, лента прокручивается.
+  const [anchor, setAnchor] = useState(null);
+  const addRef = useRef(null);
+
+  const open = Boolean(anchor);
+  const close = () => setAnchor(null);
+
+  // Меню закрываем кликом вне и по Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => {
+      if (addRef.current?.contains(e.target)) return;
+      if (e.target.closest?.("[data-add-menu]")) return;
+      close();
+    };
+    const onKey = (e) => e.key === "Escape" && close();
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  // Категории, которых ещё нет в отчёте.
+  const freePresets = CATEGORY_PRESETS.filter(
+    (preset) => !groups.some((group) => group.name === preset.name),
+  );
+
   const renderTab = (tab) => (
     <button
       key={tab.value}
@@ -230,46 +495,157 @@ export function CampaignTabs({ value, onChange }) {
     </button>
   );
 
+  const hasCustom = groups.some((group) => group.id);
+
+  const actionButtons = (
+    <div className="flex shrink-0 items-center gap-1.5">
+      <div ref={addRef}>
+        <button
+          type="button"
+          onClick={(e) =>
+            setAnchor(open ? null : e.currentTarget.getBoundingClientRect())
+          }
+          aria-label="Добавить категорию"
+          aria-expanded={open}
+          title="Добавить категорию"
+          className={cn(
+            "flex h-[45px] w-[45px] items-center justify-center rounded-xl bg-indigo-500 text-ink shadow-soft transition-all hover:bg-indigo-400 hover:shadow-pop active:scale-[0.97] focus-ring",
+            open && "bg-indigo-400 shadow-pop",
+          )}
+        >
+          <Plus size={18} />
+        </button>
+      </div>
+
+      {/* Карандаш включает правку: у категорий появляются крестики. */}
+      {hasCustom && (
+        <button
+          type="button"
+          onClick={() => setEditing((on) => !on)}
+          aria-pressed={editing}
+          aria-label={
+            editing ? "Выйти из режима правки" : "Править категории"
+          }
+          title={editing ? "Готово" : "Править категории"}
+          className={cn(
+            "flex h-[45px] w-[45px] items-center justify-center rounded-xl border transition-colors focus-ring",
+            editing
+              ? "border-ink bg-ink text-paper"
+              : "border-line bg-surface text-ink-soft hover:border-indigo-300 hover:text-ink",
+          )}
+        >
+          {editing ? <Check size={18} /> : <Pencil size={16} />}
+        </button>
+      )}
+    </div>
+  );
+
+  const addMenu =
+    open &&
+    createPortal(
+      <div
+        data-add-menu
+        style={{
+          left: Math.min(anchor.left, window.innerWidth - 288),
+          top: anchor.bottom + 8,
+        }}
+        className="fixed z-50 w-72 rounded-2xl border border-line bg-surface p-4 shadow-lift"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+            Добавить категорию
+          </p>
+          <button
+            type="button"
+            onClick={close}
+            aria-label="Закрыть"
+            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="mt-3 grid gap-1.5">
+          {freePresets.length ? (
+            freePresets.map((preset) => (
+              <button
+                key={preset.name}
+                type="button"
+                onClick={() => {
+                  close();
+                  onAddCategory(preset.name);
+                }}
+                className="rounded-xl border border-line bg-surface px-3 py-2 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+              >
+                <span className="block text-[13px] font-medium text-ink">
+                  {preset.name}
+                </span>
+                <span className="block text-[11px] text-ink-muted">
+                  {preset.hint}
+                </span>
+              </button>
+            ))
+          ) : (
+            <p className="rounded-xl bg-paper/70 px-3 py-3 text-center text-[12px] text-ink-muted">
+              Все категории уже добавлены.
+            </p>
+          )}
+        </div>
+      </div>,
+      document.body,
+    );
+
   return (
     <div className="mb-4 overflow-x-auto rounded-2xl border border-line bg-surface p-1.5 shadow-soft">
       <div className="flex min-w-max items-center gap-1.5">
-        {groupTabs(CAMPAIGN_TABS).map((group) => {
+        {groups.map((group, index) => {
           // Группа с открытой вкладкой подсвечивается целиком — сразу видно,
           // в каком блоке находишься.
           const opened = group.items.some((tab) => tab.value === value);
           return (
-            <div
-              key={group.name ?? "summary"}
-              className={cn(
-                "flex items-center gap-1.5 rounded-xl border p-2  transition-colors bg-paper",
-                opened
-                  ? "border-indigo-500 bg-indigo-50 shadow-[0_0_0_3px_rgba(255,209,6,0.28)]"
-                  : group.name
-                    ? "border-ink/15 bg-paper"
-                    : // Сводные вкладки без своей группы — на сером фоне.
-                      "border-ink/15 bg-ink/[0.05]",
-              )}
-            >
-              {/* Название группы — тёмной плашкой: активная вкладка жёлтая,
-                  поэтому группу метим контрастом, а не цветом. */}
-              {group.name && (
+            <Fragment key={group.id ?? group.name}>
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 rounded-xl border p-2 transition-colors",
+                  opened
+                    ? "border-indigo-500 bg-indigo-50 shadow-[0_0_0_3px_rgba(255,209,6,0.28)]"
+                    : "border-ink/15 bg-paper",
+                )}
+              >
+                {/* Название категории — тёмной плашкой: активная вкладка
+                    жёлтая, поэтому группу метим контрастом, а не цветом. */}
                 <span className="whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-paper">
                   {group.name}
                 </span>
-              )}
-              {group.items.map(renderTab)}
-            </div>
+                {group.items.map(renderTab)}
+                {/* В режиме правки свои категории можно убрать —
+                    постоянная Statistic остаётся. */}
+                {canAdd && editing && group.id && (
+                  <button
+                    type="button"
+                    onClick={() => removeCategory(group)}
+                    aria-label={`Убрать категорию ${group.name}`}
+                    title="Убрать категорию"
+                    className="ml-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger transition-colors hover:bg-danger hover:text-white focus-ring"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              {canAdd && index === 0 && actionButtons}
+            </Fragment>
           );
         })}
       </div>
+      {addMenu}
     </div>
   );
 }
 
-export function EditableSpotTable({ tableKey }) {
-  const { isAdvertiser, isViewer, canEdit } = useAuth()
+export function EditableSpotTable({ tableKey, title, subtitle }) {
+  const { isAdvertiser, isViewer, canEdit } = useAuth();
   // Рекламодателю и наблюдателю таблица доступна только на просмотр.
-  const readOnly = isAdvertiser || !canEdit
+  const readOnly = isAdvertiser || !canEdit;
   const toast = useToast();
   const [rows, setRows] = useState(() => loadRows(tableKey));
   const [pendingScrollRowId, setPendingScrollRowId] = useState(null);
@@ -283,7 +659,12 @@ export function EditableSpotTable({ tableKey }) {
   const rowRefs = useRef(new Map());
   const originalRowsRef = useRef(null);
   const saveFeedbackTimeoutRef = useRef(null);
-  const meta = TABLE_META[tableKey];
+  // У добавленных вкладок своей записи в TABLE_META нет — подписи приходят
+  // из самой вкладки.
+  const meta = TABLE_META[tableKey] ?? {
+    title: title ?? "LIVE SPOT",
+    subtitle: subtitle ?? "Медиаплан канала",
+  };
 
   useEffect(() => {
     if (!pendingScrollRowId) return;
@@ -453,6 +834,9 @@ export function EditableSpotTable({ tableKey }) {
     setIsDragging(true);
   };
 
+  // Секундные колонки — всё, кроме просмотров: их сумма идёт отдельной строкой.
+  const secondColumns = sumColumns.filter((column) => column.key !== "views");
+
   // Итоги по числовым колонкам — считаем по текущим строкам.
   const totals = sumColumns.reduce((acc, column) => {
     acc[column.key] = rows.reduce(
@@ -551,7 +935,11 @@ export function EditableSpotTable({ tableKey }) {
                 onClick={saveChanges}
                 disabled={!isEditing || !isDirty}
               >
-                {saveState === "saved" ? <Check size={15} /> : <Save size={15} />}
+                {saveState === "saved" ? (
+                  <Check size={15} />
+                ) : (
+                  <Save size={15} />
+                )}
                 {saveState === "saved"
                   ? "Изменения сохранены"
                   : "Сохранить изменения"}
@@ -688,7 +1076,7 @@ export function EditableSpotTable({ tableKey }) {
           <tfoot>
             <tr className="border-t border-line bg-paper/70 font-semibold text-ink">
               <td colSpan={6} className="px-4 py-3 text-right text-[12px]">
-                Итого: {rows.length} размещений · {rows.length * 4} вставок
+                Итого: {rows.length} спотов · {rows.length * 4} вставок
               </td>
               {/* Под каждой числовой колонкой — её сумма. */}
               {sumColumns.map((column) => (
@@ -705,6 +1093,26 @@ export function EditableSpotTable({ tableKey }) {
                   )}
                 </td>
               ))}
+              {isEditing && <td />}
+            </tr>
+
+            {/* Хронометраж целиком: Pre + Mid 1 + Mid 2 + Post.
+                Значение встаёт под итогом просмотров — правой колонкой. */}
+            <tr className="border-t border-line bg-paper/70 font-semibold text-ink">
+              {/* Подпись занимает те же шесть ячеек, что и строка «Итого». */}
+              <td colSpan={6} className="px-4 py-3 text-right text-[12px]">
+                Итоговая сумма секунд
+              </td>
+              {/* Пустое место между подписью и суммой — без разделителя. */}
+              <td colSpan={secondColumns.length} />
+              <td className="border-l border-line px-2 py-3 text-center tnum">
+                {secondColumns
+                  .reduce((sum, column) => sum + totals[column.key], 0)
+                  .toLocaleString("ru-RU")}
+                <span className="mt-0.5 block text-[10px] font-medium uppercase tracking-wider text-ink-muted">
+                  Сумма, сек.
+                </span>
+              </td>
               {isEditing && <td />}
             </tr>
           </tfoot>
