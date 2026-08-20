@@ -40,7 +40,14 @@ export default function App() {
         <Route index element={<Navigate to="campaigns" replace />} />
         <Route path="campaigns" element={<Campaigns />} />
         <Route path="campaigns/:campaignId" element={<CampaignStats />} />
-        <Route path="contracts" element={<ContractOverview />} />
+        <Route
+          path="contracts"
+          element={
+            <Protected roles={['admin']}>
+              <ContractOverview />
+            </Protected>
+          }
+        />
         <Route
           path="advertisers"
           element={
