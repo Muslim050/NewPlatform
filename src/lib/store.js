@@ -26,6 +26,9 @@ const DB_KEY = 'bloom.db.v12'
 // При смене версии демо-кампании догоняют сид: статусы воронки и условия
 // договора. Заполненное руками не трогаем — дописываем только пустые поля.
 const CAMPAIGN_STATUS_LAYOUT_VERSION = 6
+// Раскладка демо-оплат по месяцам: при смене версии сидовые договоры
+// догоняют новый набор статусов.
+const CONTRACT_PAYMENT_LAYOUT_VERSION = 2
 const DEMO_CAMPAIGN_STATUSES = Object.fromEntries(
   CAMPAIGNS.map((c) => [c.id, c.status]),
 )
@@ -137,6 +140,8 @@ function fillDemoStatuses(contract) {
 function normalizeDatabase(database) {
   const shouldUpdateDemoStatuses =
     database.campaignStatusLayoutVersion !== CAMPAIGN_STATUS_LAYOUT_VERSION
+  const shouldUpdateContractPayments =
+    database.contractPaymentLayoutVersion !== CONTRACT_PAYMENT_LAYOUT_VERSION
 
   const advertisers = (database.advertisers ?? []).map((advertiser) => ({
       ...advertiser,
@@ -155,7 +160,17 @@ function normalizeDatabase(database) {
       },
       contracts: advertiser.contracts?.length
         ? advertiser.contracts.map((raw) => {
-            const contract = fillDemoStatuses(dropStatusesWithoutPeriod(raw))
+            const cleaned = dropStatusesWithoutPeriod(raw)
+            // Демо-договор — обновляем его статусы вместе с раскладкой сида.
+            const contract = fillDemoStatuses(
+              shouldUpdateContractPayments && String(cleaned.id).startsWith('ctr_')
+                ? {
+                    ...cleaned,
+                    paymentStatusByPeriod: undefined,
+                    paymentLog: [],
+                  }
+                : cleaned,
+            )
             // Скан договора мог появиться в сиде позже — подтягиваем по номеру.
             const seed = (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).find(
               (c) => c.number === contract.number,
@@ -243,6 +258,7 @@ function normalizeDatabase(database) {
     // Данные вкладки «Обзор» правятся прямо на странице.
     overview: database.overview ?? cloneOverview(),
     campaignStatusLayoutVersion: CAMPAIGN_STATUS_LAYOUT_VERSION,
+    contractPaymentLayoutVersion: CONTRACT_PAYMENT_LAYOUT_VERSION,
   }
 }
 

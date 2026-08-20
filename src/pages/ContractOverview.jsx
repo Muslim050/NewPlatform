@@ -32,10 +32,7 @@ import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
 import { periodKey } from '@/components/campaigns/StatusPopover.jsx'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i)
-// Январь–июнь по отчёту закрыты, июль и август ждут оплату — цвет вкладок
-// у этих месяцев фиксированный.
-const CLOSED_MONTHS = [0, 1, 2, 3, 4, 5]
-const AWAITING_MONTHS = [6, 7]
+
 
 /** Границы месяца в ISO — с ними и сравниваем срок договора. */
 function monthBounds(year, month) {
@@ -125,16 +122,7 @@ export default function ContractOverview() {
   )
 
   // Цвет месяца: красный, если хоть один договор за него не оплачен.
-  // Январь–июнь закрыты (зелёные), июль и август ждут оплату (красные).
   const monthStatuses = MONTHS.reduce((acc, m) => {
-    if (CLOSED_MONTHS.includes(m)) {
-      acc[m] = 'paid'
-      return acc
-    }
-    if (AWAITING_MONTHS.includes(m)) {
-      acc[m] = 'awaiting'
-      return acc
-    }
     const period = periodKey(activeYear, m)
     const statuses = rows
       .filter(({ contract }) => inMonth(contract, activeYear, m))
@@ -176,11 +164,12 @@ export default function ContractOverview() {
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
 
   // Суммы ведутся по договорам — здесь складываем их по всем видимым.
-  // Закрытый месяц — по договорам всё оплачено: показываем 100% и нулевой
-  // остаток, даже если в самой записи освоено меньше.
-  const monthClosed = activeMonth != null && CLOSED_MONTHS.includes(activeMonth)
+  // Месяц закрыт по договору — значит он оплачен полностью: показываем 100%
+  // и нулевой остаток, даже если в самой записи освоено меньше.
   const spentOf = (contract) =>
-    monthClosed ? (contract.budget ?? 0) : (contract.spent ?? 0)
+    activePeriod && statusAt(contract, activePeriod) === 'paid'
+      ? (contract.budget ?? 0)
+      : (contract.spent ?? 0)
 
   const money = scoped.reduce(
     (acc, { contract }) => ({
@@ -325,8 +314,6 @@ export default function ContractOverview() {
                 <Th>Договор</Th>
                 <Th className="text-center">
                   {isAdvertiser ? 'Бюджет / Оплачено' : 'Бюджет / Прибыль'}
-                  {activeMonth != null &&
-                    ` · ${MONTHS_FULL[activeMonth].toLowerCase()}`}
                 </Th>
                 <Th className="text-right">Остаток</Th>
                 <Th>Срок договора</Th>
