@@ -176,10 +176,16 @@ export default function ContractOverview() {
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
 
   // Суммы ведутся по договорам — здесь складываем их по всем видимым.
+  // Закрытый месяц — по договорам всё оплачено: показываем 100% и нулевой
+  // остаток, даже если в самой записи освоено меньше.
+  const monthClosed = activeMonth != null && CLOSED_MONTHS.includes(activeMonth)
+  const spentOf = (contract) =>
+    monthClosed ? (contract.budget ?? 0) : (contract.spent ?? 0)
+
   const money = scoped.reduce(
     (acc, { contract }) => ({
       budget: acc.budget + (contract.budget ?? 0),
-      spent: acc.spent + (contract.spent ?? 0),
+      spent: acc.spent + spentOf(contract),
     }),
     { budget: 0, spent: 0 },
   )
@@ -331,7 +337,7 @@ export default function ContractOverview() {
             <tbody>
               {filtered.map(({ contract, advertiser }, i) => {
                 const budget = contract.budget ?? 0
-                const spent = contract.spent ?? 0
+                const spent = spentOf(contract)
                 const pacing = budget ? (spent / budget) * 100 : 0
                 // Остаток — сколько по договору ещё не закрыто деньгами.
                 const rest = budget - spent
