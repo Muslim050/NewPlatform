@@ -32,8 +32,10 @@ import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
 import { periodKey } from '@/components/campaigns/StatusPopover.jsx'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i)
-// Январь–июнь по отчёту закрыты — во вкладках они всегда зелёные.
+// Январь–июнь по отчёту закрыты, июль и август ждут оплату — цвет вкладок
+// у этих месяцев фиксированный.
 const CLOSED_MONTHS = [0, 1, 2, 3, 4, 5]
+const AWAITING_MONTHS = [6, 7]
 
 /** Границы месяца в ISO — с ними и сравниваем срок договора. */
 function monthBounds(year, month) {
@@ -123,10 +125,14 @@ export default function ContractOverview() {
   )
 
   // Цвет месяца: красный, если хоть один договор за него не оплачен.
-  // Январь–июнь в отчёте закрыты — они всегда зелёные.
+  // Январь–июнь закрыты (зелёные), июль и август ждут оплату (красные).
   const monthStatuses = MONTHS.reduce((acc, m) => {
     if (CLOSED_MONTHS.includes(m)) {
       acc[m] = 'paid'
+      return acc
+    }
+    if (AWAITING_MONTHS.includes(m)) {
+      acc[m] = 'awaiting'
       return acc
     }
     const period = periodKey(activeYear, m)
