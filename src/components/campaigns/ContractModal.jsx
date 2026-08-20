@@ -9,12 +9,19 @@ import { Button } from '@/components/ui/Button.jsx'
 import { Field, Input, Select } from '@/components/ui/Field.jsx'
 import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { FilePicker } from '@/components/ui/FilePicker.jsx'
-import { LEAGUES, PACKAGES, leagueLabel } from '@/lib/metrics.js'
+import {
+  CONTRACT_STATUS,
+  LEAGUES,
+  PACKAGES,
+  leagueLabel,
+} from '@/lib/metrics.js'
 import { formatDate, formatDateTime } from '@/lib/format.js'
 import { uid } from '@/lib/id.js'
 
 const emptyContract = () => ({
   number: '',
+  // Договор заводят действующим, дальше статус ведёт площадка.
+  status: 'active',
   // Рекламная кампания, под которую заключён договор.
   campaignName: '',
   legalName: '',
@@ -202,6 +209,10 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
           {!canEditCampaign && (
             <Row label="Рекламная кампания" value={form.campaignName} />
           )}
+          <Row
+            label="Статус"
+            value={CONTRACT_STATUS[form.status ?? 'active']?.label}
+          />
           <Row label="Пакет" value={PACKAGES[form.package]?.label} />
           <Row
             label="Лиги"
@@ -358,6 +369,18 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
           {/* Юр. лицо подставляется из карточки бренда, сроки оплаты живут
               в самом договоре — в форме их не спрашиваем. */}
           <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Статус договора">
+              <Select
+                value={form.status ?? 'active'}
+                onChange={(e) => set('status', e.target.value)}
+              >
+                {Object.entries(CONTRACT_STATUS).map(([key, meta]) => (
+                  <option key={key} value={key}>
+                    {meta.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
             <Field label="Пакет">
               <Select
                 value={form.package}

@@ -236,14 +236,73 @@ export function paymentStatusesFor(contractId) {
   return { byPeriod, log }
 }
 
+/**
+ * Демо-суммы договоров: у каждого бренда свой бюджет и своя доля прибыли,
+ * чтобы в сводке по договорам цифры не были одинаковыми.
+ */
+const CONTRACT_BUDGETS = [
+  520_000_000, 460_000_000, 380_000_000, 610_000_000, 290_000_000, 340_000_000,
+  480_000_000, 250_000_000, 570_000_000,
+]
+const CONTRACT_SHARES = [0.82, 0.41, 0.63, 0.27, 0.55, 0.9, 0.36, 0.71, 0.18]
+
+/**
+ * Демо-история выплат: освоенную сумму разбиваем по одной из схем — где-то
+ * один крупный платёж, где-то четыре мелких, с разными датами и временем.
+ */
+const PAYMENT_SPLITS = [
+  [1],
+  [0.6, 0.4],
+  [0.5, 0.3, 0.2],
+  [0.4, 0.25, 0.2, 0.15],
+  [0.35, 0.65],
+  [0.7, 0.18, 0.12],
+  [0.25, 0.25, 0.5],
+]
+
+function paymentsFor(contractId, spent, seed) {
+  if (spent <= 0) return []
+  const shares = PAYMENT_SPLITS[seed % PAYMENT_SPLITS.length]
+  // Платежи расставляем по 2026 году с разным шагом между ними.
+  const firstMonth = 1 + (seed % 4)
+  const step = 1 + (seed % 3)
+  let left = spent
+  return shares.map((share, i) => {
+    const last = i === shares.length - 1
+    const amount = last ? left : Math.round(spent * share)
+    left -= amount
+    const month = pad(Math.min(12, firstMonth + i * step))
+    const day = pad(2 + ((seed * 5 + i * 9) % 26))
+    const hour = pad(9 + ((seed + i * 3) % 9))
+    const minute = pad((seed * 17 + i * 23) % 60)
+    return {
+      id: `pay_${contractId}_${i + 1}`,
+      amount,
+      createdAt: `2026-${month}-${day}T${hour}:${minute}:00`,
+      seq: i + 1,
+    }
+  })
+}
+
 function contractsFor(advertiser, index) {
-  return CONTRACT_TEMPLATES.map((template) => {
+  return CONTRACT_TEMPLATES.map((template, order) => {
     const id = `ctr_${advertiser.id.replace('adv_', '')}_${template.suffix}`
     const statuses = paymentStatusesFor(id)
     const last = statuses.log[0]
+    // Второй договор бренда — меньше первого: пакет там уже дополнительный.
+    const budget = Math.round(
+      CONTRACT_BUDGETS[index % CONTRACT_BUDGETS.length] * (order ? 0.55 : 1),
+    )
+    const spent = Math.round(
+      budget * CONTRACT_SHARES[(index + order * 4) % CONTRACT_SHARES.length],
+    )
+    const payments = paymentsFor(id, spent, index + order)
     return {
       id,
       number: `Д-2026/${index + 1}${template.suffix}`,
+      budget,
+      spent,
+      payments,
       legalName: advertiser.legalName,
       package: template.package,
       leagues: [...template.leagues],

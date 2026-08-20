@@ -21,15 +21,17 @@ import { useAuth } from "@/context/AuthContext.jsx";
 import { useConfirm } from "@/components/ui/Confirm.jsx";
 import { useToast } from "@/components/ui/Toast.jsx";
 
-const STORAGE_KEY = "setanta.campaign.live-spots.v4";
+const STORAGE_KEY = "setanta.campaign.live-spots.v5";
 const LEGACY_STORAGE_KEY = "setanta.campaign.live-spots.v1";
+// Предыдущая версия ключа: из неё переносим то, что уже наработали в таблицах.
+const PREV_STORAGE_KEY = "setanta.campaign.live-spots.v4";
 // Категории и каналы, которые завёл пользователь: свой набор у каждого договора.
 const TABS_STORAGE_KEY = "setanta.campaign.custom-tabs.v2";
 
 // Постоянные вкладки: сводки по отчёту. Всё остальное собирается руками.
 const CAMPAIGN_TABS = [
-  { value: "channels", label: "Spot", group: "Statistic" },
   { value: "stats", label: "Total", group: "Statistic" },
+  { value: "channels", label: "Spot", group: "Statistic" },
 ];
 
 // Что за таблица открывается на вкладке канала.
@@ -93,11 +95,11 @@ export const CATEGORY_PRESETS = [
   },
   {
     name: "OTT",
-    kind: "plan",
-    hint: "Медиаплан Live spot и лог Preroll",
+    kind: "log",
+    hint: "Логи выходов Live spot и Preroll",
     channels: [
       { id: "ott_live", label: "Live spot" },
-      { id: "ott_preroll", label: "Preroll", kind: "log" },
+      { id: "ott_preroll", label: "Preroll" },
     ],
   },
 ];
@@ -379,6 +381,17 @@ function loadRows(tableKey) {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     if (Array.isArray(saved[tableKey])) return saved[tableKey];
+
+    // Из прошлой версии забираем только непустые таблицы: пустая вторая
+    // таблица там означала «сида ещё нет», а теперь он есть.
+    const prev = JSON.parse(localStorage.getItem(PREV_STORAGE_KEY) || "{}");
+    if (Array.isArray(prev[tableKey]) && prev[tableKey].length) {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ ...saved, [tableKey]: prev[tableKey] }),
+      );
+      return prev[tableKey];
+    }
 
     const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY) || "{}");
     let migratedRows;

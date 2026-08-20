@@ -166,8 +166,17 @@ const spotOneRows = buildRows("spot-one", "S1", [
   ["Wed, Jan 14", "21:30", "Serie A", "Napoli - Parma", 208419],
 ]);
 
+const spotOneAll = [...campaignRows, ...spotOneRows];
+
+// Вторая таблица стартует тем же расписанием, что и первая, — только канал
+// другой. Дальше её правят и дополняют импортом из Excel.
+const spotTwoAll = spotOneAll.map((row) => ({
+  ...row,
+  id: `s2-${row.id}`,
+  channel: "S2",
+}));
+
 export const LIVE_SPOT_SEED = {
-  spot1: [...campaignRows, ...spotOneRows],
-  // Вторая таблица заполняется импортом из Excel — стартует пустой.
-  spot2: [],
+  spot1: spotOneAll,
+  spot2: spotTwoAll,
 };

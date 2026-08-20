@@ -1,0 +1,150 @@
+/**
+ * Данные вкладки «Обзор». Значения демо-отчёта Setanta — их правят прямо на
+ * странице, поэтому здесь только начальное состояние; правки лежат в базе.
+ * Иконки храним ключами: в localStorage компонент не сериализуешь.
+ */
+export const OVERVIEW_DEFAULTS = {
+  summary: {
+    title: 'Общая статистика эфира',
+    subtitle: 'Ключевые показатели телевизионных и digital-размещений.',
+    publications: 14,
+    socialImpressions: 495246,
+  },
+  mediaTotals: [
+    { id: 'mt_live', label: 'Прямые эфиры', value: 111, icon: 'RadioTower' },
+    { id: 'mt_ads', label: 'Рекламные ролики', value: 1088, icon: 'Clapperboard' },
+    { id: 'mt_promo', label: 'Промо в эфире', value: 1295, icon: 'Tv' },
+    { id: 'mt_time', label: 'Хронометраж, сек.', value: 32640, icon: 'Timer' },
+    {
+      id: 'mt_views',
+      label: 'Просмотры Live Ads',
+      value: 23708161,
+      icon: 'PlayCircle',
+    },
+  ],
+  socialChannels: [
+    {
+      id: 'sc_instagram',
+      name: 'Instagram',
+      icon: 'Instagram',
+      color: '#FFD106',
+      posts: 7,
+      impressions: 188046,
+      rows: [51102, 30399, 29222, 27392, 23915, 14127, 11889].map(
+        (value, index) => ({ id: `instagram-${index + 1}`, value }),
+      ),
+    },
+    {
+      id: 'sc_telegram',
+      name: 'Telegram',
+      icon: 'Send',
+      color: '#0EA5E9',
+      posts: 7,
+      impressions: 307200,
+      rows: [35000, 39200, 42600, 58800, 46200, 42600, 42800].map(
+        (value, index) => ({ id: `telegram-${index + 1}`, value }),
+      ),
+    },
+  ],
+  audience: {
+    malePct: 95.5,
+    ageTitle: 'Возрастная структура',
+    ageNote: 'Основное ядро аудитории — зрители от 18 до 34 лет.',
+  },
+  ageShare: [
+    { id: 'age_18', label: '18–24', value: 33, color: '#F2C94C' },
+    { id: 'age_25', label: '25–34', value: 42, color: '#84C65A' },
+    { id: 'age_35', label: '35–44', value: 18, color: '#76B7E5' },
+    { id: 'age_45', label: '45–54', value: 6, color: '#F1DFC0' },
+    { id: 'age_13', label: '13–17', value: 1, color: '#F27474' },
+  ],
+  deviceShare: [
+    { id: 'dev_browser', label: 'Браузер', value: 3, color: '#68A9DC' },
+    { id: 'dev_tv', label: 'Smart TV', value: 66, color: '#EE9B5A' },
+    { id: 'dev_phone', label: 'Телефон', value: 30, color: '#A7ADB4' },
+    { id: 'dev_tablet', label: 'Планшет', value: 1, color: '#EFCB55' },
+  ],
+  platformDeviceShare: [
+    {
+      id: 'pf_ott',
+      platform: 'OTT',
+      data: [
+        { id: 'ott_phone', label: 'Телефон', value: 65, color: '#68A9DC' },
+        { id: 'ott_tv', label: 'Smart TV', value: 22, color: '#EFCB55' },
+        { id: 'ott_browser', label: 'Браузер', value: 10, color: '#A7ADB4' },
+        { id: 'ott_tablet', label: 'Планшет', value: 3, color: '#EE9B5A' },
+      ],
+    },
+    {
+      id: 'pf_tv',
+      platform: 'TV',
+      data: [
+        { id: 'tv_tv', label: 'Smart TV', value: 54, color: '#EFCB55' },
+        { id: 'tv_phone', label: 'Телефон', value: 33, color: '#68A9DC' },
+        { id: 'tv_browser', label: 'Браузер', value: 12, color: '#A7ADB4' },
+        { id: 'tv_tablet', label: 'Планшет', value: 1, color: '#EE9B5A' },
+      ],
+    },
+  ],
+  leagueAgeRows: [
+    {
+      id: 'lg_football',
+      sport: 'Football',
+      leagues: 'EPL, LaLiga, Ligue 1, Bundesliga, Serie A',
+      ages: [27.8, 33.3, 22.2, 16.7],
+    },
+    {
+      id: 'lg_mma',
+      sport: 'MMA Fights',
+      leagues: 'UFC, Bellator, PFL',
+      ages: [37.9, 34.5, 16.5, 11.1],
+    },
+    { id: 'lg_racing', sport: 'Racing', leagues: 'F1', ages: [15.6, 31.9, 27.9, 24.6] },
+    {
+      id: 'lg_tennis',
+      sport: 'Tennis',
+      leagues: 'WTA, ATP',
+      ages: [17.0, 31.2, 28.2, 23.6],
+    },
+    {
+      id: 'lg_basketball',
+      sport: 'Basketball',
+      leagues: 'NBA',
+      ages: [35.3, 28.8, 24.7, 11.2],
+    },
+    {
+      id: 'lg_hockey',
+      sport: 'Hockey',
+      leagues: 'NHL',
+      ages: [15.8, 25.5, 32.5, 26.2],
+    },
+  ],
+  cityShare: [
+    ['Ташкент', 62.3],
+    ['Самарканд', 12.6],
+    ['Бухара', 7.3],
+    ['Андижан', 2.1],
+    ['Джизак', 2.1],
+    ['Чирчик', 2.1],
+    ['ZZC', 1.8],
+    ['Навои', 1],
+    ['Карши', 1],
+    ['Фергана', 1],
+    ['Наманган', 1],
+    ['Шахрисабз', 0.8],
+    ['Нукус', 0.7],
+    ['Алмалык', 0.7],
+    ['Денау', 0.7],
+    ['Байсун', 0.6],
+    ['Гулистан', 0.6],
+    ['Зарафшан', 0.5],
+    ['Хива', 0.5],
+    ['Хорезмская область', 0.3],
+    ['GHUST', 0.2],
+    ['Коканд', 0.1],
+  ].map(([name, value], index) => ({ id: `city_${index + 1}`, name, value })),
+}
+
+/** Свежая копия дефолтов — состояние правят иммутабельно. */
+export const cloneOverview = () =>
+  JSON.parse(JSON.stringify(OVERVIEW_DEFAULTS))

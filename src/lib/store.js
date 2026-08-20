@@ -6,6 +6,7 @@ import {
   buildSeed,
   paymentStatusesFor,
 } from './seed.js'
+import { cloneOverview } from './overviewSeed.js'
 import { uid } from './id.js'
 
 // Юр. лица демо-брендов — добираем их в базах, созданных до появления поля.
@@ -159,16 +160,36 @@ function normalizeDatabase(database) {
             const seed = (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).find(
               (c) => c.number === contract.number,
             )
-            if (contract.file) {
+            // Суммы и история выплат появились позже — в старых записях их
+            // нет. Демо-историю подставляем, только если своей не завели и
+            // освоенное совпадает с сидовым: иначе цифры разъедутся.
+            const own = contract.payments ?? []
+            const seedMoney =
+              seed && contract.budget == null && contract.spent == null
+            const seedHistory =
+              seed &&
+              own.length === 0 &&
+              (seedMoney || (contract.spent ?? 0) === seed.spent)
+            const withMoney = {
+              ...contract,
+              budget: seedMoney ? seed.budget : contract.budget,
+              spent: seedMoney ? seed.spent : contract.spent,
+              payments: seedHistory
+                ? (seed.payments ?? []).map((payment) => ({ ...payment }))
+                : own,
+            }
+            if (withMoney.file) {
               // Дата загрузки скана появилась позже самого скана.
-              return contract.file.addedAt || !seed?.file?.addedAt
-                ? contract
+              return withMoney.file.addedAt || !seed?.file?.addedAt
+                ? withMoney
                 : {
-                    ...contract,
-                    file: { ...contract.file, addedAt: seed.file.addedAt },
+                    ...withMoney,
+                    file: { ...withMoney.file, addedAt: seed.file.addedAt },
                   }
             }
-            return seed?.file ? { ...contract, file: { ...seed.file } } : contract
+            return seed?.file
+              ? { ...withMoney, file: { ...seed.file } }
+              : withMoney
           })
         : (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).map((contract) => ({
             ...contract,
@@ -219,6 +240,8 @@ function normalizeDatabase(database) {
         ? fillContract(withCreative, contractNumbers)
         : withCreative
     }),
+    // Данные вкладки «Обзор» правятся прямо на странице.
+    overview: database.overview ?? cloneOverview(),
     campaignStatusLayoutVersion: CAMPAIGN_STATUS_LAYOUT_VERSION,
   }
 }
@@ -297,6 +320,18 @@ export function remove(collection, id) {
     ...state,
     [collection]: state[collection].filter((r) => r.id !== id),
   }
+  emit()
+}
+
+/** Обзор — один объект целиком, без коллекций. */
+export function saveOverview(overview) {
+  state = { ...state, overview }
+  emit()
+}
+
+/** Обзор к демо-значениям — на случай, если правки увели цифры не туда. */
+export function resetOverview() {
+  state = { ...state, overview: cloneOverview() }
   emit()
 }
 

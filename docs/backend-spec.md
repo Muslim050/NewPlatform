@@ -497,8 +497,7 @@ pacing = budget ? spent / budget * 100 : 0
 | Standart spot | SS1 (`ss1uzb`), SS2 (`ss2uzb`) | `log` |
 | Event promo | SS1 (`promo1`), SS2 (`promo2`) | `log` |
 | Social media | Instagram (`social_ig`), Telegram (`social_tg`) | `social` |
-| OTT | Live spot (`ott_live`) | `plan` |
-| | Preroll (`ott_preroll`) | `log` |
+| OTT | Live spot (`ott_live`), Preroll (`ott_preroll`) | `log` |
 
 | Тип | Что открывается |
 |---|---|

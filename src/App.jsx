@@ -6,6 +6,7 @@ import Dashboard from '@/pages/Dashboard.jsx'
 import Campaigns from '@/pages/Campaigns.jsx'
 import CampaignStats from '@/pages/CampaignStats.jsx'
 import Advertisers from '@/pages/Advertisers.jsx'
+import ContractOverview from '@/pages/ContractOverview.jsx'
 import Channels from '@/pages/Channels.jsx'
 import Reports from '@/pages/Reports.jsx'
 import NotFound from '@/pages/NotFound.jsx'
@@ -39,6 +40,7 @@ export default function App() {
         <Route index element={<Navigate to="campaigns" replace />} />
         <Route path="campaigns" element={<Campaigns />} />
         <Route path="campaigns/:campaignId" element={<CampaignStats />} />
+        <Route path="contracts" element={<ContractOverview />} />
         <Route
           path="advertisers"
           element={

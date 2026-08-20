@@ -1,205 +1,226 @@
+import { useState } from 'react'
 import {
+  Check,
+  Clapperboard,
   Instagram,
+  MapPin,
+  MonitorSmartphone,
+  Pencil,
+  PlayCircle,
+  Plus,
+  RadioTower,
+  RotateCcw,
   Send,
+  Timer,
+  Trash2,
+  Trophy,
+  Tv,
+  UsersRound,
+  X,
+} from 'lucide-react'
+import { useAuth } from '@/context/AuthContext.jsx'
+import { useData } from '@/context/DataContext.jsx'
+import { useToast } from '@/components/ui/Toast.jsx'
+import { useConfirm } from '@/components/ui/Confirm.jsx'
+import { formatCompact, formatPct, formatNumber } from '@/lib/format.js'
+import { cloneOverview } from '@/lib/overviewSeed.js'
+import { PageHeader } from '@/components/PageHeader.jsx'
+import { Card } from '@/components/ui/Card.jsx'
+import { Button } from '@/components/ui/Button.jsx'
+import { DonutChart } from '@/components/charts/DonutChart.jsx'
+import { uid } from '@/lib/id.js'
+import { cn } from '@/lib/cn.js'
+
+// Иконки в базе лежат ключами — здесь возвращаем их компоненты.
+const ICONS = {
   RadioTower,
   Clapperboard,
   Tv,
   Timer,
   PlayCircle,
-  MonitorSmartphone,
-  MapPin,
-  UsersRound,
-  Trophy,
-} from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
-import { formatCompact, formatPct, formatNumber } from '@/lib/format.js'
-import { PageHeader } from '@/components/PageHeader.jsx'
-import { Card } from '@/components/ui/Card.jsx'
-import { Badge } from '@/components/ui/Badge.jsx'
-import { DonutChart } from '@/components/charts/DonutChart.jsx'
+  Instagram,
+  Send,
+}
 
-const MEDIA_TOTALS = [
-  { label: 'Прямые эфиры', value: 111, icon: RadioTower },
-  { label: 'Рекламные ролики', value: 1088, icon: Clapperboard },
-  { label: 'Промо в эфире', value: 1295, icon: Tv },
-  { label: 'Хронометраж, сек.', value: 32640, icon: Timer },
-  { label: 'Просмотры Live Ads', value: 23708161, icon: PlayCircle },
-]
+const inputClass =
+  'w-full rounded-lg border border-indigo-300 bg-surface px-2 py-1 text-sm text-ink outline-none transition-colors focus:border-indigo-500 focus-ring'
 
-const SOCIAL_CHANNELS = [
-  {
-    name: 'Instagram',
-    icon: Instagram,
-    color: '#FFD106',
-    posts: 7,
-    impressions: 188046,
-    rows: [51102, 30399, 29222, 27392, 23915, 14127, 11889].map(
-      (value, index) => ({ id: `instagram-${index + 1}`, value }),
-    ),
-  },
-  {
-    name: 'Telegram',
-    icon: Send,
-    color: '#0EA5E9',
-    posts: 7,
-    impressions: 307200,
-    rows: [35000, 39200, 42600, 58800, 46200, 42600, 42800].map(
-      (value, index) => ({ id: `telegram-${index + 1}`, value }),
-    ),
-  },
-]
+/** Текстовое поле правки: вне режима редактирования — обычный текст. */
+function EditText({ editing, value, onChange, className, children }) {
+  if (!editing) return children ?? value
+  return (
+    <input
+      value={value ?? ''}
+      onChange={(e) => onChange(e.target.value)}
+      className={cn(inputClass, className)}
+    />
+  )
+}
 
-const DEVICE_SHARE = [
-  { label: 'Браузер', value: 3, color: '#68A9DC' },
-  { label: 'Smart TV', value: 66, color: '#EE9B5A' },
-  { label: 'Телефон', value: 30, color: '#A7ADB4' },
-  { label: 'Планшет', value: 1, color: '#EFCB55' },
-]
+/** Числовое поле правки — дробные проценты тоже вводятся здесь. */
+function EditNumber({ editing, value, onChange, className, children }) {
+  if (!editing) return children
+  return (
+    <input
+      type="number"
+      step="any"
+      value={value ?? 0}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className={cn(inputClass, 'tnum text-right', className)}
+    />
+  )
+}
 
-const AGE_SHARE = [
-  { label: '18–24', value: 33, color: '#F2C94C' },
-  { label: '25–34', value: 42, color: '#84C65A' },
-  { label: '35–44', value: 18, color: '#76B7E5' },
-  { label: '45–54', value: 6, color: '#F1DFC0' },
-  { label: '13–17', value: 1, color: '#F27474' },
-]
+/** Кружок цвета: в режиме правки — нативный пикер. */
+function EditColor({ editing, value, onChange, className }) {
+  if (!editing) {
+    return (
+      <span
+        className={cn('shrink-0 rounded-full', className)}
+        style={{ backgroundColor: value }}
+      />
+    )
+  }
+  return (
+    <input
+      type="color"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      aria-label="Цвет"
+      className={cn(
+        'h-5 w-5 shrink-0 cursor-pointer rounded-full border border-line bg-transparent p-0',
+        className,
+      )}
+    />
+  )
+}
 
-const PLATFORM_DEVICE_SHARE = [
-  {
-    platform: 'OTT',
-    data: [
-      { label: 'Телефон', value: 65, color: '#68A9DC' },
-      { label: 'Smart TV', value: 22, color: '#EFCB55' },
-      { label: 'Браузер', value: 10, color: '#A7ADB4' },
-      { label: 'Планшет', value: 3, color: '#EE9B5A' },
-    ],
-  },
-  {
-    platform: 'TV',
-    data: [
-      { label: 'Smart TV', value: 54, color: '#EFCB55' },
-      { label: 'Телефон', value: 33, color: '#68A9DC' },
-      { label: 'Браузер', value: 12, color: '#A7ADB4' },
-      { label: 'Планшет', value: 1, color: '#EE9B5A' },
-    ],
-  },
-]
+/** Корзина у строки списка — только в режиме правки. */
+function RemoveButton({ onClick, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-danger/10 hover:text-danger focus-ring"
+    >
+      <Trash2 size={14} />
+    </button>
+  )
+}
 
-const LEAGUE_AGE_ROWS = [
-  {
-    sport: 'Football',
-    leagues: 'EPL, LaLiga, Ligue 1, Bundesliga, Serie A',
-    ages: ['27,8%', '33,3%', '22,2%', '16,7%'],
-  },
-  {
-    sport: 'MMA Fights',
-    leagues: 'UFC, Bellator, PFL',
-    ages: ['37,9%', '34,5%', '16,5%', '11,1%'],
-  },
-  {
-    sport: 'Racing',
-    leagues: 'F1',
-    ages: ['15,6%', '31,9%', '27,9%', '24,6%'],
-  },
-  {
-    sport: 'Tennis',
-    leagues: 'WTA, ATP',
-    ages: ['17,0%', '31,2%', '28,2%', '23,6%'],
-  },
-  {
-    sport: 'Basketball',
-    leagues: 'NBA',
-    ages: ['35,3%', '28,8%', '24,7%', '11,2%'],
-  },
-  {
-    sport: 'Hockey',
-    leagues: 'NHL',
-    ages: ['15,8%', '25,5%', '32,5%', '26,2%'],
-  },
-]
+function AddButton({ onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-dashed border-indigo-300 px-3 py-1.5 text-[12px] font-medium text-indigo-800 transition-colors hover:border-indigo-500 hover:bg-indigo-50 focus-ring"
+    >
+      <Plus size={14} />
+      {children}
+    </button>
+  )
+}
 
-const CITY_SHARE = [
-  ['Ташкент', 62.3],
-  ['Самарканд', 12.6],
-  ['Бухара', 7.3],
-  ['Андижан', 2.1],
-  ['Джизак', 2.1],
-  ['Чирчик', 2.1],
-  ['ZZC', 1.8],
-  ['Навои', 1],
-  ['Карши', 1],
-  ['Фергана', 1],
-  ['Наманган', 1],
-  ['Шахрисабз', 0.8],
-  ['Нукус', 0.7],
-  ['Алмалык', 0.7],
-  ['Денау', 0.7],
-  ['Байсун', 0.6],
-  ['Гулистан', 0.6],
-  ['Зарафшан', 0.5],
-  ['Хива', 0.5],
-  ['Хорезмская область', 0.3],
-  ['GHUST', 0.2],
-  ['Коканд', 0.1],
-].map(([name, value]) => ({ name, value }))
-
-function MediaMetric({ item }) {
-  const Icon = item.icon
+function MediaMetric({ item, editing, onChange }) {
+  const Icon = ICONS[item.icon] ?? RadioTower
   return (
     <div className="group rounded-2xl border border-line bg-surface p-4 shadow-soft transition-colors hover:border-indigo-300">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink-muted">
-          {item.label}
+        <span className="min-w-0 flex-1 text-[11px] font-medium uppercase tracking-[0.12em] text-ink-muted">
+          <EditText
+            editing={editing}
+            value={item.label}
+            onChange={(label) => onChange({ ...item, label })}
+          />
         </span>
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-900 transition-transform group-hover:scale-105">
           <Icon size={16} />
         </span>
       </div>
-      <p className="mt-3 font-display text-2xl font-semibold text-ink tnum">
-        {formatNumber(item.value)}
-      </p>
+      <div className="mt-3 font-display text-2xl font-semibold text-ink tnum">
+        <EditNumber
+          editing={editing}
+          value={item.value}
+          onChange={(value) => onChange({ ...item, value })}
+        >
+          {formatNumber(item.value)}
+        </EditNumber>
+      </div>
     </div>
   )
 }
 
-function SocialChannelCard({ channel }) {
-  const Icon = channel.icon
-  const max = Math.max(...channel.rows.map((row) => row.value))
+function SocialChannelCard({ channel, editing, onChange, onRemove }) {
+  const Icon = ICONS[channel.icon] ?? Instagram
+  const max = Math.max(1, ...channel.rows.map((row) => row.value))
+  const patch = (part) => onChange({ ...channel, ...part })
+
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center justify-between gap-4 border-b border-line p-5">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <span
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-ink"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-ink"
             style={{ backgroundColor: channel.color }}
           >
             <Icon size={19} />
           </span>
-          <div>
+          <div className="min-w-0">
             <h3 className="font-display text-base font-semibold text-ink">
-              {channel.name}
+              <EditText
+                editing={editing}
+                value={channel.name}
+                onChange={(name) => patch({ name })}
+              />
             </h3>
-            <p className="text-[12px] text-ink-muted">Результаты публикаций</p>
+            <p className="flex items-center gap-2 text-[12px] text-ink-muted">
+              Результаты публикаций
+              <EditColor
+                editing={editing}
+                value={channel.color}
+                onChange={(color) => patch({ color })}
+                className="h-3 w-3"
+              />
+            </p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="font-display text-xl font-semibold text-ink tnum">
-            {formatCompact(channel.impressions)}
-          </p>
+        <div className="shrink-0 text-right">
+          <div className="font-display text-xl font-semibold text-ink tnum">
+            <EditNumber
+              editing={editing}
+              value={channel.impressions}
+              onChange={(impressions) => patch({ impressions })}
+            >
+              {formatCompact(channel.impressions)}
+            </EditNumber>
+          </div>
           <p className="text-[11px] text-ink-muted">показов</p>
         </div>
+        {editing && onRemove && (
+          <RemoveButton onClick={onRemove} label={`Удалить ${channel.name}`} />
+        )}
       </div>
       <div className="grid grid-cols-2 gap-3 bg-paper/45 p-4">
         <div className="rounded-xl bg-surface px-3 py-2.5">
           <p className="text-[11px] text-ink-muted">Публикации</p>
-          <p className="mt-1 font-display text-xl font-semibold text-ink tnum">
-            {channel.posts}
-          </p>
+          <div className="mt-1 font-display text-xl font-semibold text-ink tnum">
+            <EditNumber
+              editing={editing}
+              value={channel.posts}
+              onChange={(posts) => patch({ posts })}
+            >
+              {channel.posts}
+            </EditNumber>
+          </div>
         </div>
         <div className="rounded-xl bg-surface px-3 py-2.5">
           <p className="text-[11px] text-ink-muted">Средний охват</p>
           <p className="mt-1 font-display text-xl font-semibold text-ink tnum">
-            {formatCompact(channel.impressions / channel.posts)}
+            {channel.posts
+              ? formatCompact(channel.impressions / channel.posts)
+              : '—'}
           </p>
         </div>
       </div>
@@ -207,7 +228,12 @@ function SocialChannelCard({ channel }) {
         {channel.rows.map((row, index) => (
           <div
             key={row.id}
-            className="grid grid-cols-[92px_1fr_62px] items-center gap-3"
+            className={cn(
+              'grid items-center gap-3',
+              editing
+                ? 'grid-cols-[92px_1fr_110px_28px]'
+                : 'grid-cols-[92px_1fr_62px]',
+            )}
           >
             <span className="text-[12px] text-ink-muted">
               Публикация {String(index + 1).padStart(2, '0')}
@@ -222,72 +248,255 @@ function SocialChannelCard({ channel }) {
               />
             </span>
             <span className="text-right text-[12px] font-medium text-ink tnum">
-              {formatNumber(row.value)}
+              <EditNumber
+                editing={editing}
+                value={row.value}
+                onChange={(value) =>
+                  patch({
+                    rows: channel.rows.map((r) =>
+                      r.id === row.id ? { ...r, value } : r,
+                    ),
+                  })
+                }
+              >
+                {formatNumber(row.value)}
+              </EditNumber>
             </span>
+            {editing && (
+              <RemoveButton
+                onClick={() =>
+                  patch({ rows: channel.rows.filter((r) => r.id !== row.id) })
+                }
+                label={`Удалить публикацию ${index + 1}`}
+              />
+            )}
           </div>
         ))}
+        {editing && (
+          <AddButton
+            onClick={() =>
+              patch({ rows: [...channel.rows, { id: uid('row'), value: 0 }] })
+            }
+          >
+            Добавить публикацию
+          </AddButton>
+        )}
       </div>
     </Card>
   )
 }
 
-function MediaSummary() {
+function MediaSummary({ data, editing, patch }) {
+  const { summary, mediaTotals, socialChannels } = data
+
   return (
     <>
       <section className="relative overflow-hidden rounded-[28px] border border-indigo-200 bg-gradient-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-7">
         <div className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full border border-indigo-300/60" />
         <div className="pointer-events-none absolute -right-8 -top-12 h-44 w-44 rounded-full bg-indigo-200/45 blur-3xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-indigo-800">
               <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
               Setanta Media Report
             </div>
             <h2 className="mt-2 font-display text-2xl font-semibold text-ink sm:text-3xl">
-              Общая статистика эфира
+              <EditText
+                editing={editing}
+                value={summary.title}
+                onChange={(title) =>
+                  patch({ summary: { ...summary, title } })
+                }
+              />
             </h2>
-            <p className="mt-1 max-w-xl text-sm text-ink-muted">
-              Ключевые показатели телевизионных и digital-размещений.
-            </p>
+            <div className="mt-1 max-w-xl text-sm text-ink-muted">
+              <EditText
+                editing={editing}
+                value={summary.subtitle}
+                onChange={(subtitle) =>
+                  patch({ summary: { ...summary, subtitle } })
+                }
+              />
+            </div>
           </div>
           <div className="flex gap-6 rounded-2xl border border-line bg-surface/90 px-5 py-3.5 shadow-soft backdrop-blur">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-ink-muted">
                 Публикации
               </p>
-              <p className="mt-1 font-display text-lg font-semibold text-ink tnum">
-                14
-              </p>
+              <div className="mt-1 font-display text-lg font-semibold text-ink tnum">
+                <EditNumber
+                  editing={editing}
+                  value={summary.publications}
+                  onChange={(publications) =>
+                    patch({ summary: { ...summary, publications } })
+                  }
+                >
+                  {summary.publications}
+                </EditNumber>
+              </div>
             </div>
             <div className="h-10 w-px bg-line" />
             <div>
               <p className="text-[10px] uppercase tracking-wider text-ink-muted">
                 Показы в соцсетях
               </p>
-              <p className="mt-1 font-display text-lg font-semibold text-ink tnum">
-                {formatNumber(495246)}
-              </p>
+              <div className="mt-1 font-display text-lg font-semibold text-ink tnum">
+                <EditNumber
+                  editing={editing}
+                  value={summary.socialImpressions}
+                  onChange={(socialImpressions) =>
+                    patch({ summary: { ...summary, socialImpressions } })
+                  }
+                >
+                  {formatNumber(summary.socialImpressions)}
+                </EditNumber>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="relative mt-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-          {MEDIA_TOTALS.map((item) => (
-            <MediaMetric key={item.label} item={item} />
+          {mediaTotals.map((item) => (
+            <MediaMetric
+              key={item.id}
+              item={item}
+              editing={editing}
+              onChange={(next) =>
+                patch({
+                  mediaTotals: mediaTotals.map((m) =>
+                    m.id === next.id ? next : m,
+                  ),
+                })
+              }
+            />
           ))}
         </div>
       </section>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        {SOCIAL_CHANNELS.map((channel) => (
-          <SocialChannelCard key={channel.name} channel={channel} />
+        {socialChannels.map((channel) => (
+          <SocialChannelCard
+            key={channel.id}
+            channel={channel}
+            editing={editing}
+            onChange={(next) =>
+              patch({
+                socialChannels: socialChannels.map((c) =>
+                  c.id === next.id ? next : c,
+                ),
+              })
+            }
+            onRemove={() =>
+              patch({
+                socialChannels: socialChannels.filter(
+                  (c) => c.id !== channel.id,
+                ),
+              })
+            }
+          />
         ))}
       </div>
+      {editing && (
+        <AddButton
+          onClick={() =>
+            patch({
+              socialChannels: [
+                ...socialChannels,
+                {
+                  id: uid('sc'),
+                  name: 'Новая площадка',
+                  icon: 'Send',
+                  color: '#FFD106',
+                  posts: 1,
+                  impressions: 0,
+                  rows: [{ id: uid('row'), value: 0 }],
+                },
+              ],
+            })
+          }
+        >
+          Добавить соцсеть
+        </AddButton>
+      )}
     </>
   )
 }
 
-function AudienceAgeReport() {
+/** Список долей рядом с бубликом: подпись, цвет и процент. */
+function ShareList({ items, editing, onChange, itemClassName, addLabel }) {
+  return (
+    <>
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className={cn('flex items-center gap-2 text-sm', itemClassName)}
+        >
+          <EditColor
+            editing={editing}
+            value={item.color}
+            onChange={(color) =>
+              onChange(items.map((i) => (i.id === item.id ? { ...i, color } : i)))
+            }
+            className="h-2.5 w-2.5"
+          />
+          <span className="min-w-0 flex-1 text-ink-soft">
+            <EditText
+              editing={editing}
+              value={item.label}
+              onChange={(label) =>
+                onChange(
+                  items.map((i) => (i.id === item.id ? { ...i, label } : i)),
+                )
+              }
+            />
+          </span>
+          <span className="w-[76px] text-right font-semibold text-ink tnum">
+            <EditNumber
+              editing={editing}
+              value={item.value}
+              onChange={(value) =>
+                onChange(
+                  items.map((i) => (i.id === item.id ? { ...i, value } : i)),
+                )
+              }
+            >
+              {formatPct(item.value, 0)}
+            </EditNumber>
+          </span>
+          {editing && (
+            <RemoveButton
+              onClick={() => onChange(items.filter((i) => i.id !== item.id))}
+              label={`Удалить ${item.label}`}
+            />
+          )}
+        </div>
+      ))}
+      {editing && (
+        <AddButton
+          onClick={() =>
+            onChange([
+              ...items,
+              {
+                id: uid('share'),
+                label: 'Новая группа',
+                value: 0,
+                color: '#A7ADB4',
+              },
+            ])
+          }
+        >
+          {addLabel}
+        </AddButton>
+      )}
+    </>
+  )
+}
+
+function AudienceAgeReport({ data, editing, patch }) {
+  const { audience, ageShare, platformDeviceShare, leagueAgeRows } = data
+  const malePct = formatPct(audience.malePct, 1)
+
   return (
     <section className="mt-6">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -304,7 +513,17 @@ function AudienceAgeReport() {
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-xl border border-line bg-paper/70 px-3 py-2 text-[12px] font-semibold text-ink-soft">
           <UsersRound size={16} />
-          95,5% аудитории — мужчины
+          <EditNumber
+            editing={editing}
+            value={audience.malePct}
+            onChange={(value) =>
+              patch({ audience: { ...audience, malePct: value } })
+            }
+            className="w-20"
+          >
+            {malePct}
+          </EditNumber>
+          аудитории — мужчины
         </div>
       </div>
 
@@ -312,38 +531,40 @@ function AudienceAgeReport() {
         <Card className="overflow-hidden">
           <div className="border-b border-line bg-paper/45 p-5">
             <h3 className="font-display text-lg font-semibold text-ink">
-              Возрастная структура
+              <EditText
+                editing={editing}
+                value={audience.ageTitle}
+                onChange={(ageTitle) =>
+                  patch({ audience: { ...audience, ageTitle } })
+                }
+              />
             </h3>
-            <p className="mt-1 text-[13px] text-ink-muted">
-              Основное ядро аудитории — зрители от 18 до 34 лет.
-            </p>
+            <div className="mt-1 text-[13px] text-ink-muted">
+              <EditText
+                editing={editing}
+                value={audience.ageNote}
+                onChange={(ageNote) =>
+                  patch({ audience: { ...audience, ageNote } })
+                }
+              />
+            </div>
           </div>
           <div className="flex flex-col items-center gap-6 p-5 sm:flex-row sm:justify-center sm:p-6">
             <DonutChart
-              data={AGE_SHARE}
+              data={ageShare}
               size={220}
               thickness={34}
-              centerValue="95,5%"
+              centerValue={malePct}
               centerLabel="мужчины"
             />
-            <div className="w-full max-w-[250px] space-y-2.5">
-              {AGE_SHARE.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center gap-3 rounded-xl border border-line bg-paper/55 px-3 py-2.5"
-                >
-                  <span
-                    className="h-3 w-3 rounded-full shadow-[0_0_0_3px_rgba(22,22,28,0.04)]"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="text-sm font-medium text-ink-soft">
-                    {item.label}
-                  </span>
-                  <span className="ml-auto font-display text-base font-semibold text-ink tnum">
-                    {formatPct(item.value, 0)}
-                  </span>
-                </div>
-              ))}
+            <div className="w-full max-w-[280px] space-y-2.5">
+              <ShareList
+                items={ageShare}
+                editing={editing}
+                onChange={(next) => patch({ ageShare: next })}
+                itemClassName="rounded-xl border border-line bg-paper/55 px-3 py-2.5"
+                addLabel="Добавить возрастную группу"
+              />
             </div>
           </div>
         </Card>
@@ -363,9 +584,9 @@ function AudienceAgeReport() {
             </span>
           </div>
           <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
-            {PLATFORM_DEVICE_SHARE.map((platform) => (
+            {platformDeviceShare.map((platform) => (
               <div
-                key={platform.platform}
+                key={platform.id}
                 className="flex flex-col items-center gap-4 rounded-2xl border border-line/80 bg-paper/55 p-4"
               >
                 <DonutChart
@@ -374,22 +595,33 @@ function AudienceAgeReport() {
                   thickness={30}
                   centerValue={platform.platform}
                 />
+                {editing && (
+                  <EditText
+                    editing={editing}
+                    value={platform.platform}
+                    onChange={(name) =>
+                      patch({
+                        platformDeviceShare: platformDeviceShare.map((p) =>
+                          p.id === platform.id ? { ...p, platform: name } : p,
+                        ),
+                      })
+                    }
+                  />
+                )}
                 <div className="w-full space-y-2">
-                  {platform.data.map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex items-center gap-2 text-[13px]"
-                    >
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-ink-soft">{item.label}</span>
-                      <span className="ml-auto font-semibold text-ink tnum">
-                        {formatPct(item.value, 0)}
-                      </span>
-                    </div>
-                  ))}
+                  <ShareList
+                    items={platform.data}
+                    editing={editing}
+                    onChange={(next) =>
+                      patch({
+                        platformDeviceShare: platformDeviceShare.map((p) =>
+                          p.id === platform.id ? { ...p, data: next } : p,
+                        ),
+                      })
+                    }
+                    itemClassName="text-[13px]"
+                    addLabel="Добавить экран"
+                  />
                 </div>
               </div>
             ))}
@@ -421,38 +653,117 @@ function AudienceAgeReport() {
                 <th className="px-4 py-3 text-center">25–34 y.o.</th>
                 <th className="px-4 py-3 text-center">35–44 y.o.</th>
                 <th className="px-4 py-3 text-center">45–54 y.o.</th>
+                {editing && <th className="px-3 py-3" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {LEAGUE_AGE_ROWS.map((row) => (
-                <tr key={row.sport} className="transition-colors hover:bg-indigo-50/70">
+              {leagueAgeRows.map((row) => (
+                <tr key={row.id} className="transition-colors hover:bg-indigo-50/70">
                   <td className="px-5 py-3.5 font-semibold text-ink">
-                    {row.sport}
+                    <EditText
+                      editing={editing}
+                      value={row.sport}
+                      onChange={(sport) =>
+                        patch({
+                          leagueAgeRows: leagueAgeRows.map((r) =>
+                            r.id === row.id ? { ...r, sport } : r,
+                          ),
+                        })
+                      }
+                    />
                   </td>
                   <td className="max-w-[270px] px-5 py-3.5 text-[13px] text-ink-soft">
-                    {row.leagues}
+                    <EditText
+                      editing={editing}
+                      value={row.leagues}
+                      onChange={(leagues) =>
+                        patch({
+                          leagueAgeRows: leagueAgeRows.map((r) =>
+                            r.id === row.id ? { ...r, leagues } : r,
+                          ),
+                        })
+                      }
+                    />
                   </td>
                   {row.ages.map((value, index) => (
                     <td
-                      key={`${row.sport}-${index}`}
+                      key={`${row.id}-${index}`}
                       className="px-4 py-3.5 text-center font-semibold text-ink tnum"
                     >
-                      <span className="inline-flex min-w-[58px] justify-center rounded-lg border border-line bg-paper/70 px-2 py-1.5">
-                        {value}
-                      </span>
+                      <EditNumber
+                        editing={editing}
+                        value={value}
+                        onChange={(next) =>
+                          patch({
+                            leagueAgeRows: leagueAgeRows.map((r) =>
+                              r.id === row.id
+                                ? {
+                                    ...r,
+                                    ages: r.ages.map((a, i) =>
+                                      i === index ? next : a,
+                                    ),
+                                  }
+                                : r,
+                            ),
+                          })
+                        }
+                      >
+                        <span className="inline-flex min-w-[58px] justify-center rounded-lg border border-line bg-paper/70 px-2 py-1.5">
+                          {formatPct(value, 1)}
+                        </span>
+                      </EditNumber>
                     </td>
                   ))}
+                  {editing && (
+                    <td className="px-3 py-3.5">
+                      <RemoveButton
+                        onClick={() =>
+                          patch({
+                            leagueAgeRows: leagueAgeRows.filter(
+                              (r) => r.id !== row.id,
+                            ),
+                          })
+                        }
+                        label={`Удалить ${row.sport}`}
+                      />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        {editing && (
+          <div className="px-5 pb-4">
+            <AddButton
+              onClick={() =>
+                patch({
+                  leagueAgeRows: [
+                    ...leagueAgeRows,
+                    {
+                      id: uid('lg'),
+                      sport: 'Новый вид спорта',
+                      leagues: '',
+                      ages: [0, 0, 0, 0],
+                    },
+                  ],
+                })
+              }
+            >
+              Добавить строку
+            </AddButton>
+          </div>
+        )}
       </Card>
     </section>
   )
 }
 
-function AudienceBreakdown() {
+function AudienceBreakdown({ data, editing, patch }) {
+  const { deviceShare, cityShare } = data
+  // В центре бублика — самый крупный тип экрана.
+  const topDevice = [...deviceShare].sort((a, b) => b.value - a.value)[0]
+
   return (
     <div className="mt-4 grid gap-4 lg:grid-cols-[0.82fr_1.18fr]">
       <Card className="p-5">
@@ -471,25 +782,19 @@ function AudienceBreakdown() {
         </div>
         <div className="mt-5 flex flex-col items-center gap-5 sm:flex-row sm:justify-center">
           <DonutChart
-            data={DEVICE_SHARE}
+            data={deviceShare}
             size={190}
             thickness={22}
-            centerValue="66%"
-            centerLabel="Smart TV"
+            centerValue={topDevice ? formatPct(topDevice.value, 0) : '—'}
+            centerLabel={topDevice?.label}
           />
-          <div className="w-full max-w-[220px] space-y-2.5">
-            {DEVICE_SHARE.map((item) => (
-              <div key={item.label} className="flex items-center gap-2 text-sm">
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: item.color }}
-                />
-                <span className="text-ink-soft">{item.label}</span>
-                <span className="ml-auto font-semibold text-ink tnum">
-                  {formatPct(item.value, 0)}
-                </span>
-              </div>
-            ))}
+          <div className="w-full max-w-[250px] space-y-2.5">
+            <ShareList
+              items={deviceShare}
+              editing={editing}
+              onChange={(next) => patch({ deviceShare: next })}
+              addLabel="Добавить тип экрана"
+            />
           </div>
         </div>
       </Card>
@@ -514,36 +819,117 @@ function AudienceBreakdown() {
               <tr className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
                 <th className="px-5 py-2.5 text-left">Город</th>
                 <th className="px-5 py-2.5 text-right">Зрители</th>
+                {editing && <th className="px-3 py-2.5" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {CITY_SHARE.map((city) => (
-                <tr key={city.name} className="hover:bg-ink/[0.015]">
+              {cityShare.map((city) => (
+                <tr key={city.id} className="hover:bg-ink/[0.015]">
                   <td className="px-5 py-2.5 font-medium text-ink-soft">
-                    {city.name}
+                    <EditText
+                      editing={editing}
+                      value={city.name}
+                      onChange={(name) =>
+                        patch({
+                          cityShare: cityShare.map((c) =>
+                            c.id === city.id ? { ...c, name } : c,
+                          ),
+                        })
+                      }
+                    />
                   </td>
                   <td className="relative px-5 py-2.5 text-right">
-                    <span
-                      className="absolute inset-y-1.5 right-3 rounded-md bg-indigo-100"
-                      style={{ width: `${Math.max(city.value, 4)}%` }}
-                    />
+                    {!editing && (
+                      <span
+                        className="absolute inset-y-1.5 right-3 rounded-md bg-indigo-100"
+                        style={{ width: `${Math.max(city.value, 4)}%` }}
+                      />
+                    )}
                     <span className="relative font-semibold text-ink tnum">
-                      {formatPct(city.value, 2)}
+                      <EditNumber
+                        editing={editing}
+                        value={city.value}
+                        onChange={(value) =>
+                          patch({
+                            cityShare: cityShare.map((c) =>
+                              c.id === city.id ? { ...c, value } : c,
+                            ),
+                          })
+                        }
+                      >
+                        {formatPct(city.value, 2)}
+                      </EditNumber>
                     </span>
                   </td>
+                  {editing && (
+                    <td className="px-3 py-2.5">
+                      <RemoveButton
+                        onClick={() =>
+                          patch({
+                            cityShare: cityShare.filter((c) => c.id !== city.id),
+                          })
+                        }
+                        label={`Удалить ${city.name}`}
+                      />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        {editing && (
+          <div className="px-5 pb-4 pt-1">
+            <AddButton
+              onClick={() =>
+                patch({
+                  cityShare: [
+                    ...cityShare,
+                    { id: uid('city'), name: 'Новый город', value: 0 },
+                  ],
+                })
+              }
+            >
+              Добавить город
+            </AddButton>
+          </div>
+        )}
       </Card>
     </div>
   )
 }
 
 export default function Dashboard() {
-  const { user, isAdvertiser } = useAuth()
+  const { user, canEdit, isAdvertiser } = useAuth()
+  const { overview, saveOverview, resetOverview } = useData()
+  const toast = useToast()
+  const confirm = useConfirm()
   const firstName = user.name.split(' ')[0]
+
+  // Правки копим в черновике: «Отмена» возвращает сохранённые данные.
+  const [draft, setDraft] = useState(null)
+  const editing = draft != null
+  const data = draft ?? overview
+
+  const patch = (part) => setDraft((current) => ({ ...current, ...part }))
+
+  const save = () => {
+    saveOverview(draft)
+    setDraft(null)
+    toast.success('Обзор сохранён')
+  }
+
+  const reset = async () => {
+    const ok = await confirm({
+      title: 'Вернуть демо-данные?',
+      description: 'Обзор',
+      body: 'Все правки на этой странице будут заменены исходными значениями.',
+    })
+    if (!ok) return
+    resetOverview()
+    setDraft(null)
+    toast.info('Обзор сброшен к демо-данным')
+  }
 
   return (
     <div>
@@ -552,15 +938,48 @@ export default function Dashboard() {
         subtitle={
           isAdvertiser
             ? 'Сводка по вашим медиаразмещениям.'
-            : 'Сводка медиаразмещений и социальных сетей.'
+            : editing
+              ? 'Правьте цифры прямо в карточках — изменения сохранятся по кнопке.'
+              : 'Сводка медиаразмещений и социальных сетей.'
         }
       >
-
+        {/* Данные обзора ведёт площадка: наблюдателю кнопки не показываем. */}
+        {canEdit && !isAdvertiser && (
+          editing ? (
+            <>
+              <Button variant="ghost" onClick={reset} title="Вернуть демо-данные">
+                <RotateCcw size={16} />
+                Сбросить
+              </Button>
+              <Button variant="secondary" onClick={() => setDraft(null)}>
+                <X size={16} />
+                Отмена
+              </Button>
+              <Button variant="primary" onClick={save}>
+                <Check size={16} />
+                Сохранить
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="primary"
+              onClick={() => setDraft(cloneDraft(overview))}
+            >
+              <Pencil size={16} />
+              Редактировать
+            </Button>
+          )
+        )}
       </PageHeader>
 
-      <MediaSummary />
-      <AudienceAgeReport />
-      <AudienceBreakdown />
+      <MediaSummary data={data} editing={editing} patch={patch} />
+      <AudienceAgeReport data={data} editing={editing} patch={patch} />
+      <AudienceBreakdown data={data} editing={editing} patch={patch} />
     </div>
   )
+}
+
+/** Черновик правим свободно — оригинал в сторе трогать нельзя. */
+function cloneDraft(overview) {
+  return overview ? JSON.parse(JSON.stringify(overview)) : cloneOverview()
 }

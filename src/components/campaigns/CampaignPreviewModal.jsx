@@ -124,7 +124,7 @@ export function CampaignStatusPill({ status, pacing, createdAt }) {
 }
 
 /** Плитка ролика — по клику видео открывается в новой вкладке. */
-function CreativeTile({ url, addedAt }) {
+export function CreativeTile({ url, addedAt }) {
   if (!url) {
     return (
       <div className="rounded-2xl border border-dashed border-line p-4">
@@ -175,7 +175,7 @@ function CreativeTile({ url, addedAt }) {
  * Плитка договора — тот же формат, что у метрик, но текст поменьше.
  * file — скан договора: тогда плитка становится ссылкой на скачивание.
  */
-function ContractTile({ icon: Icon, label, value, file }) {
+export function ContractTile({ icon: Icon, label, value, file }) {
   const body = (
     <>
       <div className="flex items-center justify-between gap-3">

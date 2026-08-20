@@ -5,16 +5,21 @@ import { Button } from '@/components/ui/Button.jsx'
 import { Card } from '@/components/ui/Card.jsx'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
+import { SPOT_LOG_SEED } from '@/lib/spotLogSeed.js'
 
 const STORAGE_KEY = 'setanta.campaign.spot-logs.v1'
 const HEADER_CELLS = ['item name', 'date', 'time']
 
+// Демо-выходы для вкладок из шаблона отчёта: пустая таблица ничего не показывает.
+const seedRows = (logKey) =>
+  (SPOT_LOG_SEED[logKey] ?? []).map((row) => ({ ...row }))
+
 function loadRows(logKey) {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    return Array.isArray(saved[logKey]) ? saved[logKey] : []
+    return Array.isArray(saved[logKey]) ? saved[logKey] : seedRows(logKey)
   } catch {
-    return []
+    return seedRows(logKey)
   }
 }
 
@@ -241,10 +246,11 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
               <th className="border-l border-black/10 px-3 py-3 text-left">
                 Item name
               </th>
-              <th className="w-[120px] border-l border-black/10 px-3 py-3 text-left">
+              {/* Дата и время выхода — своя красная колонка, как в медиаплане. */}
+              <th className="w-[120px] border-l border-black/10 bg-[#ff665f]/90 px-3 py-3 text-center">
                 Date
               </th>
-              <th className="w-[110px] border-l border-black/10 px-3 py-3 text-left">
+              <th className="w-[110px] border-l border-black/10 bg-[#ff665f]/90 px-3 py-3 text-center">
                 Time
               </th>
             </tr>
@@ -279,10 +285,10 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
                 <td className="border-l border-line px-3 py-2 text-ink-soft">
                   {row.item}
                 </td>
-                <td className="border-l border-line px-3 py-2 text-ink-soft tnum">
+                <td className="border-l border-line bg-danger/[0.045] px-3 py-2 text-center font-semibold text-ink tnum">
                   {row.date}
                 </td>
-                <td className="border-l border-line px-3 py-2 text-ink-soft tnum">
+                <td className="border-l border-line bg-danger/[0.045] px-3 py-2 text-center font-semibold text-ink tnum">
                   {row.time}
                 </td>
               </tr>

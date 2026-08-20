@@ -64,6 +64,13 @@ export const STATUS = {
   archived: { label: 'В архиве', tone: 'muted' },
 }
 
+/** Статус самого договора — его ведёт площадка вручную. */
+export const CONTRACT_STATUS = {
+  active: { label: 'Активен', tone: 'success' },
+  completed: { label: 'Завершён', tone: 'muted' },
+  terminated: { label: 'Расторгнут', tone: 'danger' },
+}
+
 /** Рекламный пакет кампании. */
 export const PACKAGES = {
   partner: { label: 'Партнёр' },

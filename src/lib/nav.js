@@ -4,6 +4,7 @@ import {
   Building2,
   Radio,
   LineChart,
+  FileText,
 } from 'lucide-react'
 
 export const NAV = [
@@ -18,6 +19,12 @@ export const NAV = [
     label: 'Обзор',
     icon: LayoutDashboard,
     roles: ['admin', 'viewer'],
+  },
+  {
+    to: '/app/contracts',
+    label: 'Contract Overview',
+    icon: FileText,
+    roles: ['admin', 'viewer', 'advertiser'],
   },
   {
     to: '/app/advertisers',
