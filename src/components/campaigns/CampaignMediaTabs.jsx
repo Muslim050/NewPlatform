@@ -241,15 +241,6 @@ export function useCampaignTabs(scopeId = 'default') {
 
 /** Соседние вкладки с одинаковым group собираем в одну секцию.
  *  Вкладки без группы тоже идут одной секцией — общей сводкой. */
-function groupTabs(tabs) {
-  return tabs.reduce((groups, tab) => {
-    const last = groups[groups.length - 1]
-    const name = tab.group ?? null
-    if (last && last.name === name) last.items.push(tab)
-    else groups.push({ name, items: [tab] })
-    return groups
-  }, [])
-}
 
 const TABLE_META = {
   spot1: {

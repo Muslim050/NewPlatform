@@ -22,17 +22,6 @@ import { formatDateTime } from '@/lib/format.js'
 import { uid } from '@/lib/id.js'
 import { cn } from '@/lib/cn.js'
 
-const CATEGORIES = [
-  'Финансы',
-  'Телеком',
-  'Ритейл',
-  'Авто',
-  'Красота',
-  'Технологии',
-  'Медиа',
-  'Другое',
-]
-
 const PALETTE = [
   '#FFD106',
   '#0EA5E9',

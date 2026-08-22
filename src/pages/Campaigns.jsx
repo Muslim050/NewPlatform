@@ -4,7 +4,6 @@ import {
   Plus,
   Search,
   Pencil,
-  Trash2,
   Megaphone,
   BarChart3,
   FileText,
@@ -12,7 +11,6 @@ import {
   Download,
   CalendarPlus,
   CalendarCheck,
-  CalendarClock,
   X,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext.jsx'
@@ -219,7 +217,7 @@ function brandsOf(campaigns, advertiserById) {
 export default function Campaigns() {
   const { user, isAdmin, isAdvertiser, canEdit } = useAuth()
   const navigate = useNavigate()
-  const { advertiserById, channelById, remove, update } = useData()
+  const { advertiserById, update } = useData()
   const campaigns = useScopedCampaigns()
   const toast = useToast()
   const confirm = useConfirm()
@@ -387,12 +385,6 @@ export default function Campaigns() {
   const previewAdvertiser = preview
     ? advertiserById(preview.advertiserId)
     : null
-  const previewChannels = preview
-    ? preview.channelIds.flatMap((id) => {
-        const channel = channelById(id)
-        return channel ? [channel] : []
-      })
-    : []
 
   // Договор для поповера берём из актуального бренда: поповер остаётся
   // открытым после сохранения и должен показывать свежие суммы и историю.
@@ -427,7 +419,7 @@ export default function Campaigns() {
     return (a.seq ?? 0) - (b.seq ?? 0)
   }
 
-  const saveMoney = ({ budget, spent, amount, paidAt }) => {
+  const saveMoney = ({ budget, spent, paidAt }) => {
     const history = moneyContract.payments ?? []
     // В историю пишем весь прирост оплаченного, а не только поле
     // «Поступление»: первую оплату часто вбивают прямо в «Оплачено»,
@@ -549,18 +541,6 @@ export default function Campaigns() {
       spent: Math.max(0, (moneyContract.spent ?? 0) - payment.amount),
     })
     toast.info('Поступление удалено')
-  }
-
-  const del = async (c) => {
-    const ok = await confirm({
-      title: 'Удалить кампанию?',
-      description: c.name,
-      body: 'Кампания и её показатели будут удалены безвозвратно.',
-    })
-    if (ok) {
-      remove('campaigns', c.id)
-      toast.info('Кампания удалена')
-    }
   }
 
   return (
@@ -1151,7 +1131,6 @@ export default function Campaigns() {
       <CampaignPreviewModal
         campaign={preview}
         advertiser={previewAdvertiser}
-        channels={previewChannels}
         onClose={() => setPreview(null)}
         onOpenStats={() => navigate(`/app/campaigns/${preview.id}`)}
       />

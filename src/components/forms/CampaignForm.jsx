@@ -16,7 +16,7 @@ import { Field, Input, Select } from '@/components/ui/Field.jsx'
 import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { CreativeLink } from '@/components/campaigns/CreativePlayer.jsx'
 import { Logo } from '@/components/Logo.jsx'
-import { LEAGUES, PACKAGES, STATUS, statusLabel } from '@/lib/metrics.js'
+import { LEAGUES, STATUS, statusLabel } from '@/lib/metrics.js'
 import { cn } from '@/lib/cn.js'
 
 // Договор храним прямо в базе (localStorage), поэтому ограничиваем размер.
@@ -67,7 +67,7 @@ function fileNameFromUrl(url) {
 }
 
 export function CampaignForm({ open, onClose, initial }) {
-  const { advertisers, channels, create, update } = useData()
+  const { advertisers, create, update } = useData()
   const { user, isAdmin } = useAuth()
   const toast = useToast()
   const editing = !!initial
@@ -171,14 +171,6 @@ export function CampaignForm({ open, onClose, initial }) {
         !f.legalName || f.legalName === legalNameOf(f.advertiserId)
           ? legalNameOf(advertiserId)
           : f.legalName,
-    }))
-
-  const toggleChannel = (id) =>
-    setForm((f) => ({
-      ...f,
-      channelIds: f.channelIds.includes(id)
-        ? f.channelIds.filter((x) => x !== id)
-        : [...f.channelIds, id],
     }))
 
   const submit = () => {

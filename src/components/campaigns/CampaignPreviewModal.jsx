@@ -283,7 +283,6 @@ function ContractTiles({ campaign, advertiser }) {
 export function CampaignPreviewModal({
   campaign,
   advertiser,
-  channels,
   onClose,
   onOpenStats,
 }) {

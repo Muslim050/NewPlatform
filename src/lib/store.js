@@ -6,7 +6,6 @@ import {
   buildSeed,
   paymentStatusesFor,
 } from './seed.js'
-import { cloneOverview } from './overviewSeed.js'
 import { uid } from './id.js'
 
 // Юр. лица демо-брендов — добираем их в базах, созданных до появления поля.
