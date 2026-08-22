@@ -1,6 +1,12 @@
 import { cn } from '@/lib/cn.js'
 
-export function EmptyState({ icon: Icon, title, description, action, className }) {
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+  className,
+}) {
   return (
     <div
       className={cn(

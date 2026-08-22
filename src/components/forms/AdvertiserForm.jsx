@@ -279,7 +279,11 @@ export function AdvertiserForm({ open, onClose, initial }) {
         onChange={setTab}
         items={[
           { value: 'main', label: 'Реквизиты' },
-          { value: 'contracts', label: 'Договоры', count: form.contracts.length },
+          {
+            value: 'contracts',
+            label: 'Договоры',
+            count: form.contracts.length,
+          },
         ]}
       />
 
@@ -308,7 +312,6 @@ export function AdvertiserForm({ open, onClose, initial }) {
               placeholder="name@brand.ru"
             />
           </Field>
-
         </div>
 
         {/* Подставляется в договоры бренда и в кампании. */}
@@ -316,17 +319,22 @@ export function AdvertiserForm({ open, onClose, initial }) {
           <Input
             value={form.legalName}
             onChange={(e) => set('legalName', e.target.value)}
-            placeholder='ООО «Пример»'
+            placeholder="ООО «Пример»"
           />
         </Field>
 
-        <Field label="Реквизиты" hint="По строке на пункт: ИНН, банк, счёт, адрес.">
+        <Field
+          label="Реквизиты"
+          hint="По строке на пункт: ИНН, банк, счёт, адрес."
+        >
           <Textarea
             rows={7}
             value={form.requisites}
             onChange={(e) => set('requisites', e.target.value)}
             className="min-h-[164px]"
-            placeholder={'ИНН: 311985311\nБанк: ГО АК «Алокабанк», г. Ташкент\nМФО: 00401\nР/с: 20208000407214976001\nАдрес: г. Ташкент, ул. Elbek, 8'}
+            placeholder={
+              'ИНН: 311985311\nБанк: ГО АК «Алокабанк», г. Ташкент\nМФО: 00401\nР/с: 20208000407214976001\nАдрес: г. Ташкент, ул. Elbek, 8'
+            }
           />
         </Field>
 
@@ -387,7 +395,8 @@ export function AdvertiserForm({ open, onClose, initial }) {
               Договоров пока нет
             </p>
             <p className="mt-1 text-[13px] text-ink-muted">
-              Из этих договоров рекламодатель выбирает номер при создании кампании.
+              Из этих договоров рекламодатель выбирает номер при создании
+              кампании.
             </p>
           </div>
         )}
@@ -525,7 +534,6 @@ export function AdvertiserForm({ open, onClose, initial }) {
                 />
               </Field>
             </div>
-
           </div>
         ))}
 

@@ -29,7 +29,8 @@ export default function Channels() {
       .includes(q.trim().toLowerCase()),
   )
 
-  const usage = (id) => campaigns.filter((c) => c.channelIds.includes(id)).length
+  const usage = (id) =>
+    campaigns.filter((c) => c.channelIds.includes(id)).length
 
   const del = async (c) => {
     const ok = await confirm({

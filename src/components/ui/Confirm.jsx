@@ -63,6 +63,7 @@ export function ConfirmProvider({ children }) {
 
 export function useConfirm() {
   const ctx = useContext(ConfirmCtx)
-  if (!ctx) throw new Error('useConfirm должен вызываться внутри <ConfirmProvider>')
+  if (!ctx)
+    throw new Error('useConfirm должен вызываться внутри <ConfirmProvider>')
   return ctx
 }

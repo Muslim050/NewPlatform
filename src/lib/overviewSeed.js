@@ -12,7 +12,12 @@ export const OVERVIEW_DEFAULTS = {
   },
   mediaTotals: [
     { id: 'mt_live', label: 'Прямые эфиры', value: 111, icon: 'RadioTower' },
-    { id: 'mt_ads', label: 'Рекламные ролики', value: 1088, icon: 'Clapperboard' },
+    {
+      id: 'mt_ads',
+      label: 'Рекламные ролики',
+      value: 1088,
+      icon: 'Clapperboard',
+    },
     { id: 'mt_promo', label: 'Промо в эфире', value: 1295, icon: 'Tv' },
     { id: 'mt_time', label: 'Хронометраж, сек.', value: 32640, icon: 'Timer' },
     {
@@ -99,7 +104,12 @@ export const OVERVIEW_DEFAULTS = {
       leagues: 'UFC, Bellator, PFL',
       ages: [37.9, 34.5, 16.5, 11.1],
     },
-    { id: 'lg_racing', sport: 'Racing', leagues: 'F1', ages: [15.6, 31.9, 27.9, 24.6] },
+    {
+      id: 'lg_racing',
+      sport: 'Racing',
+      leagues: 'F1',
+      ages: [15.6, 31.9, 27.9, 24.6],
+    },
     {
       id: 'lg_tennis',
       sport: 'Tennis',
@@ -146,8 +156,7 @@ export const OVERVIEW_DEFAULTS = {
 }
 
 /** Свежая копия дефолтов — состояние правят иммутабельно. */
-export const cloneOverview = () =>
-  JSON.parse(JSON.stringify(OVERVIEW_DEFAULTS))
+export const cloneOverview = () => JSON.parse(JSON.stringify(OVERVIEW_DEFAULTS))
 
 /**
  * Обзор за конкретный месяц: те же показатели, но с сезонным разбросом —

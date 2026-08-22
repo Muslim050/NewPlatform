@@ -8,9 +8,7 @@ import { Logo } from '@/components/Logo.jsx'
 import { Button } from '@/components/ui/Button.jsx'
 import { Field, Input } from '@/components/ui/Field.jsx'
 
-const TV_SPOTS = [
-  '/creatives/setanta-2.mp4',
-]
+const TV_SPOTS = ['/creatives/setanta-2.mp4']
 
 // Боковые колонки выровнены по краям панели — одинаковый отступ у всех.
 const AUDIENCE_STATS = [
@@ -37,13 +35,14 @@ function AudienceStatsOrbit({ stats }) {
       <div className="absolute left-1/2 top-[42%] h-[36%] w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-dashed border-lime-300/10" />
 
       {stats.map((stat, index) => (
-        <div
-          key={stat.label}
-          className={`absolute ${stat.position} w-[184px]`}
-        >
+        <div key={stat.label} className={`absolute ${stat.position} w-[184px]`}>
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: [0, index % 2 === 0 ? -4 : 4, 0] }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              y: [0, index % 2 === 0 ? -4 : 4, 0],
+            }}
             transition={{
               opacity: { delay: 0.58 + index * 0.07, duration: 0.45 },
               scale: { delay: 0.58 + index * 0.07, duration: 0.45 },
@@ -106,9 +105,8 @@ function TvShowcase() {
           STAY IN THE GAME.
         </h2>
         <p className="mt-4 max-w-md text-[20px] leading-relaxed text-white/70">
-         В УЗБЕКИСТАНЕ ВЕДЕТСЯ ТРАНСЛЯЦИЯ 2Х ТЕЛЕКАНАЛОВ
+          В УЗБЕКИСТАНЕ ВЕДЕТСЯ ТРАНСЛЯЦИЯ 2Х ТЕЛЕКАНАЛОВ
         </p>
-
       </motion.div>
 
       <AudienceStatsOrbit stats={AUDIENCE_STATS} />
@@ -130,7 +128,12 @@ function TvShowcase() {
           <div
             data-testid="tv-video-frame"
             className="absolute z-10 overflow-hidden bg-[#050607]"
-            style={{ left: '31.5978%', top: '17.7471%', width: '36.6846%', height: '36.6631%' }}
+            style={{
+              left: '31.5978%',
+              top: '17.7471%',
+              width: '36.6846%',
+              height: '36.6631%',
+            }}
           >
             <motion.video
               data-testid="tv-video"
@@ -155,7 +158,8 @@ function TvShowcase() {
               <span className="flex items-center gap-1 text-white/70">
                 <VolumeX className="h-[clamp(7px,0.8vw,12px)] w-[clamp(7px,0.8vw,12px)]" />
                 <span className="text-[clamp(5px,0.58vw,9px)] tabular-nums">
-                  {String(activeSpot + 1).padStart(2, '0')} / {String(TV_SPOTS.length).padStart(2, '0')}
+                  {String(activeSpot + 1).padStart(2, '0')} /{' '}
+                  {String(TV_SPOTS.length).padStart(2, '0')}
                 </span>
               </span>
             </div>
@@ -229,7 +233,6 @@ export default function Login() {
             <h1 className="font-display-cond text-display-md text-ink text-base">
               С возвращением
             </h1>
-
           </div>
 
           <form onSubmit={submit} className="mt-8 space-y-4">
@@ -259,13 +262,16 @@ export default function Login() {
               />
             </Field>
 
-            <Button size="lg" variant="primary" type="submit" className="w-full">
+            <Button
+              size="lg"
+              variant="primary"
+              type="submit"
+              className="w-full"
+            >
               Войти в платформу
               <ArrowRight size={18} />
             </Button>
           </form>
-
-
         </motion.div>
       </section>
 

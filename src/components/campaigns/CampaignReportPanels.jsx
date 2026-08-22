@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react'
 import {
   Check,
   Clapperboard,
@@ -14,53 +14,53 @@ import {
   Timer,
   Trash2,
   Tv,
-} from "lucide-react";
-import { useAuth } from "@/context/AuthContext.jsx";
-import { useToast } from "@/components/ui/Toast.jsx";
-import { formatNumber, formatPct } from "@/lib/format.js";
-import { Button } from "@/components/ui/Button.jsx";
-import { Card } from "@/components/ui/Card.jsx";
-import { DonutChart } from "@/components/charts/DonutChart.jsx";
-import { uid } from "@/lib/id.js";
-import { cn } from "@/lib/cn.js";
+} from 'lucide-react'
+import { useAuth } from '@/context/AuthContext.jsx'
+import { useToast } from '@/components/ui/Toast.jsx'
+import { formatNumber, formatPct } from '@/lib/format.js'
+import { Button } from '@/components/ui/Button.jsx'
+import { Card } from '@/components/ui/Card.jsx'
+import { DonutChart } from '@/components/charts/DonutChart.jsx'
+import { uid } from '@/lib/id.js'
+import { cn } from '@/lib/cn.js'
 
 // Правки сводных отчётов лежат рядом с таблицами, каждый под своим ключом.
-const STATS_STORAGE_KEY = "setanta.campaign.report-stats.v1";
+const STATS_STORAGE_KEY = 'setanta.campaign.report-stats.v1'
 
 /** Число из поля: там строка, иногда с пробелами. */
 const statNumber = (value) => {
-  const digits = String(value ?? "").replace(/[^\d.-]/g, "");
-  const number = Number(digits);
-  return Number.isFinite(number) ? number : 0;
-};
+  const digits = String(value ?? '').replace(/[^\d.-]/g, '')
+  const number = Number(digits)
+  return Number.isFinite(number) ? number : 0
+}
 
 /** Как в отчёте: 14 111 352. Тем же видом показываем и в поле правки. */
 const groupDigits = (value) => {
-  const raw = String(value ?? "");
-  if (!raw.trim()) return "";
+  const raw = String(value ?? '')
+  if (!raw.trim()) return ''
   // Дроби в показателях не используются, поэтому оставляем только цифры.
-  const digits = raw.replace(/[^\d]/g, "");
-  return digits ? formatNumber(Number(digits)) : "";
-};
+  const digits = raw.replace(/[^\d]/g, '')
+  return digits ? formatNumber(Number(digits)) : ''
+}
 
 function loadStats(key, seed) {
   try {
-    const saved = JSON.parse(localStorage.getItem(STATS_STORAGE_KEY) || "{}");
+    const saved = JSON.parse(localStorage.getItem(STATS_STORAGE_KEY) || '{}')
     // Сохранённый отчёт мог быть записан до появления новых блоков —
     // недостающее добираем из сида, иначе панель падает на пустом поле.
-    return saved[key] ? { ...seed, ...saved[key] } : seed;
+    return saved[key] ? { ...seed, ...saved[key] } : seed
   } catch {
-    return seed;
+    return seed
   }
 }
 
 function persistStats(key, data) {
   try {
-    const saved = JSON.parse(localStorage.getItem(STATS_STORAGE_KEY) || "{}");
+    const saved = JSON.parse(localStorage.getItem(STATS_STORAGE_KEY) || '{}')
     localStorage.setItem(
       STATS_STORAGE_KEY,
       JSON.stringify({ ...saved, [key]: data }),
-    );
+    )
   } catch {
     // Переполнилось хранилище — правки останутся до перезагрузки.
   }
@@ -68,24 +68,24 @@ function persistStats(key, data) {
 
 /** Правка сводного отчёта: состояние, режим и сохранение в одном месте. */
 function useEditableStats(key, seed, title) {
-  const { isAdvertiser, canEdit } = useAuth();
-  const toast = useToast();
-  const [data, setData] = useState(() => loadStats(key, seed));
-  const [editing, setEditing] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const { isAdvertiser, canEdit } = useAuth()
+  const toast = useToast()
+  const [data, setData] = useState(() => loadStats(key, seed))
+  const [editing, setEditing] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   const save = () => {
-    persistStats(key, data);
-    setEditing(false);
-    setSaved(true);
-    toast.success(`${title}: отчёт сохранён`);
-    setTimeout(() => setSaved(false), 1200);
-  };
+    persistStats(key, data)
+    setEditing(false)
+    setSaved(true)
+    toast.success(`${title}: отчёт сохранён`)
+    setTimeout(() => setSaved(false), 1200)
+  }
 
   const cancel = () => {
-    setData(loadStats(key, seed));
-    setEditing(false);
-  };
+    setData(loadStats(key, seed))
+    setEditing(false)
+  }
 
   return {
     data,
@@ -97,14 +97,14 @@ function useEditableStats(key, seed, title) {
     cancel,
     // Рекламодателю и наблюдателю сводки доступны только на просмотр.
     readOnly: isAdvertiser || !canEdit,
-  };
+  }
 }
 
 /** Кнопки «Редактировать» / «Сохранить» в шапке сводного отчёта. */
 function EditControls({ state, className }) {
-  if (state.readOnly) return null;
+  if (state.readOnly) return null
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn('flex items-center gap-2', className)}>
       {state.editing ? (
         <>
           <Button size="sm" variant="secondary" onClick={state.cancel}>
@@ -122,22 +122,22 @@ function EditControls({ state, className }) {
           onClick={() => state.setEditing(true)}
         >
           {state.saved ? <Check size={15} /> : <Pencil size={15} />}
-          {state.saved ? "Сохранено" : "Редактировать"}
+          {state.saved ? 'Сохранено' : 'Редактировать'}
         </Button>
       )}
     </div>
-  );
+  )
 }
 
 /** Поле числа в сводке: в режиме правки — input, иначе просто значение. */
 function StatValue({ editing, value, onChange, className, suffix }) {
   if (!editing) {
     return (
-      <p className={cn("font-display font-semibold text-ink tnum", className)}>
+      <p className={cn('font-display font-semibold text-ink tnum', className)}>
         {formatNumber(statNumber(value))}
         {suffix}
       </p>
-    );
+    )
   }
   return (
     <input
@@ -145,17 +145,17 @@ function StatValue({ editing, value, onChange, className, suffix }) {
       onChange={(e) => onChange(groupDigits(e.target.value))}
       inputMode="numeric"
       className={cn(
-        "w-full rounded-lg border border-line bg-surface px-2 py-1 font-display font-semibold text-ink outline-none transition-colors tnum focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200",
+        'w-full rounded-lg border border-line bg-surface px-2 py-1 font-display font-semibold text-ink outline-none transition-colors tnum focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200',
         className,
       )}
     />
-  );
+  )
 }
 
 const CHANNELS = [
   {
-    name: "Setanta Sports 1",
-    code: "S1",
+    name: 'Setanta Sports 1',
+    code: 'S1',
     standardSpots: 329,
     standardSeconds: 9870,
     liveAds: 272,
@@ -163,76 +163,76 @@ const CHANNELS = [
     liveViews: 14111352,
   },
   {
-    name: "Setanta Sports 2",
-    code: "S2",
+    name: 'Setanta Sports 2',
+    code: 'S2',
     standardSpots: 315,
     standardSeconds: 9450,
     liveAds: 172,
     liveSeconds: 5160,
     liveViews: 9596809,
   },
-];
+]
 
 const SOCIAL_CHANNELS = [
   {
-    name: "Instagram",
+    name: 'Instagram',
     icon: Instagram,
-    color: "#8B5CF6",
+    color: '#8B5CF6',
     posts: 7,
     impressions: 188000,
-    linkPrefix: "instagram.com/",
+    linkPrefix: 'instagram.com/',
     rows: [51102, 30399, 29222, 27392, 23915, 14127, 11889],
   },
   {
-    name: "Telegram",
+    name: 'Telegram',
     icon: Send,
-    color: "#29B6F6",
+    color: '#29B6F6',
     posts: 7,
     impressions: 307000,
-    linkPrefix: "t.me/setanta_uzb/",
+    linkPrefix: 't.me/setanta_uzb/',
     rows: [35000, 39200, 42600, 58800, 46200, 42600, 42800],
   },
-];
+]
 
 const TOTAL_METRICS = [
-  { label: "Прямые эфиры", value: 111, icon: RadioTower },
-  { label: "Рекламные ролики", value: 1088, icon: Clapperboard },
-  { label: "Промо в эфире", value: 1295, icon: Tv },
-  { label: "Хронометраж, сек.", value: 32640, icon: Timer },
-  { label: "Просмотры Live Ads", value: 23708161, icon: PlayCircle },
-];
+  { label: 'Прямые эфиры', value: 111, icon: RadioTower },
+  { label: 'Рекламные ролики', value: 1088, icon: Clapperboard },
+  { label: 'Промо в эфире', value: 1295, icon: Tv },
+  { label: 'Хронометраж, сек.', value: 32640, icon: Timer },
+  { label: 'Просмотры Live Ads', value: 23708161, icon: PlayCircle },
+]
 
 const DEVICE_SHARE = [
-  { label: "Браузер", value: 3, color: "#4A9BDF" },
-  { label: "Smart TV", value: 66, color: "#F47B20" },
-  { label: "Телефон", value: 30, color: "#A3A3A3" },
-  { label: "Планшет", value: 1, color: "#FFD106" },
-];
+  { label: 'Браузер', value: 3, color: '#4A9BDF' },
+  { label: 'Smart TV', value: 66, color: '#F47B20' },
+  { label: 'Телефон', value: 30, color: '#A3A3A3' },
+  { label: 'Планшет', value: 1, color: '#FFD106' },
+]
 
 const CITY_SHARE = [
-  ["Ташкент", 62.3],
-  ["Самарканд", 12.6],
-  ["Бухара", 7.3],
-  ["Андижан", 2.1],
-  ["Джизак", 2.1],
-  ["Чирчик", 2.1],
-  ["ZZC", 1.8],
-  ["Навои", 1],
-  ["Карши", 1],
-  ["Фергана", 1],
-  ["Наманган", 1],
-  ["Шахрисабз", 0.8],
-  ["Нукус", 0.7],
-  ["Алмалык", 0.7],
-  ["Денау", 0.7],
-  ["Байсун", 0.6],
-  ["Гулистан", 0.6],
-  ["Зарафшан", 0.5],
-  ["Хива", 0.5],
-  ["Хорезмская область", 0.3],
-  ["GHUST", 0.2],
-  ["Коканд", 0.1],
-].map(([name, value]) => ({ name, value }));
+  ['Ташкент', 62.3],
+  ['Самарканд', 12.6],
+  ['Бухара', 7.3],
+  ['Андижан', 2.1],
+  ['Джизак', 2.1],
+  ['Чирчик', 2.1],
+  ['ZZC', 1.8],
+  ['Навои', 1],
+  ['Карши', 1],
+  ['Фергана', 1],
+  ['Наманган', 1],
+  ['Шахрисабз', 0.8],
+  ['Нукус', 0.7],
+  ['Алмалык', 0.7],
+  ['Денау', 0.7],
+  ['Байсун', 0.6],
+  ['Гулистан', 0.6],
+  ['Зарафшан', 0.5],
+  ['Хива', 0.5],
+  ['Хорезмская область', 0.3],
+  ['GHUST', 0.2],
+  ['Коканд', 0.1],
+].map(([name, value]) => ({ name, value }))
 
 function ReportHeader({ eyebrow, title, subtitle }) {
   return (
@@ -245,21 +245,21 @@ function ReportHeader({ eyebrow, title, subtitle }) {
       </h3>
       <p className="mt-1 max-w-2xl text-sm text-ink-muted">{subtitle}</p>
     </div>
-  );
+  )
 }
 
 function ChannelMetric({
   label,
   value,
   unit,
-  accent = "coral",
+  accent = 'coral',
   editing,
   onChange,
 }) {
   const accentClass =
-    accent === "green"
-      ? "border-success/20 bg-gradient-to-br from-surface to-success/[0.06]"
-      : "border-indigo-200 bg-gradient-to-br from-surface to-indigo-50";
+    accent === 'green'
+      ? 'border-success/20 bg-gradient-to-br from-surface to-success/[0.06]'
+      : 'border-indigo-200 bg-gradient-to-br from-surface to-indigo-50'
 
   return (
     <div className={`rounded-2xl border p-4 shadow-soft ${accentClass}`}>
@@ -274,13 +274,13 @@ function ChannelMetric({
       />
       {unit && <p className="mt-0.5 text-[12px] text-ink-muted">{unit}</p>}
     </div>
-  );
+  )
 }
 
 function ChannelPanel({ channel, editing, onChange }) {
   // Наблюдателю просмотры не показываем — как и в таблице размещений.
-  const { isViewer } = useAuth();
-  const set = (key) => (value) => onChange({ ...channel, [key]: value });
+  const { isViewer } = useAuth()
+  const set = (key) => (value) => onChange({ ...channel, [key]: value })
 
   return (
     <div className="rounded-3xl border border-line bg-surface/90 p-4 shadow-soft sm:p-5">
@@ -292,7 +292,7 @@ function ChannelPanel({ channel, editing, onChange }) {
           {editing ? (
             <input
               value={channel.name}
-              onChange={(e) => set("name")(e.target.value)}
+              onChange={(e) => set('name')(e.target.value)}
               aria-label="Название канала"
               className="w-full rounded-lg border border-line bg-surface px-2 py-1 font-display text-lg font-semibold text-ink outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
             />
@@ -311,28 +311,28 @@ function ChannelPanel({ channel, editing, onChange }) {
           value={channel.standardSpots}
           unit="роликов"
           editing={editing}
-          onChange={set("standardSpots")}
+          onChange={set('standardSpots')}
         />
         <ChannelMetric
           label="Live spot UFC / Football"
           value={channel.liveAds}
           unit="Live Ads"
           editing={editing}
-          onChange={set("liveAds")}
+          onChange={set('liveAds')}
         />
         <ChannelMetric
           label="Standard spot"
           value={channel.standardSeconds}
           unit="секунд"
           editing={editing}
-          onChange={set("standardSeconds")}
+          onChange={set('standardSeconds')}
         />
         <ChannelMetric
           label="Live spot UFC / Football"
           value={channel.liveSeconds}
           unit="секунд"
           editing={editing}
-          onChange={set("liveSeconds")}
+          onChange={set('liveSeconds')}
         />
         {!isViewer && (
           <div className="col-span-2">
@@ -341,30 +341,30 @@ function ChannelPanel({ channel, editing, onChange }) {
               value={channel.liveViews}
               unit="просмотров"
               editing={editing}
-              onChange={set("liveViews")}
+              onChange={set('liveViews')}
             />
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }
 
 const SPOT_SEED = {
   channels: CHANNELS.map((channel) => ({ ...channel })),
   eventPromo: 1295,
   ottPreroll: 884310,
-};
+}
 
 export function ChannelSummaryReport() {
-  const state = useEditableStats("spot", SPOT_SEED, "Spot statistic");
-  const { data, setData, editing } = state;
+  const state = useEditableStats('spot', SPOT_SEED, 'Spot statistic')
+  const { data, setData, editing } = state
 
   const setChannel = (index) => (channel) =>
     setData({
       ...data,
       channels: data.channels.map((item, i) => (i === index ? channel : item)),
-    });
+    })
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">
@@ -409,11 +409,11 @@ export function ChannelSummaryReport() {
         />
       </div>
     </section>
-  );
+  )
 }
 
 // Правки строк соцсетей живут рядом с остальными таблицами отчёта.
-const SOCIAL_STORAGE_KEY = "setanta.campaign.social.v1";
+const SOCIAL_STORAGE_KEY = 'setanta.campaign.social.v1'
 
 const seedSocialReport = (channel) => ({
   posts: String(channel.posts),
@@ -423,12 +423,12 @@ const seedSocialReport = (channel) => ({
     link: `${channel.linkPrefix}XXXXXXX`,
     views: String(views),
   })),
-});
+})
 
 function loadSocialReport(storageKey, channel) {
   try {
-    const saved = JSON.parse(localStorage.getItem(SOCIAL_STORAGE_KEY) || "{}");
-    const stored = saved[storageKey];
+    const saved = JSON.parse(localStorage.getItem(SOCIAL_STORAGE_KEY) || '{}')
+    const stored = saved[storageKey]
     // Старый формат — просто массив строк, показатели тогда считались сами.
     if (Array.isArray(stored)) {
       return {
@@ -437,28 +437,28 @@ function loadSocialReport(storageKey, channel) {
           stored.reduce((sum, row) => sum + socialNumber(row.views), 0),
         ),
         rows: stored,
-      };
+      }
     }
     if (stored?.rows) {
       return {
         posts: String(stored.posts ?? stored.rows.length),
         impressions: String(stored.impressions ?? 0),
         rows: stored.rows,
-      };
+      }
     }
-    return seedSocialReport(channel);
+    return seedSocialReport(channel)
   } catch {
-    return seedSocialReport(channel);
+    return seedSocialReport(channel)
   }
 }
 
 function persistSocialReport(storageKey, report) {
   try {
-    const saved = JSON.parse(localStorage.getItem(SOCIAL_STORAGE_KEY) || "{}");
+    const saved = JSON.parse(localStorage.getItem(SOCIAL_STORAGE_KEY) || '{}')
     localStorage.setItem(
       SOCIAL_STORAGE_KEY,
       JSON.stringify({ ...saved, [storageKey]: report }),
-    );
+    )
   } catch {
     // Переполнилось хранилище — правки останутся до перезагрузки.
   }
@@ -466,58 +466,58 @@ function persistSocialReport(storageKey, report) {
 
 /** Число из ячейки: в поле строка, иногда с пробелами. */
 const socialNumber = (value) => {
-  const digits = String(value ?? "").replace(/[^\d]/g, "");
-  return digits ? Number(digits) : 0;
-};
+  const digits = String(value ?? '').replace(/[^\d]/g, '')
+  return digits ? Number(digits) : 0
+}
 
 function SocialReportCard({ channel, storageKey }) {
-  const Icon = channel.icon;
-  const { isAdvertiser, canEdit } = useAuth();
-  const toast = useToast();
+  const Icon = channel.icon
+  const { isAdvertiser, canEdit } = useAuth()
+  const toast = useToast()
   // Рекламодателю и наблюдателю отчёт доступен только на просмотр.
-  const readOnly = isAdvertiser || !canEdit;
+  const readOnly = isAdvertiser || !canEdit
   const [report, setReport] = useState(() =>
     loadSocialReport(storageKey, channel),
-  );
-  const [editing, setEditing] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const { rows } = report;
+  )
+  const [editing, setEditing] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const { rows } = report
 
   // Сменили канал — показываем его отчёт.
   useEffect(() => {
-    setReport(loadSocialReport(storageKey, channel));
-    setEditing(false);
-    setSaved(false);
+    setReport(loadSocialReport(storageKey, channel))
+    setEditing(false)
+    setSaved(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey]);
+  }, [storageKey])
 
   const setRows = (updater) =>
     setReport((current) => ({
       ...current,
-      rows: typeof updater === "function" ? updater(current.rows) : updater,
-    }));
+      rows: typeof updater === 'function' ? updater(current.rows) : updater,
+    }))
 
   const updateRow = (id, key, value) =>
     setRows((current) =>
       current.map((row) => (row.id === id ? { ...row, [key]: value } : row)),
-    );
+    )
 
   const addRow = () =>
     setRows((current) => [
       ...current,
-      { id: uid("soc"), link: channel.linkPrefix, views: "" },
-    ]);
+      { id: uid('soc'), link: channel.linkPrefix, views: '' },
+    ])
 
   const removeRow = (id) =>
-    setRows((current) => current.filter((row) => row.id !== id));
+    setRows((current) => current.filter((row) => row.id !== id))
 
   const save = () => {
-    persistSocialReport(storageKey, report);
-    setEditing(false);
-    setSaved(true);
-    toast.success(`${channel.name}: отчёт сохранён`);
-    setTimeout(() => setSaved(false), 1200);
-  };
+    persistSocialReport(storageKey, report)
+    setEditing(false)
+    setSaved(true)
+    toast.success(`${channel.name}: отчёт сохранён`)
+    setTimeout(() => setSaved(false), 1200)
+  }
 
   return (
     <Card className="overflow-hidden">
@@ -557,7 +557,7 @@ function SocialReportCard({ channel, storageKey }) {
                 onClick={() => setEditing(true)}
               >
                 {saved ? <Check size={15} /> : <Pencil size={15} />}
-                {saved ? "Сохранено" : "Редактировать"}
+                {saved ? 'Сохранено' : 'Редактировать'}
               </Button>
             )}
           </div>
@@ -567,8 +567,8 @@ function SocialReportCard({ channel, storageKey }) {
       {/* Показатели ведутся руками: они не всегда равны сумме по строкам. */}
       <div className="grid grid-cols-2 gap-3 bg-paper/45 p-4">
         {[
-          { key: "posts", label: "Публикации" },
-          { key: "impressions", label: "Impressions" },
+          { key: 'posts', label: 'Публикации' },
+          { key: 'impressions', label: 'Impressions' },
         ].map((metric) => (
           <div key={metric.key} className="rounded-xl bg-surface px-3 py-2.5">
             <p className="text-[11px] text-ink-muted">{metric.label}</p>
@@ -597,7 +597,7 @@ function SocialReportCard({ channel, storageKey }) {
       <div className="divide-y divide-line">
         {rows.length === 0 && (
           <p className="px-5 py-8 text-center text-[13px] text-ink-muted">
-            Публикаций нет. {readOnly ? "" : "Добавьте строку."}
+            Публикаций нет. {readOnly ? '' : 'Добавьте строку.'}
           </p>
         )}
         {rows.map((row) => (
@@ -608,7 +608,7 @@ function SocialReportCard({ channel, storageKey }) {
             {editing ? (
               <input
                 value={row.link}
-                onChange={(e) => updateRow(row.id, "link", e.target.value)}
+                onChange={(e) => updateRow(row.id, 'link', e.target.value)}
                 aria-label="Ссылка на публикацию"
                 className="h-9 w-full min-w-0 rounded-lg border border-line bg-surface px-2 text-[12px] text-ink outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
               />
@@ -621,7 +621,7 @@ function SocialReportCard({ channel, storageKey }) {
               <input
                 value={groupDigits(row.views)}
                 onChange={(e) =>
-                  updateRow(row.id, "views", groupDigits(e.target.value))
+                  updateRow(row.id, 'views', groupDigits(e.target.value))
                 }
                 inputMode="numeric"
                 aria-label="Показы"
@@ -647,13 +647,13 @@ function SocialReportCard({ channel, storageKey }) {
         ))}
       </div>
     </Card>
-  );
+  )
 }
 
 /** Отчёт по одной соцсети: канал выбирается вкладкой в общей ленте. */
 export function SocialMediaReport({ channel: name, channelKey }) {
   const channel =
-    SOCIAL_CHANNELS.find((item) => item.name === name) ?? SOCIAL_CHANNELS[0];
+    SOCIAL_CHANNELS.find((item) => item.name === name) ?? SOCIAL_CHANNELS[0]
 
   return (
     <div>
@@ -673,11 +673,11 @@ export function SocialMediaReport({ channel: name, channelKey }) {
         />
       </div>
     </div>
-  );
+  )
 }
 
 function TotalMetric({ item, editing, onChange }) {
-  const Icon = TOTAL_ICONS[item.label] ?? RadioTower;
+  const Icon = TOTAL_ICONS[item.label] ?? RadioTower
   return (
     <div className="rounded-2xl border border-line bg-surface/85 p-4 shadow-soft">
       <div className="flex items-center justify-between gap-3">
@@ -695,13 +695,13 @@ function TotalMetric({ item, editing, onChange }) {
         className="mt-3 text-2xl"
       />
     </div>
-  );
+  )
 }
 
 // Иконки метрик держим отдельно: в хранилище едут только числа.
 const TOTAL_ICONS = Object.fromEntries(
   TOTAL_METRICS.map((item) => [item.label, item.icon]),
-);
+)
 
 const TOTAL_SEED = {
   metrics: TOTAL_METRICS.map(({ label, value }) => ({ label, value })),
@@ -712,7 +712,7 @@ const TOTAL_SEED = {
   })),
   devices: DEVICE_SHARE.map((item) => ({ ...item })),
   cities: CITY_SHARE.map((item) => ({ ...item })),
-};
+}
 
 // Иконка и цвет соцсети живут в коде — в хранилище едут только цифры.
 const SOCIAL_STYLE = Object.fromEntries(
@@ -720,17 +720,17 @@ const SOCIAL_STYLE = Object.fromEntries(
     channel.name,
     { icon: channel.icon, color: channel.color },
   ]),
-);
+)
 
 export function TotalStatisticsReport() {
   // Наблюдателю не показываем просмотры, устройства и географию —
   // остаётся эфирная сводка и социальные сети.
-  const { isViewer } = useAuth();
-  const state = useEditableStats("total", TOTAL_SEED, "Total statistics");
-  const { data, setData, editing } = state;
+  const { isViewer } = useAuth()
+  const state = useEditableStats('total', TOTAL_SEED, 'Total statistics')
+  const { data, setData, editing } = state
   const metrics = isViewer
-    ? data.metrics.filter((item) => item.label !== "Просмотры Live Ads")
-    : data.metrics;
+    ? data.metrics.filter((item) => item.label !== 'Просмотры Live Ads')
+    : data.metrics
 
   const setMetric = (label) => (value) =>
     setData({
@@ -738,7 +738,7 @@ export function TotalStatisticsReport() {
       metrics: data.metrics.map((item) =>
         item.label === label ? { ...item, value } : item,
       ),
-    });
+    })
 
   const setDevice = (index, patch) =>
     setData({
@@ -746,7 +746,7 @@ export function TotalStatisticsReport() {
       devices: data.devices.map((item, i) =>
         i === index ? { ...item, ...patch } : item,
       ),
-    });
+    })
 
   const setCity = (index, patch) =>
     setData({
@@ -754,10 +754,10 @@ export function TotalStatisticsReport() {
       cities: data.cities.map((item, i) =>
         i === index ? { ...item, ...patch } : item,
       ),
-    });
+    })
 
   const addCity = () =>
-    setData({ ...data, cities: [...data.cities, { name: "", value: 0 }] });
+    setData({ ...data, cities: [...data.cities, { name: '', value: 0 }] })
 
   const setSocial = (index, patch) =>
     setData({
@@ -765,19 +765,19 @@ export function TotalStatisticsReport() {
       social: data.social.map((item, i) =>
         i === index ? { ...item, ...patch } : item,
       ),
-    });
+    })
 
   const removeCity = (index) =>
-    setData({ ...data, cities: data.cities.filter((_, i) => i !== index) });
+    setData({ ...data, cities: data.cities.filter((_, i) => i !== index) })
 
   const devices = data.devices.map((item) => ({
     ...item,
     value: statNumber(item.value),
-  }));
+  }))
   const topDevice = devices.reduce(
     (top, item) => (!top || item.value > top.value ? item : top),
     null,
-  );
+  )
 
   return (
     <div>
@@ -790,16 +790,16 @@ export function TotalStatisticsReport() {
             title="Общая статистика размещений"
             subtitle={
               isViewer
-                ? "Сводка эфира и социальных сетей."
-                : "Сводка эфира, социальных сетей, устройств и географии аудитории."
+                ? 'Сводка эфира и социальных сетей.'
+                : 'Сводка эфира, социальных сетей, устройств и географии аудитории.'
             }
           />
           <EditControls state={state} />
         </div>
         <div
           className={cn(
-            "relative mt-6 grid grid-cols-2 gap-3",
-            isViewer ? "lg:grid-cols-4" : "lg:grid-cols-5",
+            'relative mt-6 grid grid-cols-2 gap-3',
+            isViewer ? 'lg:grid-cols-4' : 'lg:grid-cols-5',
           )}
         >
           {metrics.map((item) => (
@@ -815,8 +815,8 @@ export function TotalStatisticsReport() {
 
       <div
         className={cn(
-          "mt-4 grid gap-4",
-          !isViewer && "xl:grid-cols-[0.72fr_0.95fr_1.1fr]",
+          'mt-4 grid gap-4',
+          !isViewer && 'xl:grid-cols-[0.72fr_0.95fr_1.1fr]',
         )}
       >
         <Card className="p-5">
@@ -828,13 +828,13 @@ export function TotalStatisticsReport() {
               в две колонки, чтобы не тянуть их в высоту. */}
           <div
             className={cn(
-              "mt-4",
-              isViewer ? "grid gap-3 sm:grid-cols-2" : "space-y-3",
+              'mt-4',
+              isViewer ? 'grid gap-3 sm:grid-cols-2' : 'space-y-3',
             )}
           >
             {data.social.map((channel, index) => {
-              const style = SOCIAL_STYLE[channel.name] ?? {};
-              const Icon = style.icon ?? Send;
+              const style = SOCIAL_STYLE[channel.name] ?? {}
+              const Icon = style.icon ?? Send
               return (
                 <div
                   key={channel.name}
@@ -843,7 +843,7 @@ export function TotalStatisticsReport() {
                   <div className="flex items-center gap-2">
                     <span
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
-                      style={{ backgroundColor: style.color ?? "#8E8B98" }}
+                      style={{ backgroundColor: style.color ?? '#8E8B98' }}
                     >
                       <Icon size={16} />
                     </span>
@@ -878,7 +878,7 @@ export function TotalStatisticsReport() {
                     </div>
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
         </Card>
@@ -902,7 +902,7 @@ export function TotalStatisticsReport() {
                 size={190}
                 thickness={22}
                 centerValue={formatPct(topDevice?.value ?? 0, 0)}
-                centerLabel={topDevice?.label ?? ""}
+                centerLabel={topDevice?.label ?? ''}
               />
               <div className="w-full space-y-2">
                 {data.devices.map((item, index) => (
@@ -982,7 +982,10 @@ export function TotalStatisticsReport() {
                 </thead>
                 <tbody className="divide-y divide-line">
                   {data.cities.map((city, index) => (
-                    <tr key={`${city.name}-${index}`} className="hover:bg-ink/[0.015]">
+                    <tr
+                      key={`${city.name}-${index}`}
+                      className="hover:bg-ink/[0.015]"
+                    >
                       <td className="py-2.5 pl-5 text-[12px] text-ink-muted tnum">
                         {index + 1}
                       </td>
@@ -1017,7 +1020,7 @@ export function TotalStatisticsReport() {
                             <button
                               type="button"
                               onClick={() => removeCity(index)}
-                              aria-label={`Удалить ${city.name || "город"}`}
+                              aria-label={`Удалить ${city.name || 'город'}`}
                               title="Удалить"
                               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger transition hover:bg-danger hover:text-white focus-ring"
                             >
@@ -1047,5 +1050,5 @@ export function TotalStatisticsReport() {
         )}
       </div>
     </div>
-  );
+  )
 }

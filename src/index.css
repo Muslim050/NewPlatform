@@ -73,7 +73,10 @@
   }
 
   /* Крупная выразительная типографика заголовков */
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: theme('fontFamily.display');
     font-weight: 600;
   }
@@ -113,12 +116,18 @@
     outline: none;
   }
   .focus-ring:focus-visible {
-    box-shadow: 0 0 0 2px theme('colors.paper'), 0 0 0 4px theme('colors.indigo.500');
+    box-shadow:
+      0 0 0 2px theme('colors.paper'),
+      0 0 0 4px theme('colors.indigo.500');
   }
 
   /* Градиентный текст-акцент */
   .text-gradient {
-    background: linear-gradient(100deg, theme('colors.ink.DEFAULT') 30%, theme('colors.indigo.600') 100%);
+    background: linear-gradient(
+      100deg,
+      theme('colors.ink.DEFAULT') 30%,
+      theme('colors.indigo.600') 100%
+    );
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;

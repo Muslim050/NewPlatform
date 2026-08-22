@@ -26,7 +26,11 @@ export function Field({ label, hint, error, required, children, className }) {
 
 export const Input = forwardRef(function Input({ className, ...props }, ref) {
   return (
-    <input ref={ref} className={cn(baseControl, 'h-11', className)} {...props} />
+    <input
+      ref={ref}
+      className={cn(baseControl, 'h-11', className)}
+      {...props}
+    />
   )
 })
 

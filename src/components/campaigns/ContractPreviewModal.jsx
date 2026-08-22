@@ -63,7 +63,9 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
   // Клик мимо списка статусов — закрываем его.
   useEffect(() => {
     const h = (e) =>
-      statusRef.current && !statusRef.current.contains(e.target) && setStatusOpen(false)
+      statusRef.current &&
+      !statusRef.current.contains(e.target) &&
+      setStatusOpen(false)
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])
@@ -168,7 +170,9 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
                   disabled={!canEditStatus}
                   onClick={() => setStatusOpen((v) => !v)}
                   title={
-                    canEditStatus ? 'Изменить статус договора' : 'Статус договора'
+                    canEditStatus
+                      ? 'Изменить статус договора'
+                      : 'Статус договора'
                   }
                   className={cn(
                     'inline-flex max-w-full items-center gap-2 rounded-xl border px-2.5 py-1.5 text-[12px] font-semibold transition-colors focus-ring',
@@ -185,7 +189,9 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
                   <span className="truncate">
                     {CONTRACT_STATUS[status].label}
                   </span>
-                  {canEditStatus && <ChevronDown size={14} className="shrink-0" />}
+                  {canEditStatus && (
+                    <ChevronDown size={14} className="shrink-0" />
+                  )}
                 </button>
 
                 {statusOpen && (

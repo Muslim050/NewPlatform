@@ -63,7 +63,8 @@ function fillContract(campaign, contractNumbers) {
   for (const field of CONTRACT_FIELDS) {
     const value = campaign[field]
     const isEmpty = Array.isArray(value) ? !value.length : !value
-    if (isEmpty) patch[field] = Array.isArray(seed[field]) ? [...seed[field]] : seed[field]
+    if (isEmpty)
+      patch[field] = Array.isArray(seed[field]) ? [...seed[field]] : seed[field]
   }
   return Object.keys(patch).length ? { ...campaign, ...patch } : campaign
 }
@@ -74,9 +75,8 @@ function normalizeCampaignStatus(campaign) {
   }
 
   const today = new Date().toISOString().slice(0, 10)
-  const status = campaign.endDate && campaign.endDate < today
-    ? 'completed'
-    : 'active'
+  const status =
+    campaign.endDate && campaign.endDate < today ? 'completed' : 'active'
 
   return { ...campaign, status }
 }
@@ -146,72 +146,74 @@ function normalizeDatabase(database) {
     database.contractPaymentLayoutVersion !== CONTRACT_PAYMENT_LAYOUT_VERSION
 
   const advertisers = (database.advertisers ?? []).map((advertiser) => ({
-      ...advertiser,
-      legalName: advertiser.legalName || SEED_LEGAL_NAMES.get(advertiser.id) || '',
-      // Сидовые логотипы обновляем из сида (путь мог смениться вместе с
-      // файлом), а загруженный в интерфейсе — оставляем как есть.
-      logo:
-        advertiser.logo === undefined ||
-        (typeof advertiser.logo === 'string' &&
-          advertiser.logo.startsWith('/logos/'))
-          ? SEED_LOGOS.get(advertiser.id) ?? advertiser.logo ?? null
-          : advertiser.logo,
-      // Реквизиты, договоры и сканы появились позже — добираем их из сида.
-      requisites: advertiser.requisites ?? {
-        ...(REQUISITES_BY_ADVERTISER[advertiser.id] ?? {}),
-      },
-      contracts: advertiser.contracts?.length
-        ? advertiser.contracts.map((raw) => {
-            const cleaned = dropStatusesWithoutPeriod(raw)
-            // Демо-договор — обновляем его статусы вместе с раскладкой сида.
-            const contract = fillDemoStatuses(
-              shouldUpdateContractPayments && String(cleaned.id).startsWith('ctr_')
-                ? {
-                    ...cleaned,
-                    paymentStatusByPeriod: undefined,
-                    paymentLog: [],
-                  }
-                : cleaned,
-            )
-            // Скан договора мог появиться в сиде позже — подтягиваем по номеру.
-            const seed = (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).find(
-              (c) => c.number === contract.number,
-            )
-            // Суммы и история выплат появились позже — в старых записях их
-            // нет. Демо-историю подставляем, только если своей не завели и
-            // освоенное совпадает с сидовым: иначе цифры разъедутся.
-            const own = contract.payments ?? []
-            const seedMoney =
-              seed && contract.budget == null && contract.spent == null
-            const seedHistory =
-              seed &&
-              own.length === 0 &&
-              (seedMoney || (contract.spent ?? 0) === seed.spent)
-            const withMoney = {
-              ...contract,
-              budget: seedMoney ? seed.budget : contract.budget,
-              spent: seedMoney ? seed.spent : contract.spent,
-              payments: seedHistory
-                ? (seed.payments ?? []).map((payment) => ({ ...payment }))
-                : own,
-            }
-            if (withMoney.file) {
-              // Дата загрузки скана появилась позже самого скана.
-              return withMoney.file.addedAt || !seed?.file?.addedAt
-                ? withMoney
-                : {
-                    ...withMoney,
-                    file: { ...withMoney.file, addedAt: seed.file.addedAt },
-                  }
-            }
-            return seed?.file
-              ? { ...withMoney, file: { ...seed.file } }
-              : withMoney
-          })
-        : (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).map((contract) => ({
+    ...advertiser,
+    legalName:
+      advertiser.legalName || SEED_LEGAL_NAMES.get(advertiser.id) || '',
+    // Сидовые логотипы обновляем из сида (путь мог смениться вместе с
+    // файлом), а загруженный в интерфейсе — оставляем как есть.
+    logo:
+      advertiser.logo === undefined ||
+      (typeof advertiser.logo === 'string' &&
+        advertiser.logo.startsWith('/logos/'))
+        ? (SEED_LOGOS.get(advertiser.id) ?? advertiser.logo ?? null)
+        : advertiser.logo,
+    // Реквизиты, договоры и сканы появились позже — добираем их из сида.
+    requisites: advertiser.requisites ?? {
+      ...(REQUISITES_BY_ADVERTISER[advertiser.id] ?? {}),
+    },
+    contracts: advertiser.contracts?.length
+      ? advertiser.contracts.map((raw) => {
+          const cleaned = dropStatusesWithoutPeriod(raw)
+          // Демо-договор — обновляем его статусы вместе с раскладкой сида.
+          const contract = fillDemoStatuses(
+            shouldUpdateContractPayments &&
+              String(cleaned.id).startsWith('ctr_')
+              ? {
+                  ...cleaned,
+                  paymentStatusByPeriod: undefined,
+                  paymentLog: [],
+                }
+              : cleaned,
+          )
+          // Скан договора мог появиться в сиде позже — подтягиваем по номеру.
+          const seed = (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).find(
+            (c) => c.number === contract.number,
+          )
+          // Суммы и история выплат появились позже — в старых записях их
+          // нет. Демо-историю подставляем, только если своей не завели и
+          // освоенное совпадает с сидовым: иначе цифры разъедутся.
+          const own = contract.payments ?? []
+          const seedMoney =
+            seed && contract.budget == null && contract.spent == null
+          const seedHistory =
+            seed &&
+            own.length === 0 &&
+            (seedMoney || (contract.spent ?? 0) === seed.spent)
+          const withMoney = {
             ...contract,
-            leagues: [...contract.leagues],
-          })),
+            budget: seedMoney ? seed.budget : contract.budget,
+            spent: seedMoney ? seed.spent : contract.spent,
+            payments: seedHistory
+              ? (seed.payments ?? []).map((payment) => ({ ...payment }))
+              : own,
+          }
+          if (withMoney.file) {
+            // Дата загрузки скана появилась позже самого скана.
+            return withMoney.file.addedAt || !seed?.file?.addedAt
+              ? withMoney
+              : {
+                  ...withMoney,
+                  file: { ...withMoney.file, addedAt: seed.file.addedAt },
+                }
+          }
+          return seed?.file
+            ? { ...withMoney, file: { ...seed.file } }
+            : withMoney
+        })
+      : (CONTRACTS_BY_ADVERTISER[advertiser.id] ?? []).map((contract) => ({
+          ...contract,
+          leagues: [...contract.leagues],
+        })),
   }))
 
   // Номера договоров по брендам — чтобы проверить ссылки кампаний.
@@ -231,38 +233,40 @@ function normalizeDatabase(database) {
   return {
     advertisers,
     channels: database.channels ?? [],
-    campaigns: [...(database.campaigns ?? []), ...missingSeedCampaigns].map((rawCampaign) => {
-      // История поступлений появилась позже — в старых записях её нет.
-      const campaign = rawCampaign.payments
-        ? rawCampaign
-        : { ...rawCampaign, payments: [] }
-      const normalizedCampaign = normalizeCampaignStatus(campaign)
-      const demoStatus = DEMO_CAMPAIGN_STATUSES[campaign.id]
-      const withStatus =
-        shouldUpdateDemoStatuses && demoStatus
-          ? { ...normalizedCampaign, status: demoStatus }
-          : normalizedCampaign
+    campaigns: [...(database.campaigns ?? []), ...missingSeedCampaigns].map(
+      (rawCampaign) => {
+        // История поступлений появилась позже — в старых записях её нет.
+        const campaign = rawCampaign.payments
+          ? rawCampaign
+          : { ...rawCampaign, payments: [] }
+        const normalizedCampaign = normalizeCampaignStatus(campaign)
+        const demoStatus = DEMO_CAMPAIGN_STATUSES[campaign.id]
+        const withStatus =
+          shouldUpdateDemoStatuses && demoStatus
+            ? { ...normalizedCampaign, status: demoStatus }
+            : normalizedCampaign
 
-      // Дата без времени — берём полную метку из сида, если кампания демо-шная.
-      const seedCreatedAt = SEED_CREATED_AT.get(campaign.id)
-      const withCreatedAt =
-        seedCreatedAt && !String(campaign.createdAt).includes('T')
-          ? { ...withStatus, createdAt: seedCreatedAt }
-          : withStatus
+        // Дата без времени — берём полную метку из сида, если кампания демо-шная.
+        const seedCreatedAt = SEED_CREATED_AT.get(campaign.id)
+        const withCreatedAt =
+          seedCreatedAt && !String(campaign.createdAt).includes('T')
+            ? { ...withStatus, createdAt: seedCreatedAt }
+            : withStatus
 
-      // Дату загрузки ролика дописываем только там, где её нет.
-      const seedCreativeAddedAt = SEED_CREATIVE_ADDED_AT.get(campaign.id)
-      const withCreative =
-        !withCreatedAt.creativeAddedAt &&
-        withCreatedAt.creativeUrl &&
-        seedCreativeAddedAt
-          ? { ...withCreatedAt, creativeAddedAt: seedCreativeAddedAt }
-          : withCreatedAt
+        // Дату загрузки ролика дописываем только там, где её нет.
+        const seedCreativeAddedAt = SEED_CREATIVE_ADDED_AT.get(campaign.id)
+        const withCreative =
+          !withCreatedAt.creativeAddedAt &&
+          withCreatedAt.creativeUrl &&
+          seedCreativeAddedAt
+            ? { ...withCreatedAt, creativeAddedAt: seedCreativeAddedAt }
+            : withCreatedAt
 
-      return shouldUpdateDemoStatuses
-        ? fillContract(withCreative, contractNumbers)
-        : withCreative
-    }),
+        return shouldUpdateDemoStatuses
+          ? fillContract(withCreative, contractNumbers)
+          : withCreative
+      },
+    ),
     // Данные вкладки «Обзор» правятся прямо на странице и ведутся по месяцам.
     // Старая база хранила один объект — переносим его в текущий месяц.
     overviewByPeriod: database.overviewByPeriod ?? {

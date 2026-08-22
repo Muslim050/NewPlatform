@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useSyncExternalStore,
-} from 'react'
+import { createContext, useContext, useMemo, useSyncExternalStore } from 'react'
 import * as store from '@/lib/store.js'
 import { overviewForPeriod } from '@/lib/overviewSeed.js'
 

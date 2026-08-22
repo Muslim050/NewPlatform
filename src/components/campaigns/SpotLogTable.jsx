@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Download, FileSpreadsheet, Save, Trash2, Upload } from 'lucide-react'
+import {
+  Check,
+  Download,
+  FileSpreadsheet,
+  Save,
+  Trash2,
+  Upload,
+} from 'lucide-react'
 import { cn } from '@/lib/cn.js'
 import { Button } from '@/components/ui/Button.jsx'
 import { Card } from '@/components/ui/Card.jsx'
@@ -26,7 +33,10 @@ function loadRows(logKey) {
 function persistRows(logKey, rows) {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...saved, [logKey]: rows }))
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...saved, [logKey]: rows }),
+    )
   } catch {
     // Переполнение хранилища не должно ронять импорт — данные останутся в сессии.
   }
@@ -63,7 +73,10 @@ export function rowsFromSheet(sheet) {
       return {
         item: String(item).trim(),
         // Дата-число — это порядковый номер дня, всё остальное берём как есть.
-        date: isNumeric(date) && Number(date) > 1000 ? excelDate(date) : String(date).trim(),
+        date:
+          isNumeric(date) && Number(date) > 1000
+            ? excelDate(date)
+            : String(date).trim(),
         // Время-число — доля суток; текстовое «19:09:13» не трогаем.
         time: isNumeric(time) ? excelTime(time) : String(time).trim(),
       }
@@ -259,7 +272,10 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
             {!rows.length && (
               <tr>
                 <td colSpan={4} className="px-4 py-12 text-center">
-                  <FileSpreadsheet size={26} className="mx-auto text-ink-muted" />
+                  <FileSpreadsheet
+                    size={26}
+                    className="mx-auto text-ink-muted"
+                  />
                   <p className="mt-3 text-sm font-medium text-ink-soft">
                     Таблица пустая
                   </p>

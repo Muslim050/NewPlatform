@@ -41,7 +41,11 @@ export function AreaChart({
   const hp = hover != null ? points[hover] : null
 
   return (
-    <div ref={ref} className={cn('relative w-full', className)} style={{ height }}>
+    <div
+      ref={ref}
+      className={cn('relative w-full', className)}
+      style={{ height }}
+    >
       {width > 0 && (
         <svg
           width={w}

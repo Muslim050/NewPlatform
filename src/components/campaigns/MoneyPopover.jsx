@@ -174,7 +174,11 @@ export function MoneyPopover({
       {/* Вкладку с правкой показываем только тем, кто может менять суммы. */}
       {editable && (
         <div className="mt-3 flex items-center gap-1 rounded-xl border border-line bg-paper/60 p-1">
-          <button type="button" className={tabClass('pay')} onClick={() => setTab('pay')}>
+          <button
+            type="button"
+            className={tabClass('pay')}
+            onClick={() => setTab('pay')}
+          >
             Поступление
           </button>
           <button
@@ -184,7 +188,9 @@ export function MoneyPopover({
           >
             История выплат
             {payments.length > 0 && (
-              <span className="ml-1 text-ink-muted tnum">{payments.length}</span>
+              <span className="ml-1 text-ink-muted tnum">
+                {payments.length}
+              </span>
             )}
           </button>
         </div>
@@ -276,13 +282,15 @@ export function MoneyPopover({
                   key={payment.id}
                   className="flex items-center justify-between gap-2 rounded-xl bg-paper/70 px-2 py-1.5"
                 >
-                  <div className='text-[10px] text-ink-muted'>{index + 1}</div>
+                  <div className="text-[10px] text-ink-muted">{index + 1}</div>
                   {/* Дату и время выплаты можно поправить прямо в истории. */}
                   {editable ? (
                     <input
                       type="datetime-local"
                       value={toDateTimeInput(new Date(payment.createdAt))}
-                      onChange={(e) => onEditPayment(payment.id, e.target.value)}
+                      onChange={(e) =>
+                        onEditPayment(payment.id, e.target.value)
+                      }
                       aria-label="Дата и время выплаты"
                       className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-2 py-1 text-[11px] text-ink transition-colors tnum focus-ring focus-visible:border-indigo-300"
                     />

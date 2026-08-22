@@ -153,10 +153,12 @@ export default function Advertisers() {
                   </div>
 
                   <div className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4">
-                    <Metric label="Договоров" value={a.contracts?.length ?? 0} />
+                    <Metric
+                      label="Договоров"
+                      value={a.contracts?.length ?? 0}
+                    />
                     <Metric label="Кампаний" value={campaignCount(a.id)} />
                   </div>
-
                 </Card>
               </motion.div>
             )
