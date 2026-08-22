@@ -32,11 +32,11 @@ import {
   lastNDates,
 } from '@/lib/format.js'
 import { PageHeader } from '@/components/PageHeader.jsx'
-import { Logo } from '@/components/Logo.jsx'
+import { Logo } from '@/components/Logo'
 import { AreaChart } from '@/components/charts/AreaChart.jsx'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { Badge } from '@/components/ui/Badge.jsx'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card.jsx'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'

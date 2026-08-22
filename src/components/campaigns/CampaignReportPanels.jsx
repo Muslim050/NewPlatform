@@ -15,10 +15,10 @@ import {
   Trash2,
   Tv,
 } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { formatNumber, formatPct } from '@/lib/format.js'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card.jsx'
 import { DonutChart } from '@/components/charts/DonutChart.jsx'
 import { uid } from '@/lib/id.js'

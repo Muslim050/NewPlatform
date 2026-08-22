@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 
 /**

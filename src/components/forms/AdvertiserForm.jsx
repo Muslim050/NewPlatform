@@ -8,12 +8,12 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react'
-import { Logo } from '@/components/Logo.jsx'
+import { Logo } from '@/components/Logo'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
-import { Button } from '@/components/ui/Button.jsx'
-import { Field, Input, Select, Textarea } from '@/components/ui/Field.jsx'
+import { Button } from '@/components/ui/Button'
+import { Field, Input, Select, Textarea } from '@/components/ui/Field'
 import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { FilePicker } from '@/components/ui/FilePicker.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'

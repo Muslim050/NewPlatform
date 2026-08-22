@@ -15,9 +15,9 @@ import {
 import { LIVE_SPOT_SEED } from '@/lib/liveSpotSeed.js'
 import { uid } from '@/lib/id.js'
 import { cn } from '@/lib/cn.js'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card.jsx'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 

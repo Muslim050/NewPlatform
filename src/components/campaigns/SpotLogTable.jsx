@@ -8,9 +8,9 @@ import {
   Upload,
 } from 'lucide-react'
 import { cn } from '@/lib/cn.js'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card.jsx'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { SPOT_LOG_SEED } from '@/lib/spotLogSeed.js'
 

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Trash2, X } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { formatDateTime, formatMoney, formatPct } from '@/lib/format.js'
-import { Button } from '@/components/ui/Button.jsx'
-import { Field, Input } from '@/components/ui/Field.jsx'
+import { Button } from '@/components/ui/Button'
+import { Field, Input } from '@/components/ui/Field'
 import { cn } from '@/lib/cn.js'
 
 const WIDTH = 300

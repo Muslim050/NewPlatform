@@ -18,7 +18,7 @@ import {
   UsersRound,
   X,
 } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
@@ -27,7 +27,7 @@ import { formatCompact, formatPct, formatNumber } from '@/lib/format.js'
 import { cloneOverview } from '@/lib/overviewSeed.js'
 import { PageHeader } from '@/components/PageHeader.jsx'
 import { Card } from '@/components/ui/Card.jsx'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { DonutChart } from '@/components/charts/DonutChart.jsx'
 import { uid } from '@/lib/id.js'
 import { cn } from '@/lib/cn.js'

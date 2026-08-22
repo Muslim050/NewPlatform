@@ -1,17 +1,25 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, VolumeX } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
-import { useData } from '@/context/DataContext.jsx'
-import { Logo } from '@/components/Logo.jsx'
-import { Button } from '@/components/ui/Button.jsx'
-import { Field, Input } from '@/components/ui/Field.jsx'
+import { isApiError } from '@/api/errors'
+import { useLogin } from '@/features/auth/queries'
+import { Logo } from '@/components/Logo'
+import { Button } from '@/components/ui/Button'
+import { Field, Input } from '@/components/ui/Field'
+
+interface AudienceStat {
+  value: string
+  label: string
+  /** Tailwind-классы позиционирования на макете. */
+  position: string
+  primary?: boolean
+}
 
 const TV_SPOTS = ['/creatives/setanta-2.mp4']
 
 // Боковые колонки выровнены по краям панели — одинаковый отступ у всех.
-const AUDIENCE_STATS = [
+const AUDIENCE_STATS: AudienceStat[] = [
   { value: '93M', label: 'Зрителей', position: 'right-6 top-[27.5%]' },
   { value: '23M', label: 'ТВ-аудитория', position: 'right-6 top-[38%]' },
   {
@@ -29,7 +37,7 @@ const AUDIENCE_STATS = [
   { value: '15', label: 'Стран', position: 'left-6 top-[48.5%]' },
 ]
 
-function AudienceStatsOrbit({ stats }) {
+function AudienceStatsOrbit({ stats }: { stats: AudienceStat[] }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-40 hidden 2xl:block">
       <div className="absolute left-1/2 top-[42%] h-[36%] w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-dashed border-lime-300/10" />
@@ -173,47 +181,25 @@ function TvShowcase() {
 }
 
 export default function Login() {
-  const { login } = useAuth()
-  const { advertisers } = useData()
   const navigate = useNavigate()
+  const { mutate: signIn, isPending, error } = useLogin()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
 
-  const submit = (e) => {
-    e.preventDefault()
-    const login_ = username.trim().toLowerCase()
+  // Сообщение под полем пароля: ошибку формы отдаёт сервер, а сеть
+  // и всё остальное сводим к одной понятной фразе.
+  const errorMessage = error
+    ? isApiError(error)
+      ? (error.fields.password ?? error.fields.login ?? error.message)
+      : error.message
+    : ''
 
-    if (login_ === 'admin' && password === 'admin') {
-      login({ role: 'admin', name: 'admin', email: 'admin@setantasports.com' })
-      navigate('/app')
-      return
-    }
-
-    // Наблюдатель: тот же обзор, что у админа, но без права менять данные.
-    if (login_ === 'viewer' && password === 'viewer') {
-      login({
-        role: 'viewer',
-        name: 'viewer',
-        email: 'viewer@setantasports.com',
-      })
-      navigate('/app')
-      return
-    }
-
-    if (login_ === 'adv' && password === 'adv') {
-      const a = advertisers[0]
-      login({
-        role: 'advertiser',
-        advertiserId: a.id,
-        name: a.contact,
-        email: a.email,
-      })
-      navigate('/app')
-      return
-    }
-
-    setError('Неверный логин или пароль')
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    signIn(
+      { login: username.trim(), password },
+      { onSuccess: () => navigate('/app') },
+    )
   }
 
   return (
@@ -239,24 +225,18 @@ export default function Login() {
             <Field label="Логин">
               <Input
                 value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value)
-                  setError('')
-                }}
+                onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
                 autoComplete="username"
                 autoFocus
               />
             </Field>
 
-            <Field label="Пароль" error={error}>
+            <Field label="Пароль" error={errorMessage}>
               <Input
                 type="password"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  setError('')
-                }}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••"
                 autoComplete="current-password"
               />
@@ -267,8 +247,9 @@ export default function Login() {
               variant="primary"
               type="submit"
               className="w-full"
+              disabled={isPending}
             >
-              Войти в платформу
+              {isPending ? 'Входим…' : 'Войти в платформу'}
               <ArrowRight size={18} />
             </Button>
           </form>

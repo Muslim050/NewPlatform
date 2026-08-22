@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { Button } from '@/components/ui/Button.jsx'
-import { Logo } from '@/components/Logo.jsx'
+import { Button } from '@/components/ui/Button'
+import { Logo } from '@/components/Logo'
 
 export default function NotFound() {
   return (

@@ -14,7 +14,7 @@ import {
   Package,
   Trophy,
 } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import {
   PACKAGES,
   STATUS,
@@ -31,7 +31,7 @@ import {
 } from '@/lib/format.js'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Tooltip } from '@/components/ui/Tooltip.jsx'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { cn } from '@/lib/cn.js'
 

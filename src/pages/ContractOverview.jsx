@@ -10,7 +10,7 @@ import {
   Pencil,
   Search,
 } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { CONTRACT_STATUS } from '@/lib/metrics.js'
@@ -23,7 +23,7 @@ import {
 } from '@/lib/format.js'
 import { Card } from '@/components/ui/Card.jsx'
 import { Badge } from '@/components/ui/Badge.jsx'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { Progress } from '@/components/ui/Progress.jsx'

@@ -3,8 +3,8 @@ import { Radio } from 'lucide-react'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
-import { Button } from '@/components/ui/Button.jsx'
-import { Field, Input, Select } from '@/components/ui/Field.jsx'
+import { Button } from '@/components/ui/Button'
+import { Field, Input, Select } from '@/components/ui/Field'
 import { cn } from '@/lib/cn.js'
 
 const TYPES = ['CTV', 'TV', 'Web', 'Mobile', 'Social', 'Audio']

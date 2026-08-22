@@ -1,7 +1,7 @@
 import { createContext, useContext, useCallback, useRef, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { Modal } from './Modal.jsx'
-import { Button } from './Button.jsx'
+import { Button } from './Button'
 
 const ConfirmCtx = createContext(null)
 

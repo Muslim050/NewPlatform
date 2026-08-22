@@ -8,7 +8,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { NAV } from '@/lib/nav.js'
 import { Avatar } from '@/components/ui/Avatar.jsx'

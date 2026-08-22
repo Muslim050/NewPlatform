@@ -11,7 +11,7 @@ import {
   Package,
   Trophy,
 } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { CONTRACT_STATUS, PACKAGES, leagueLabel } from '@/lib/metrics.js'
@@ -23,7 +23,7 @@ import {
   formatPct,
 } from '@/lib/format.js'
 import { Modal } from '@/components/ui/Modal.jsx'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { ContractTile } from '@/components/campaigns/CampaignPreviewModal.jsx'
 import { cn } from '@/lib/cn.js'
