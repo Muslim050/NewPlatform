@@ -148,3 +148,35 @@ export const OVERVIEW_DEFAULTS = {
 /** Свежая копия дефолтов — состояние правят иммутабельно. */
 export const cloneOverview = () =>
   JSON.parse(JSON.stringify(OVERVIEW_DEFAULTS))
+
+/**
+ * Обзор за конкретный месяц: те же показатели, но с сезонным разбросом —
+ * иначе все месяцы выглядят одинаково. Коэффициент считается от номера
+ * месяца, поэтому цифры стабильны между перезагрузками.
+ */
+export function overviewForPeriod(period) {
+  const month = Number(String(period).slice(5, 7)) || 1
+  const overview = cloneOverview()
+  // Разброс ±18% с горкой к середине года.
+  const factor = 0.82 + ((month * 7) % 12) * 0.03
+  const scale = (value, extra = 1) =>
+    Math.max(1, Math.round(value * factor * extra))
+
+  overview.summary.publications = scale(overview.summary.publications)
+  overview.summary.socialImpressions = scale(overview.summary.socialImpressions)
+  overview.mediaTotals = overview.mediaTotals.map((item, index) => ({
+    ...item,
+    value: scale(item.value, 1 + ((month + index) % 5) * 0.02),
+  }))
+  overview.socialChannels = overview.socialChannels.map((channel, index) => ({
+    ...channel,
+    posts: scale(channel.posts, 1 + ((month + index) % 3) * 0.05),
+    impressions: scale(channel.impressions, 1 + ((month + index) % 4) * 0.03),
+    rows: channel.rows.map((row, rowIndex) => ({
+      ...row,
+      value: scale(row.value, 1 + ((month + rowIndex) % 6) * 0.04),
+    })),
+  }))
+  // Доли аудитории оставляем прежними: они меняются медленнее объёмов.
+  return overview
+}

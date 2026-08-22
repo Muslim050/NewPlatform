@@ -13,6 +13,8 @@ import { uid } from './id.js'
 const SEED_LEGAL_NAMES = new Map(ADVERTISERS.map((a) => [a.id, a.legalName]))
 // Логотипы появились позже — в старых базах их тоже добираем из сида.
 const SEED_LOGOS = new Map(ADVERTISERS.map((a) => [a.id, a.logo]))
+// Демо-кампании по id: набор пополняется, и старые базы должны догонять его.
+const SEED_CAMPAIGN_LIST = CAMPAIGNS
 // Время создания демо-кампаний: в старых базах даты сохранены без времени.
 const SEED_CREATED_AT = new Map(CAMPAIGNS.map((c) => [c.id, c.createdAt]))
 // Дата загрузки ролика появилась позже — в старых базах её добираем из сида.
@@ -220,10 +222,16 @@ function normalizeDatabase(database) {
     ]),
   )
 
+  // Демо-кампании, которых в базе ещё нет: добавились новые месяцы.
+  const knownIds = new Set((database.campaigns ?? []).map((c) => c.id))
+  const missingSeedCampaigns = SEED_CAMPAIGN_LIST.filter(
+    (campaign) => !knownIds.has(campaign.id),
+  ).map((campaign) => ({ ...campaign, payments: [] }))
+
   return {
     advertisers,
     channels: database.channels ?? [],
-    campaigns: (database.campaigns ?? []).map((rawCampaign) => {
+    campaigns: [...(database.campaigns ?? []), ...missingSeedCampaigns].map((rawCampaign) => {
       // История поступлений появилась позже — в старых записях её нет.
       const campaign = rawCampaign.payments
         ? rawCampaign
@@ -255,11 +263,20 @@ function normalizeDatabase(database) {
         ? fillContract(withCreative, contractNumbers)
         : withCreative
     }),
-    // Данные вкладки «Обзор» правятся прямо на странице.
-    overview: database.overview ?? cloneOverview(),
+    // Данные вкладки «Обзор» правятся прямо на странице и ведутся по месяцам.
+    // Старая база хранила один объект — переносим его в текущий месяц.
+    overviewByPeriod: database.overviewByPeriod ?? {
+      ...(database.overview ? { [currentPeriod()]: database.overview } : {}),
+    },
     campaignStatusLayoutVersion: CAMPAIGN_STATUS_LAYOUT_VERSION,
     contractPaymentLayoutVersion: CONTRACT_PAYMENT_LAYOUT_VERSION,
   }
+}
+
+/** Текущий месяц в формате гггг-мм. */
+function currentPeriod() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
 // --- Загрузка / сохранение ------------------------------------------------
@@ -339,15 +356,20 @@ export function remove(collection, id) {
   emit()
 }
 
-/** Обзор — один объект целиком, без коллекций. */
-export function saveOverview(overview) {
-  state = { ...state, overview }
+/** Обзор — один объект на месяц, без коллекций. */
+export function saveOverview(period, overview) {
+  state = {
+    ...state,
+    overviewByPeriod: { ...state.overviewByPeriod, [period]: overview },
+  }
   emit()
 }
 
-/** Обзор к демо-значениям — на случай, если правки увели цифры не туда. */
-export function resetOverview() {
-  state = { ...state, overview: cloneOverview() }
+/** Обзор месяца к демо-значениям — если правки увели цифры не туда. */
+export function resetOverview(period) {
+  const next = { ...state.overviewByPeriod }
+  delete next[period]
+  state = { ...state, overviewByPeriod: next }
   emit()
 }
 

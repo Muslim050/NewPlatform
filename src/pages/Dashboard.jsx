@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext.jsx'
 import { useData } from '@/context/DataContext.jsx'
+import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import { formatCompact, formatPct, formatNumber } from '@/lib/format.js'
@@ -901,32 +902,54 @@ function AudienceBreakdown({ data, editing, patch }) {
 
 export default function Dashboard() {
   const { user, canEdit, isAdvertiser } = useAuth()
-  const { overview, saveOverview, resetOverview } = useData()
+  const { overviewFor, saveOverview, resetOverview } = useData()
   const toast = useToast()
   const confirm = useConfirm()
   const firstName = user.name.split(' ')[0]
+
+  // Обзор ведётся помесячно: по умолчанию открываем текущий месяц.
+  const now = new Date()
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState(now.getMonth())
+  const period = `${year}-${String(month + 1).padStart(2, '0')}`
+  const years = [now.getFullYear() - 1, now.getFullYear()]
+  const overview = overviewFor(period)
 
   // Правки копим в черновике: «Отмена» возвращает сохранённые данные.
   const [draft, setDraft] = useState(null)
   const editing = draft != null
   const data = draft ?? overview
 
+  // Сменили период — черновик прошлого месяца за собой не тащим.
+  const pickMonth = (nextMonth) => {
+    if (nextMonth == null) return
+    setDraft(null)
+    setMonth(nextMonth)
+  }
+
+  const pickYear = (nextYear) => {
+    setDraft(null)
+    setYear(nextYear)
+  }
+
   const patch = (part) => setDraft((current) => ({ ...current, ...part }))
 
   const save = () => {
-    saveOverview(draft)
+    saveOverview(period, draft)
     setDraft(null)
-    toast.success('Обзор сохранён')
+    toast.success(
+      `Обзор за ${MONTHS_FULL[month].toLowerCase()} ${year} сохранён`,
+    )
   }
 
   const reset = async () => {
     const ok = await confirm({
       title: 'Вернуть демо-данные?',
-      description: 'Обзор',
-      body: 'Все правки на этой странице будут заменены исходными значениями.',
+      description: `Обзор за ${MONTHS_FULL[month].toLowerCase()} ${year}`,
+      body: 'Все правки за этот месяц будут заменены исходными значениями.',
     })
     if (!ok) return
-    resetOverview()
+    resetOverview(period)
     setDraft(null)
     toast.info('Обзор сброшен к демо-данным')
   }
@@ -936,11 +959,11 @@ export default function Dashboard() {
       <PageHeader
         title={`Здравствуйте, ${firstName}`}
         subtitle={
-          isAdvertiser
-            ? 'Сводка по вашим медиаразмещениям.'
-            : editing
-              ? 'Правьте цифры прямо в карточках — изменения сохранятся по кнопке.'
-              : 'Сводка медиаразмещений и социальных сетей.'
+          editing
+            ? 'Правьте цифры прямо в карточках — изменения сохранятся по кнопке.'
+            : `Сводка ${
+                isAdvertiser ? 'по вашим медиаразмещениям' : 'медиаразмещений и социальных сетей'
+              } за ${MONTHS_FULL[month].toLowerCase()} ${year}.`
         }
       >
         {/* Данные обзора ведёт площадка: наблюдателю кнопки не показываем. */}
@@ -971,6 +994,17 @@ export default function Dashboard() {
           )
         )}
       </PageHeader>
+
+      {/* Период обзора: цифры на странице ведутся помесячно. */}
+      <div className="mb-4">
+        <MonthTabs
+          year={year}
+          years={years}
+          onYearChange={pickYear}
+          value={month}
+          onChange={pickMonth}
+        />
+      </div>
 
       <MediaSummary data={data} editing={editing} patch={patch} />
       <AudienceAgeReport data={data} editing={editing} patch={patch} />

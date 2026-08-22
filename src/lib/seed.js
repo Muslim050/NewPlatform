@@ -1051,12 +1051,15 @@ const MONTHLY_CHANNELS = [
 
 
 /**
- * Заказ внутри текущего месяца. Статус согласован с датами: что закрылось
- * в начале месяца — завершено, что идёт сейчас — активно, поздний старт —
- * ещё на рассмотрении.
+ * Заказ внутри месяца. Статус согласован с датами: что закрылось в начале
+ * месяца — завершено, что идёт сейчас — активно, поздний старт — ещё на
+ * рассмотрении. У закрытых месяцев все заказы завершены.
  */
-function artelOrder(index) {
-  const status = ['completed', 'active', 'reviewing'][index % 3]
+function artelOrder(index, monthKey = ARTEL_MONTH, prefix = '2') {
+  const closedMonth = monthKey < ARTEL_MONTH
+  const status = closedMonth
+    ? 'completed'
+    : ['completed', 'active', 'reviewing'][index % 3]
   const [startDay, endDay] =
     status === 'completed'
       ? [1 + (index % 4), 5 + (index % 4)]
@@ -1070,8 +1073,14 @@ function artelOrder(index) {
   const impressions = Math.round(spent / 12)
   const clicks = Math.round(impressions / 70)
 
+  const lastDay = new Date(
+    Number(monthKey.slice(0, 4)),
+    Number(monthKey.slice(5, 7)),
+    0,
+  ).getDate()
+
   return {
-    id: `cmp_2${pad(index + 1).padStart(3, '0')}`,
+    id: `cmp_${prefix}${pad(index + 1).padStart(3, '0')}`,
     name: `${ARTEL_PRODUCTS[index % ARTEL_PRODUCTS.length]} Artel — ${
       ARTEL_OFFERS[Math.floor(index / ARTEL_PRODUCTS.length) % ARTEL_OFFERS.length]
     }`,
@@ -1080,20 +1089,128 @@ function artelOrder(index) {
     objective: MONTHLY_OBJECTIVES[index % MONTHLY_OBJECTIVES.length],
     budget,
     spent,
-    startDate: `${ARTEL_MONTH}-${pad(startDay)}`,
-    endDate: `${ARTEL_MONTH}-${pad(endDay)}`,
+    startDate: `${monthKey}-${pad(Math.min(startDay, lastDay))}`,
+    endDate: `${monthKey}-${pad(Math.min(endDay, lastDay))}`,
     channelIds: [...MONTHLY_CHANNELS[index % MONTHLY_CHANNELS.length]],
     impressions,
     clicks,
     conversions: Math.round(clicks / 28),
     creativeUrl: '/creatives/setanta-2.mp4',
-    // Заявки завели в июле, перед стартом месяца.
-    createdAt: `2026-07-${pad(5 + (index % 20))}T${pad(9 + (index % 8))}:15:00`,
+    // Заявку заводят в месяце перед стартом.
+    createdAt: `${previousMonth(monthKey)}-${pad(5 + (index % 20))}T${pad(
+      9 + (index % 8),
+    )}:15:00`,
   }
 }
 
-const ARTEL_MONTHLY = Array.from({ length: ARTEL_ORDERS }, (_, index) =>
-  artelOrder(index),
+/** Предыдущий месяц в формате гггг-мм. */
+function previousMonth(monthKey) {
+  const year = Number(monthKey.slice(0, 4))
+  const month = Number(monthKey.slice(5, 7))
+  return month === 1
+    ? `${year - 1}-12`
+    : `${year}-${pad(month - 1)}`
+}
+
+// Закрытые месяцы 2026 года тоже с заказами: по ним смотрят отчёт и список.
+const ARTEL_CLOSED_MONTHS = [
+  { month: '2026-01', orders: 8, prefix: '3' },
+  { month: '2026-02', orders: 6, prefix: '4' },
+  { month: '2026-03', orders: 7, prefix: '5' },
+  { month: '2026-04', orders: 5, prefix: '6' },
+  { month: '2026-05', orders: 9, prefix: '7' },
+  { month: '2026-06', orders: 6, prefix: '8' },
+  { month: '2026-07', orders: 7, prefix: '9' },
+]
+
+const ARTEL_MONTHLY = [
+  ...Array.from({ length: ARTEL_ORDERS }, (_, index) => artelOrder(index)),
+  ...ARTEL_CLOSED_MONTHS.flatMap(({ month, orders, prefix }) =>
+    Array.from({ length: orders }, (_, index) =>
+      artelOrder(index, month, prefix),
+    ),
+  ),
+]
+
+// Заказы остальных брендов в закрытых месяцах: без них старые месяцы у всех,
+// кроме Artel, оставались пустыми.
+const BRAND_OFFERS = {
+  adv_click: ['Переводы без комиссии', 'Оплата по QR', 'Кэшбэк недели', 'Click Pass'],
+  adv_korzinka: ['Korzinka Go', 'Скидки выходного дня', 'Клубная карта', 'Доставка за час'],
+  adv_payme: ['Payme Gold', 'Оплата коммуналки', 'Бонусы за перевод', 'Рассрочка'],
+  adv_makro: ['Makro Fresh', 'Цены недели', 'Собственная марка', 'Доставка'],
+  adv_byd: ['BYD Song Plus', 'BYD Seal', 'Тест-драйв', 'Сервисная кампания'],
+  adv_leapmotor: ['Leapmotor T03', 'Leapmotor C11', 'Тест-драйв', 'Городская серия'],
+  adv_cherry: ['Cherry Tiggo 4', 'Cherry Tiggo 7', 'Старт продаж', 'Трейд-ин'],
+  adv_cocacola: ['Coca Cola Zero', 'Летняя серия', 'Промо в кино', 'Новый вкус'],
+}
+
+const BRAND_MONTHS = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07']
+
+/** Заказ бренда в закрытом месяце: завершён, с фактом и бюджетом. */
+function brandOrder(advertiserId, monthKey, index, seq) {
+  const offers = BRAND_OFFERS[advertiserId] ?? ['Кампания']
+  const budget = (60 + ((seq * 5) % 8) * 25) * 1e6
+  const spent = Math.round((budget * (0.72 + (seq % 4) * 0.06)) / 1e6) * 1e6
+  const impressions = Math.round(spent / 11)
+  const clicks = Math.round(impressions / 65)
+  const lastDay = new Date(
+    Number(monthKey.slice(0, 4)),
+    Number(monthKey.slice(5, 7)),
+    0,
+  ).getDate()
+  const startDay = 1 + ((seq * 3) % 12)
+  const endDay = Math.min(lastDay, startDay + 9 + (seq % 8))
+
+  return {
+    id: `cmp_b${advertiserId.replace('adv_', '')}_${monthKey.replace('-', '')}_${index + 1}`,
+    name: `${offers[seq % offers.length]} — ${MONTHS_FULL_RU[Number(monthKey.slice(5, 7)) - 1]}`,
+    advertiserId,
+    status: 'completed',
+    objective: MONTHLY_OBJECTIVES[seq % MONTHLY_OBJECTIVES.length],
+    budget,
+    spent,
+    startDate: `${monthKey}-${pad(startDay)}`,
+    endDate: `${monthKey}-${pad(endDay)}`,
+    channelIds: [...MONTHLY_CHANNELS[seq % MONTHLY_CHANNELS.length]],
+    impressions,
+    clicks,
+    conversions: Math.round(clicks / 30),
+    creativeUrl: '/creatives/setanta-2.mp4',
+    createdAt: `${previousMonth(monthKey)}-${pad(6 + (seq % 18))}T${pad(
+      10 + (seq % 7),
+    )}:20:00`,
+  }
+}
+
+const MONTHS_FULL_RU = [
+  'январь',
+  'февраль',
+  'март',
+  'апрель',
+  'май',
+  'июнь',
+  'июль',
+  'август',
+  'сентябрь',
+  'октябрь',
+  'ноябрь',
+  'декабрь',
+]
+
+const BRAND_MONTHLY = Object.keys(BRAND_OFFERS).flatMap((advertiserId, brandIndex) =>
+  BRAND_MONTHS.flatMap((monthKey, monthIndex) => {
+    // 2–4 заказа на месяц — у каждого бренда свой ритм.
+    const orders = 2 + ((brandIndex + monthIndex) % 3)
+    return Array.from({ length: orders }, (_, index) =>
+      brandOrder(
+        advertiserId,
+        monthKey,
+        index,
+        brandIndex * 7 + monthIndex * 3 + index,
+      ),
+    )
+  }),
 )
 
 // Каждая кампания привязана к одному из договоров своего бренда — условия
@@ -1120,7 +1237,11 @@ export function creativeAddedAtFor(campaign, index = 0) {
   )
 }
 
-export const CAMPAIGNS = [...CAMPAIGN_BASE, ...ARTEL_MONTHLY].map((campaign) => {
+export const CAMPAIGNS = [
+  ...CAMPAIGN_BASE,
+  ...ARTEL_MONTHLY,
+  ...BRAND_MONTHLY,
+].map((campaign) => {
   const contracts = CONTRACTS_BY_ADVERTISER[campaign.advertiserId] ?? []
   const seen = seenByAdvertiser.get(campaign.advertiserId) ?? 0
   seenByAdvertiser.set(campaign.advertiserId, seen + 1)

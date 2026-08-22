@@ -238,6 +238,8 @@ export default function Campaigns() {
   const [money, setMoney] = useState(null)
   // Карточка, у которой открыт поповер со сменой статуса оплаты.
   const [statusAnchor, setStatusAnchor] = useState(null)
+  // Вкладка внутри месяца: статистика или кампании. null — по умолчанию.
+  const [monthTab, setMonthTab] = useState(null)
 
   // Суммы переехали на договор — в таблице кампаний колонки бюджета нет.
   const showBudget = false
@@ -293,10 +295,10 @@ export default function Campaigns() {
     : years.includes(currentYear)
       ? currentYear
       : years[years.length - 1]
-  // Счётчик заказов есть только у текущего месяца: в закрытых открывается
-  // отчёт, а не список, в будущих кампаний ещё нет.
+  // Счётчик заказов у каждого прошедшего месяца: список кампаний теперь
+  // открывается вкладкой в любом из них.
   const monthCounts = MONTHS.map((m) =>
-    isCurrentMonth(activeYear, m)
+    isPassedMonth(activeYear, m)
       ? contractCampaigns.filter((c) => inMonth(c, activeYear, m)).length
       : 0,
   )
@@ -304,9 +306,15 @@ export default function Campaigns() {
     showMonths && month != null && isPassedMonth(activeYear, month)
       ? month
       : null
-  // Отчёт открываем только по закрытым месяцам; за текущий — список кампаний.
-  const showMonthReport =
-    activeMonth != null && !isCurrentMonth(activeYear, activeMonth)
+  // Внутри выбранного месяца переключаемся между отчётом и списком кампаний.
+  // По умолчанию закрытый месяц открывается статистикой, текущий — списком.
+  const monthOpened = activeMonth != null
+  const defaultMonthView =
+    monthOpened && !isCurrentMonth(activeYear, activeMonth)
+      ? 'stats'
+      : 'campaigns'
+  const monthView = monthTab ?? defaultMonthView
+  const showMonthReport = monthOpened && monthView === 'stats'
 
   // Договор, открытый сейчас: по нему ведутся суммы и выплаты.
   const selectedContract =
@@ -796,14 +804,30 @@ export default function Campaigns() {
             years={years}
             onYearChange={setYear}
             value={activeMonth}
-            onChange={setMonth}
+            onChange={(value) => {
+              setMonthTab(null)
+              setMonth(value)
+            }}
             counts={monthCounts}
             statuses={monthStatuses}
           />
         </div>
       )}
 
-      {/* Выбран закрытый месяц — вместо списка кампаний показываем статистику */}
+      {/* Внутри месяца переключаем статистику и список кампаний. */}
+      {monthOpened && (
+        <div className="mb-4">
+          <SegmentTabs
+            value={monthView}
+            onChange={setMonthTab}
+            items={[
+              { value: 'campaigns', label: 'Кампании', count: filtered.length },
+              { value: 'stats', label: 'Статистика' },
+            ]}
+          />
+        </div>
+      )}
+
       {!showMonthReport && (
       <Card>
         {filtered.length === 0 ? (

@@ -5,6 +5,7 @@ import {
   useSyncExternalStore,
 } from 'react'
 import * as store from '@/lib/store.js'
+import { overviewForPeriod } from '@/lib/overviewSeed.js'
 
 const DataCtx = createContext(null)
 
@@ -20,7 +21,9 @@ export function DataProvider({ children }) {
       advertisers: state.advertisers,
       channels: state.channels,
       campaigns: state.campaigns,
-      overview: state.overview,
+      // Обзор ведётся по месяцам: ключ вида 2026-08.
+      overviewFor: (period) =>
+        state.overviewByPeriod?.[period] ?? overviewForPeriod(period),
       advertiserById: (id) => state.advertisers.find((a) => a.id === id),
       channelById: (id) => state.channels.find((c) => c.id === id),
       campaignById: (id) => state.campaigns.find((c) => c.id === id),
