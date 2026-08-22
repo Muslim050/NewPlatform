@@ -5,12 +5,15 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import prettier from 'eslint-config-prettier'
 import tseslint from 'typescript-eslint'
+import query from '@tanstack/eslint-plugin-query'
 
 export default tseslint.config(
   { ignores: ['dist', 'node_modules', 'scripts'] },
 
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  // Правила TanStack Query: ключи запросов, стабильность queryFn и т.п.
+  ...query.configs['flat/recommended'],
 
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
