@@ -14,7 +14,7 @@ import {
   Package,
   Trophy,
 } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import {
   PACKAGES,
   STATUS,
@@ -31,7 +31,7 @@ import {
 } from '@/lib/format.js'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Tooltip } from '@/components/ui/Tooltip.jsx'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { cn } from '@/lib/cn.js'
 
@@ -283,15 +283,12 @@ function ContractTiles({ campaign, advertiser }) {
 export function CampaignPreviewModal({
   campaign,
   advertiser,
-  channels,
   onClose,
   onOpenStats,
 }) {
   const { isAdvertiser } = useAuth()
   const [showPayments, setShowPayments] = useState(false)
-  const pacing = campaign?.budget
-    ? (campaign.spent / campaign.budget) * 100
-    : 0
+  const pacing = campaign?.budget ? (campaign.spent / campaign.budget) * 100 : 0
   const payments = campaign?.payments ?? []
 
   // Дату загрузки ролика кампания хранит у себя, но у старых записей её нет —
@@ -360,7 +357,10 @@ export function CampaignPreviewModal({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <CreativeTile url={campaign.creativeUrl} addedAt={creativeAddedAt} />
+            <CreativeTile
+              url={campaign.creativeUrl}
+              addedAt={creativeAddedAt}
+            />
             <ContractTiles campaign={campaign} advertiser={advertiser} />
 
             {/* Плитка оплаты: по клику раскрывается история выплат. */}

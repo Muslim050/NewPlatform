@@ -8,12 +8,12 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react'
-import { Logo } from '@/components/Logo.jsx'
+import { Logo } from '@/components/Logo'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
-import { Button } from '@/components/ui/Button.jsx'
-import { Field, Input, Select, Textarea } from '@/components/ui/Field.jsx'
+import { Button } from '@/components/ui/Button'
+import { Field, Input, Select, Textarea } from '@/components/ui/Field'
 import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { FilePicker } from '@/components/ui/FilePicker.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
@@ -21,17 +21,6 @@ import { LEAGUES, PACKAGES } from '@/lib/metrics.js'
 import { formatDateTime } from '@/lib/format.js'
 import { uid } from '@/lib/id.js'
 import { cn } from '@/lib/cn.js'
-
-const CATEGORIES = [
-  'Финансы',
-  'Телеком',
-  'Ритейл',
-  'Авто',
-  'Красота',
-  'Технологии',
-  'Медиа',
-  'Другое',
-]
 
 const PALETTE = [
   '#FFD106',
@@ -279,7 +268,11 @@ export function AdvertiserForm({ open, onClose, initial }) {
         onChange={setTab}
         items={[
           { value: 'main', label: 'Реквизиты' },
-          { value: 'contracts', label: 'Договоры', count: form.contracts.length },
+          {
+            value: 'contracts',
+            label: 'Договоры',
+            count: form.contracts.length,
+          },
         ]}
       />
 
@@ -308,7 +301,6 @@ export function AdvertiserForm({ open, onClose, initial }) {
               placeholder="name@brand.ru"
             />
           </Field>
-
         </div>
 
         {/* Подставляется в договоры бренда и в кампании. */}
@@ -316,17 +308,22 @@ export function AdvertiserForm({ open, onClose, initial }) {
           <Input
             value={form.legalName}
             onChange={(e) => set('legalName', e.target.value)}
-            placeholder='ООО «Пример»'
+            placeholder="ООО «Пример»"
           />
         </Field>
 
-        <Field label="Реквизиты" hint="По строке на пункт: ИНН, банк, счёт, адрес.">
+        <Field
+          label="Реквизиты"
+          hint="По строке на пункт: ИНН, банк, счёт, адрес."
+        >
           <Textarea
             rows={7}
             value={form.requisites}
             onChange={(e) => set('requisites', e.target.value)}
             className="min-h-[164px]"
-            placeholder={'ИНН: 311985311\nБанк: ГО АК «Алокабанк», г. Ташкент\nМФО: 00401\nР/с: 20208000407214976001\nАдрес: г. Ташкент, ул. Elbek, 8'}
+            placeholder={
+              'ИНН: 311985311\nБанк: ГО АК «Алокабанк», г. Ташкент\nМФО: 00401\nР/с: 20208000407214976001\nАдрес: г. Ташкент, ул. Elbek, 8'
+            }
           />
         </Field>
 
@@ -387,7 +384,8 @@ export function AdvertiserForm({ open, onClose, initial }) {
               Договоров пока нет
             </p>
             <p className="mt-1 text-[13px] text-ink-muted">
-              Из этих договоров рекламодатель выбирает номер при создании кампании.
+              Из этих договоров рекламодатель выбирает номер при создании
+              кампании.
             </p>
           </div>
         )}
@@ -525,7 +523,6 @@ export function AdvertiserForm({ open, onClose, initial }) {
                 />
               </Field>
             </div>
-
           </div>
         ))}
 

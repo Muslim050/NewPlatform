@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Search, Pencil, Plus, Trash2, Building2, Mail } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import { ADV_STATUS } from '@/lib/metrics.js'
 import { Card } from '@/components/ui/Card.jsx'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge.jsx'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
@@ -153,10 +153,12 @@ export default function Advertisers() {
                   </div>
 
                   <div className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4">
-                    <Metric label="Договоров" value={a.contracts?.length ?? 0} />
+                    <Metric
+                      label="Договоров"
+                      value={a.contracts?.length ?? 0}
+                    />
                     <Metric label="Кампаний" value={campaignCount(a.id)} />
                   </div>
-
                 </Card>
               </motion.div>
             )

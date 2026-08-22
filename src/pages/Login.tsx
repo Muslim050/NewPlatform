@@ -1,19 +1,25 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, VolumeX } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
-import { useData } from '@/context/DataContext.jsx'
-import { Logo } from '@/components/Logo.jsx'
-import { Button } from '@/components/ui/Button.jsx'
-import { Field, Input } from '@/components/ui/Field.jsx'
+import { isApiError } from '@/api/errors'
+import { useLogin } from '@/features/auth/queries'
+import { Logo } from '@/components/Logo'
+import { Button } from '@/components/ui/Button'
+import { Field, Input } from '@/components/ui/Field'
 
-const TV_SPOTS = [
-  '/creatives/setanta-2.mp4',
-]
+interface AudienceStat {
+  value: string
+  label: string
+  /** Tailwind-классы позиционирования на макете. */
+  position: string
+  primary?: boolean
+}
+
+const TV_SPOTS = ['/creatives/setanta-2.mp4']
 
 // Боковые колонки выровнены по краям панели — одинаковый отступ у всех.
-const AUDIENCE_STATS = [
+const AUDIENCE_STATS: AudienceStat[] = [
   { value: '93M', label: 'Зрителей', position: 'right-6 top-[27.5%]' },
   { value: '23M', label: 'ТВ-аудитория', position: 'right-6 top-[38%]' },
   {
@@ -31,19 +37,20 @@ const AUDIENCE_STATS = [
   { value: '15', label: 'Стран', position: 'left-6 top-[48.5%]' },
 ]
 
-function AudienceStatsOrbit({ stats }) {
+function AudienceStatsOrbit({ stats }: { stats: AudienceStat[] }) {
   return (
     <div className="pointer-events-none absolute inset-0 z-40 hidden 2xl:block">
       <div className="absolute left-1/2 top-[42%] h-[36%] w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border border-dashed border-lime-300/10" />
 
       {stats.map((stat, index) => (
-        <div
-          key={stat.label}
-          className={`absolute ${stat.position} w-[184px]`}
-        >
+        <div key={stat.label} className={`absolute ${stat.position} w-[184px]`}>
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: [0, index % 2 === 0 ? -4 : 4, 0] }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              y: [0, index % 2 === 0 ? -4 : 4, 0],
+            }}
             transition={{
               opacity: { delay: 0.58 + index * 0.07, duration: 0.45 },
               scale: { delay: 0.58 + index * 0.07, duration: 0.45 },
@@ -106,9 +113,8 @@ function TvShowcase() {
           STAY IN THE GAME.
         </h2>
         <p className="mt-4 max-w-md text-[20px] leading-relaxed text-white/70">
-         В УЗБЕКИСТАНЕ ВЕДЕТСЯ ТРАНСЛЯЦИЯ 2Х ТЕЛЕКАНАЛОВ
+          В УЗБЕКИСТАНЕ ВЕДЕТСЯ ТРАНСЛЯЦИЯ 2Х ТЕЛЕКАНАЛОВ
         </p>
-
       </motion.div>
 
       <AudienceStatsOrbit stats={AUDIENCE_STATS} />
@@ -130,7 +136,12 @@ function TvShowcase() {
           <div
             data-testid="tv-video-frame"
             className="absolute z-10 overflow-hidden bg-[#050607]"
-            style={{ left: '31.5978%', top: '17.7471%', width: '36.6846%', height: '36.6631%' }}
+            style={{
+              left: '31.5978%',
+              top: '17.7471%',
+              width: '36.6846%',
+              height: '36.6631%',
+            }}
           >
             <motion.video
               data-testid="tv-video"
@@ -155,7 +166,8 @@ function TvShowcase() {
               <span className="flex items-center gap-1 text-white/70">
                 <VolumeX className="h-[clamp(7px,0.8vw,12px)] w-[clamp(7px,0.8vw,12px)]" />
                 <span className="text-[clamp(5px,0.58vw,9px)] tabular-nums">
-                  {String(activeSpot + 1).padStart(2, '0')} / {String(TV_SPOTS.length).padStart(2, '0')}
+                  {String(activeSpot + 1).padStart(2, '0')} /{' '}
+                  {String(TV_SPOTS.length).padStart(2, '0')}
                 </span>
               </span>
             </div>
@@ -169,47 +181,25 @@ function TvShowcase() {
 }
 
 export default function Login() {
-  const { login } = useAuth()
-  const { advertisers } = useData()
   const navigate = useNavigate()
+  const { mutate: signIn, isPending, error } = useLogin()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
 
-  const submit = (e) => {
-    e.preventDefault()
-    const login_ = username.trim().toLowerCase()
+  // Сообщение под полем пароля: ошибку формы отдаёт сервер, а сеть
+  // и всё остальное сводим к одной понятной фразе.
+  const errorMessage = error
+    ? isApiError(error)
+      ? (error.fields.password ?? error.fields.login ?? error.message)
+      : error.message
+    : ''
 
-    if (login_ === 'admin' && password === 'admin') {
-      login({ role: 'admin', name: 'admin', email: 'admin@setantasports.com' })
-      navigate('/app')
-      return
-    }
-
-    // Наблюдатель: тот же обзор, что у админа, но без права менять данные.
-    if (login_ === 'viewer' && password === 'viewer') {
-      login({
-        role: 'viewer',
-        name: 'viewer',
-        email: 'viewer@setantasports.com',
-      })
-      navigate('/app')
-      return
-    }
-
-    if (login_ === 'adv' && password === 'adv') {
-      const a = advertisers[0]
-      login({
-        role: 'advertiser',
-        advertiserId: a.id,
-        name: a.contact,
-        email: a.email,
-      })
-      navigate('/app')
-      return
-    }
-
-    setError('Неверный логин или пароль')
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    signIn(
+      { login: username.trim(), password },
+      { onSuccess: () => navigate('/app') },
+    )
   }
 
   return (
@@ -229,43 +219,40 @@ export default function Login() {
             <h1 className="font-display-cond text-display-md text-ink text-base">
               С возвращением
             </h1>
-
           </div>
 
           <form onSubmit={submit} className="mt-8 space-y-4">
             <Field label="Логин">
               <Input
                 value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value)
-                  setError('')
-                }}
+                onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
                 autoComplete="username"
                 autoFocus
               />
             </Field>
 
-            <Field label="Пароль" error={error}>
+            <Field label="Пароль" error={errorMessage}>
               <Input
                 type="password"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  setError('')
-                }}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••"
                 autoComplete="current-password"
               />
             </Field>
 
-            <Button size="lg" variant="primary" type="submit" className="w-full">
-              Войти в платформу
+            <Button
+              size="lg"
+              variant="primary"
+              type="submit"
+              className="w-full"
+              disabled={isPending}
+            >
+              {isPending ? 'Входим…' : 'Войти в платформу'}
               <ArrowRight size={18} />
             </Button>
           </form>
-
-
         </motion.div>
       </section>
 

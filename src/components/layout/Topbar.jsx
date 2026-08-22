@@ -8,7 +8,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { NAV } from '@/lib/nav.js'
 import { Avatar } from '@/components/ui/Avatar.jsx'
@@ -22,7 +22,8 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
   const ref = useRef(null)
 
   useEffect(() => {
-    const h = (e) => ref.current && !ref.current.contains(e.target) && setMenu(false)
+    const h = (e) =>
+      ref.current && !ref.current.contains(e.target) && setMenu(false)
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])
@@ -30,7 +31,9 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
   const active =
     [...NAV]
       .filter((n) =>
-        n.to === '/app' ? loc.pathname === '/app' : loc.pathname.startsWith(n.to),
+        n.to === '/app'
+          ? loc.pathname === '/app'
+          : loc.pathname.startsWith(n.to),
       )
       .sort((a, b) => b.to.length - a.to.length)[0] || NAV[0]
 

@@ -17,7 +17,11 @@ export function StatCard({
     <motion.div
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      transition={{
+        delay: index * 0.06,
+        duration: 0.4,
+        ease: [0.22, 1, 0.36, 1],
+      }}
     >
       <Card hover className="p-5">
         <div className="flex items-center justify-between">
@@ -44,7 +48,12 @@ export function StatCard({
           </span>
           {spark && (
             <div className="mb-0.5 hidden shrink-0 sm:block">
-              <Sparkline data={spark} color={sparkColor} width={72} height={36} />
+              <Sparkline
+                data={spark}
+                color={sparkColor}
+                width={72}
+                height={36}
+              />
             </div>
           )}
         </div>

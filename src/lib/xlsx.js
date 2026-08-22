@@ -60,12 +60,19 @@ export async function readSheets(file) {
   const strings = sharedStrings(read('xl/sharedStrings.xml'))
 
   const targets = new Map(
-    [...xml(read('xl/_rels/workbook.xml.rels')).querySelectorAll('Relationship')].map(
-      (rel) => [rel.getAttribute('Id'), rel.getAttribute('Target').replace(/^\/?(xl\/)?/, 'xl/')],
-    ),
+    [
+      ...xml(read('xl/_rels/workbook.xml.rels')).querySelectorAll(
+        'Relationship',
+      ),
+    ].map((rel) => [
+      rel.getAttribute('Id'),
+      rel.getAttribute('Target').replace(/^\/?(xl\/)?/, 'xl/'),
+    ]),
   )
 
-  const sheets = [...xml(read('xl/workbook.xml')).querySelectorAll('sheets > sheet')]
+  const sheets = [
+    ...xml(read('xl/workbook.xml')).querySelectorAll('sheets > sheet'),
+  ]
     .map((sheet) => {
       const id = sheet.getAttributeNS(
         'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
@@ -73,7 +80,10 @@ export async function readSheets(file) {
       )
       const path = targets.get(id)
       return path && zip[path]
-        ? { name: sheet.getAttribute('name') || '', rows: sheetRows(read(path), strings) }
+        ? {
+            name: sheet.getAttribute('name') || '',
+            rows: sheetRows(read(path), strings),
+          }
         : null
     })
     .filter(Boolean)
@@ -97,7 +107,10 @@ export async function parseXlsx(file) {
   return sheet.rows
 }
 
-const squash = (value) => String(value).toLowerCase().replace(/[\s_-]+/g, '')
+const squash = (value) =>
+  String(value)
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '')
 
 /** Лист по имени: «Event Promo SS 1» найдётся по «eventpromoss1». */
 export function findSheet(sheets, name) {

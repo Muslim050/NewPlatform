@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { useState } from 'react'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   CalendarDays,
@@ -10,9 +10,9 @@ import {
   Target,
   TrendingUp,
   WalletCards,
-} from "lucide-react";
-import { useData } from "@/context/DataContext.jsx";
-import { useScopedCampaigns } from "@/lib/useScope.js";
+} from 'lucide-react'
+import { useData } from '@/context/DataContext.jsx'
+import { useScopedCampaigns } from '@/lib/useScope.js'
 import {
   STATUS,
   cpa,
@@ -21,8 +21,8 @@ import {
   cvr,
   pacing,
   statusLabel,
-} from "@/lib/metrics.js";
-import { seededSeries } from "@/lib/id.js";
+} from '@/lib/metrics.js'
+import { seededSeries } from '@/lib/id.js'
 import {
   formatCompact,
   formatDate,
@@ -30,23 +30,23 @@ import {
   formatMoneyCompact,
   formatPct,
   lastNDates,
-} from "@/lib/format.js";
-import { PageHeader } from "@/components/PageHeader.jsx";
-import { Logo } from "@/components/Logo.jsx";
-import { AreaChart } from "@/components/charts/AreaChart.jsx";
-import { Avatar } from "@/components/ui/Avatar.jsx";
-import { Badge } from "@/components/ui/Badge.jsx";
-import { Button } from "@/components/ui/Button.jsx";
-import { Card } from "@/components/ui/Card.jsx";
-import { Progress } from "@/components/ui/Progress.jsx";
-import { SegmentTabs } from "@/components/ui/Tabs.jsx";
-import { MediaReport } from "@/components/campaigns/MediaReport.jsx";
+} from '@/lib/format.js'
+import { PageHeader } from '@/components/PageHeader.jsx'
+import { Logo } from '@/components/Logo'
+import { AreaChart } from '@/components/charts/AreaChart.jsx'
+import { Avatar } from '@/components/ui/Avatar.jsx'
+import { Badge } from '@/components/ui/Badge.jsx'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card.jsx'
+import { Progress } from '@/components/ui/Progress.jsx'
+import { SegmentTabs } from '@/components/ui/Tabs.jsx'
+import { MediaReport } from '@/components/campaigns/MediaReport.jsx'
 
 const METRICS = {
-  spent: { label: "Расход", color: "#FFD106", format: formatMoneyCompact },
-  impressions: { label: "Показы", color: "#0EA5E9", format: formatCompact },
-  clicks: { label: "Клики", color: "#12A150", format: formatCompact },
-};
+  spent: { label: 'Расход', color: '#FFD106', format: formatMoneyCompact },
+  impressions: { label: 'Показы', color: '#0EA5E9', format: formatCompact },
+  clicks: { label: 'Клики', color: '#12A150', format: formatCompact },
+}
 
 function MetricCard({ icon: Icon, label, value, hint }) {
   return (
@@ -62,37 +62,37 @@ function MetricCard({ icon: Icon, label, value, hint }) {
       </p>
       <p className="mt-1 text-[12px] text-ink-muted">{hint}</p>
     </Card>
-  );
+  )
 }
 
 export default function CampaignStats() {
-  const { campaignId } = useParams();
-  const navigate = useNavigate();
-  const campaigns = useScopedCampaigns();
-  const { advertiserById, channelById } = useData();
-  const [metric, setMetric] = useState("spent");
+  const { campaignId } = useParams()
+  const navigate = useNavigate()
+  const campaigns = useScopedCampaigns()
+  const { advertiserById, channelById } = useData()
+  const [metric, setMetric] = useState('spent')
 
-  const campaign = campaigns.find((item) => item.id === campaignId);
-  if (!campaign) return <Navigate to="/app/campaigns" replace />;
+  const campaign = campaigns.find((item) => item.id === campaignId)
+  if (!campaign) return <Navigate to="/app/campaigns" replace />
 
-  const advertiser = advertiserById(campaign.advertiserId);
+  const advertiser = advertiserById(campaign.advertiserId)
   // Медиаплан и отчётные вкладки доступны у всех запущенных кампаний.
-  const hasMediaTables = campaign.status === "active";
+  const hasMediaTables = campaign.status === 'active'
   const channels = campaign.channelIds.flatMap((id) => {
-    const channel = channelById(id);
-    return channel ? [channel] : [];
-  });
-  const status = STATUS[campaign.status];
-  const budgetPacing = pacing(campaign);
-  const remaining = Math.max(0, campaign.budget - campaign.spent);
-  const metricConfig = METRICS[metric];
-  const period = 14;
+    const channel = channelById(id)
+    return channel ? [channel] : []
+  })
+  const status = STATUS[campaign.status]
+  const budgetPacing = pacing(campaign)
+  const remaining = Math.max(0, campaign.budget - campaign.spent)
+  const metricConfig = METRICS[metric]
+  const period = 14
   const series = seededSeries(
     `campaign-${campaign.id}-${metric}`,
     period,
-    Math.max(campaign[metric] / period, metric === "clicks" ? 10 : 100),
+    Math.max(campaign[metric] / period, metric === 'clicks' ? 10 : 100),
     0.28,
-  );
+  )
 
   return (
     <div>
@@ -100,8 +100,9 @@ export default function CampaignStats() {
         title="Статистика кампании"
         subtitle="Подробные показатели, динамика и распределение бюджета."
       >
-        <Button variant="secondary" onClick={() => navigate("/app/campaigns")}>
-          <ArrowLeft size={17} />Назад
+        <Button variant="secondary" onClick={() => navigate('/app/campaigns')}>
+          <ArrowLeft size={17} />
+          Назад
         </Button>
       </PageHeader>
 
@@ -123,7 +124,7 @@ export default function CampaignStats() {
                 {campaign.name}
               </h2>
               <p className="mt-1 text-sm text-ink-muted">
-                {advertiser?.name || "Рекламодатель не указан"}
+                {advertiser?.name || 'Рекламодатель не указан'}
               </p>
             </div>
           </div>
@@ -238,7 +239,7 @@ export default function CampaignStats() {
                 <div>
                   <p className="text-[12px] text-ink-muted">CPA</p>
                   <p className="mt-1 font-semibold text-ink tnum">
-                    {campaign.conversions ? formatMoney(cpa(campaign)) : "—"}
+                    {campaign.conversions ? formatMoney(cpa(campaign)) : '—'}
                   </p>
                 </div>
                 <div>
@@ -248,7 +249,7 @@ export default function CampaignStats() {
                   <p className="mt-1 font-semibold text-ink tnum">
                     {campaign.clicks
                       ? formatMoney(campaign.spent / campaign.clicks)
-                      : "—"}
+                      : '—'}
                   </p>
                 </div>
               </div>
@@ -311,5 +312,5 @@ export default function CampaignStats() {
         </div>
       )}
     </div>
-  );
+  )
 }

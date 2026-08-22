@@ -1,6 +1,12 @@
 import { cn } from '@/lib/cn.js'
 
-export function Logo({ size = 32, withWord = true, className }) {
+export interface LogoProps {
+  size?: number
+  withWord?: boolean
+  className?: string
+}
+
+export function Logo({ size = 32, withWord = true, className }: LogoProps) {
   return (
     <div className={cn('flex items-center gap-2.5', className)}>
       <div

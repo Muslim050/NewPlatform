@@ -3,8 +3,8 @@ import { Radio } from 'lucide-react'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
-import { Button } from '@/components/ui/Button.jsx'
-import { Field, Input, Select } from '@/components/ui/Field.jsx'
+import { Button } from '@/components/ui/Button'
+import { Field, Input, Select } from '@/components/ui/Field'
 import { cn } from '@/lib/cn.js'
 
 const TYPES = ['CTV', 'TV', 'Web', 'Mobile', 'Social', 'Audio']
@@ -114,7 +114,10 @@ export function ChannelForm({ open, onClose, initial }) {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Тип">
-            <Select value={form.type} onChange={(e) => set('type', e.target.value)}>
+            <Select
+              value={form.type}
+              onChange={(e) => set('type', e.target.value)}
+            >
               {TYPES.map((t) => (
                 <option key={t} value={t}>
                   {t}
@@ -179,7 +182,9 @@ export function ChannelForm({ open, onClose, initial }) {
                 onClick={() => set('color', c)}
                 className={cn(
                   'h-8 w-8 rounded-full ring-2 ring-offset-2 ring-offset-surface transition-all',
-                  form.color === c ? 'ring-ink/40 scale-110' : 'ring-transparent',
+                  form.color === c
+                    ? 'ring-ink/40 scale-110'
+                    : 'ring-transparent',
                 )}
                 style={{ background: c }}
               />

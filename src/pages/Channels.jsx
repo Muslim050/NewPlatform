@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Search, Pencil, Trash2, Radio } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
@@ -9,7 +9,7 @@ import { formatCompact, formatMoney } from '@/lib/format.js'
 import { PageHeader } from '@/components/PageHeader.jsx'
 import { Card } from '@/components/ui/Card.jsx'
 import { Badge } from '@/components/ui/Badge.jsx'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { DropdownMenu } from '@/components/ui/DropdownMenu.jsx'
@@ -29,7 +29,8 @@ export default function Channels() {
       .includes(q.trim().toLowerCase()),
   )
 
-  const usage = (id) => campaigns.filter((c) => c.channelIds.includes(id)).length
+  const usage = (id) =>
+    campaigns.filter((c) => c.channelIds.includes(id)).length
 
   const del = async (c) => {
     const ok = await confirm({

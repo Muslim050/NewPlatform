@@ -1049,7 +1049,6 @@ const MONTHLY_CHANNELS = [
   ['ch_potok', 'ch_social', 'ch_mobile'],
 ]
 
-
 /**
  * Заказ внутри месяца. Статус согласован с датами: что закрылось в начале
  * месяца — завершено, что идёт сейчас — активно, поздний старт — ещё на
@@ -1082,7 +1081,9 @@ function artelOrder(index, monthKey = ARTEL_MONTH, prefix = '2') {
   return {
     id: `cmp_${prefix}${pad(index + 1).padStart(3, '0')}`,
     name: `${ARTEL_PRODUCTS[index % ARTEL_PRODUCTS.length]} Artel — ${
-      ARTEL_OFFERS[Math.floor(index / ARTEL_PRODUCTS.length) % ARTEL_OFFERS.length]
+      ARTEL_OFFERS[
+        Math.floor(index / ARTEL_PRODUCTS.length) % ARTEL_OFFERS.length
+      ]
     }`,
     advertiserId: 'adv_artel',
     status,
@@ -1107,9 +1108,7 @@ function artelOrder(index, monthKey = ARTEL_MONTH, prefix = '2') {
 function previousMonth(monthKey) {
   const year = Number(monthKey.slice(0, 4))
   const month = Number(monthKey.slice(5, 7))
-  return month === 1
-    ? `${year - 1}-12`
-    : `${year}-${pad(month - 1)}`
+  return month === 1 ? `${year - 1}-12` : `${year}-${pad(month - 1)}`
 }
 
 // Закрытые месяцы 2026 года тоже с заказами: по ним смотрят отчёт и список.
@@ -1135,17 +1134,50 @@ const ARTEL_MONTHLY = [
 // Заказы остальных брендов в закрытых месяцах: без них старые месяцы у всех,
 // кроме Artel, оставались пустыми.
 const BRAND_OFFERS = {
-  adv_click: ['Переводы без комиссии', 'Оплата по QR', 'Кэшбэк недели', 'Click Pass'],
-  adv_korzinka: ['Korzinka Go', 'Скидки выходного дня', 'Клубная карта', 'Доставка за час'],
-  adv_payme: ['Payme Gold', 'Оплата коммуналки', 'Бонусы за перевод', 'Рассрочка'],
+  adv_click: [
+    'Переводы без комиссии',
+    'Оплата по QR',
+    'Кэшбэк недели',
+    'Click Pass',
+  ],
+  adv_korzinka: [
+    'Korzinka Go',
+    'Скидки выходного дня',
+    'Клубная карта',
+    'Доставка за час',
+  ],
+  adv_payme: [
+    'Payme Gold',
+    'Оплата коммуналки',
+    'Бонусы за перевод',
+    'Рассрочка',
+  ],
   adv_makro: ['Makro Fresh', 'Цены недели', 'Собственная марка', 'Доставка'],
   adv_byd: ['BYD Song Plus', 'BYD Seal', 'Тест-драйв', 'Сервисная кампания'],
-  adv_leapmotor: ['Leapmotor T03', 'Leapmotor C11', 'Тест-драйв', 'Городская серия'],
+  adv_leapmotor: [
+    'Leapmotor T03',
+    'Leapmotor C11',
+    'Тест-драйв',
+    'Городская серия',
+  ],
   adv_cherry: ['Cherry Tiggo 4', 'Cherry Tiggo 7', 'Старт продаж', 'Трейд-ин'],
-  adv_cocacola: ['Coca Cola Zero', 'Летняя серия', 'Промо в кино', 'Новый вкус'],
+  adv_cocacola: [
+    'Coca Cola Zero',
+    'Летняя серия',
+    'Промо в кино',
+    'Новый вкус',
+  ],
 }
 
-const BRAND_MONTHS = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07']
+const BRAND_MONTHS = [
+  '2026-01',
+  '2026-02',
+  '2026-03',
+  '2026-04',
+  '2026-05',
+  '2026-06',
+  '2026-07',
+]
 
 /** Заказ бренда в закрытом месяце: завершён, с фактом и бюджетом. */
 function brandOrder(advertiserId, monthKey, index, seq) {
@@ -1198,19 +1230,20 @@ const MONTHS_FULL_RU = [
   'декабрь',
 ]
 
-const BRAND_MONTHLY = Object.keys(BRAND_OFFERS).flatMap((advertiserId, brandIndex) =>
-  BRAND_MONTHS.flatMap((monthKey, monthIndex) => {
-    // 2–4 заказа на месяц — у каждого бренда свой ритм.
-    const orders = 2 + ((brandIndex + monthIndex) % 3)
-    return Array.from({ length: orders }, (_, index) =>
-      brandOrder(
-        advertiserId,
-        monthKey,
-        index,
-        brandIndex * 7 + monthIndex * 3 + index,
-      ),
-    )
-  }),
+const BRAND_MONTHLY = Object.keys(BRAND_OFFERS).flatMap(
+  (advertiserId, brandIndex) =>
+    BRAND_MONTHS.flatMap((monthKey, monthIndex) => {
+      // 2–4 заказа на месяц — у каждого бренда свой ритм.
+      const orders = 2 + ((brandIndex + monthIndex) % 3)
+      return Array.from({ length: orders }, (_, index) =>
+        brandOrder(
+          advertiserId,
+          monthKey,
+          index,
+          brandIndex * 7 + monthIndex * 3 + index,
+        ),
+      )
+    }),
 )
 
 // Каждая кампания привязана к одному из договоров своего бренда — условия

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Check, Download, FileText, Film, Trash2 } from 'lucide-react'
 import { useData } from '@/context/DataContext.jsx'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
-import { Button } from '@/components/ui/Button.jsx'
-import { Field, Input, Select } from '@/components/ui/Field.jsx'
+import { Button } from '@/components/ui/Button'
+import { Field, Input, Select } from '@/components/ui/Field'
 import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { FilePicker } from '@/components/ui/FilePicker.jsx'
 import {
@@ -155,7 +155,9 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
     })
     if (!ok) return
     update('advertisers', advertiser.id, {
-      contracts: (advertiser.contracts ?? []).filter((c) => c.id !== contract.id),
+      contracts: (advertiser.contracts ?? []).filter(
+        (c) => c.id !== contract.id,
+      ),
     })
     toast.info('Договор удалён')
     onClose()
@@ -214,10 +216,7 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
             value={CONTRACT_STATUS[form.status ?? 'active']?.label}
           />
           <Row label="Пакет" value={PACKAGES[form.package]?.label} />
-          <Row
-            label="Лиги"
-            value={form.leagues?.map(leagueLabel).join(', ')}
-          />
+          <Row label="Лиги" value={form.leagues?.map(leagueLabel).join(', ')} />
           <Row label="Срок договора" value={term} />
           <Row
             label="Сроки оплаты"
@@ -231,7 +230,9 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
                 className="flex items-center gap-2 rounded-xl border border-line bg-paper/55 px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
               >
                 <FileText size={16} className="shrink-0 text-indigo-800" />
-                <span className="min-w-0 flex-1 truncate">{form.file.name}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {form.file.name}
+                </span>
                 <Download size={15} className="shrink-0 text-ink-muted" />
               </a>
               {form.file.addedAt && (
@@ -403,7 +404,6 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
               />
             </Field>
           </div>
-
         </div>
       )}
     </Modal>

@@ -11,7 +11,7 @@ import {
   Package,
   Trophy,
 } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { CONTRACT_STATUS, PACKAGES, leagueLabel } from '@/lib/metrics.js'
@@ -23,7 +23,7 @@ import {
   formatPct,
 } from '@/lib/format.js'
 import { Modal } from '@/components/ui/Modal.jsx'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { ContractTile } from '@/components/campaigns/CampaignPreviewModal.jsx'
 import { cn } from '@/lib/cn.js'
@@ -63,7 +63,9 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
   // Клик мимо списка статусов — закрываем его.
   useEffect(() => {
     const h = (e) =>
-      statusRef.current && !statusRef.current.contains(e.target) && setStatusOpen(false)
+      statusRef.current &&
+      !statusRef.current.contains(e.target) &&
+      setStatusOpen(false)
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])
@@ -168,7 +170,9 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
                   disabled={!canEditStatus}
                   onClick={() => setStatusOpen((v) => !v)}
                   title={
-                    canEditStatus ? 'Изменить статус договора' : 'Статус договора'
+                    canEditStatus
+                      ? 'Изменить статус договора'
+                      : 'Статус договора'
                   }
                   className={cn(
                     'inline-flex max-w-full items-center gap-2 rounded-xl border px-2.5 py-1.5 text-[12px] font-semibold transition-colors focus-ring',
@@ -185,7 +189,9 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
                   <span className="truncate">
                     {CONTRACT_STATUS[status].label}
                   </span>
-                  {canEditStatus && <ChevronDown size={14} className="shrink-0" />}
+                  {canEditStatus && (
+                    <ChevronDown size={14} className="shrink-0" />
+                  )}
                 </button>
 
                 {statusOpen && (

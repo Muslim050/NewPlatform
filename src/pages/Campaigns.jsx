@@ -4,7 +4,6 @@ import {
   Plus,
   Search,
   Pencil,
-  Trash2,
   Megaphone,
   BarChart3,
   FileText,
@@ -12,10 +11,9 @@ import {
   Download,
   CalendarPlus,
   CalendarCheck,
-  CalendarClock,
   X,
 } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { useScopedCampaigns } from '@/lib/useScope.js'
 import { statusLabel, timeProgress } from '@/lib/metrics.js'
@@ -28,7 +26,7 @@ import {
   formatPct,
 } from '@/lib/format.js'
 import { Card } from '@/components/ui/Card.jsx'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
@@ -219,7 +217,7 @@ function brandsOf(campaigns, advertiserById) {
 export default function Campaigns() {
   const { user, isAdmin, isAdvertiser, canEdit } = useAuth()
   const navigate = useNavigate()
-  const { advertiserById, channelById, remove, update } = useData()
+  const { advertiserById, update } = useData()
   const campaigns = useScopedCampaigns()
   const toast = useToast()
   const confirm = useConfirm()
@@ -320,9 +318,9 @@ export default function Campaigns() {
   const selectedContract =
     activeContract === ALL_CONTRACTS
       ? null
-      : (contractBrand?.contracts ?? []).find(
+      : ((contractBrand?.contracts ?? []).find(
           (c) => c.number === activeContract,
-        ) ?? null
+        ) ?? null)
   const contractPacing = selectedContract?.budget
     ? ((selectedContract.spent ?? 0) / selectedContract.budget) * 100
     : 0
@@ -387,17 +385,11 @@ export default function Campaigns() {
   const previewAdvertiser = preview
     ? advertiserById(preview.advertiserId)
     : null
-  const previewChannels = preview
-    ? preview.channelIds.flatMap((id) => {
-        const channel = channelById(id)
-        return channel ? [channel] : []
-      })
-    : []
 
   // Договор для поповера берём из актуального бренда: поповер остаётся
   // открытым после сохранения и должен показывать свежие суммы и историю.
   const moneyContract = money
-    ? (contractBrand?.contracts ?? []).find((c) => c.id === money.id) ?? null
+    ? ((contractBrand?.contracts ?? []).find((c) => c.id === money.id) ?? null)
     : null
 
   /**
@@ -427,7 +419,7 @@ export default function Campaigns() {
     return (a.seq ?? 0) - (b.seq ?? 0)
   }
 
-  const saveMoney = ({ budget, spent, amount, paidAt }) => {
+  const saveMoney = ({ budget, spent, paidAt }) => {
     const history = moneyContract.payments ?? []
     // В историю пишем весь прирост оплаченного, а не только поле
     // «Поступление»: первую оплату часто вбивают прямо в «Оплачено»,
@@ -549,18 +541,6 @@ export default function Campaigns() {
       spent: Math.max(0, (moneyContract.spent ?? 0) - payment.amount),
     })
     toast.info('Поступление удалено')
-  }
-
-  const del = async (c) => {
-    const ok = await confirm({
-      title: 'Удалить кампанию?',
-      description: c.name,
-      body: 'Кампания и её показатели будут удалены безвозвратно.',
-    })
-    if (ok) {
-      remove('campaigns', c.id)
-      toast.info('Кампания удалена')
-    }
   }
 
   return (
@@ -829,235 +809,239 @@ export default function Campaigns() {
       )}
 
       {!showMonthReport && (
-      <Card>
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon={Megaphone}
-            title="Кампаний нет"
-            description={
-              isAdvertiser
-                ? 'Измените фильтры или создайте новую кампанию.'
-                : 'По выбранным фильтрам кампаний нет.'
-            }
-            action={isAdvertiser ? (
-              <Button
-                variant="secondary"
-                onClick={() => setModal({ open: true, initial: null })}
-              >
-                <Plus size={16} />
-                Создать
-              </Button>
-            ) : null}
-          />
-        ) : (
-          <>
-            {/* Заголовки колонок */}
-            <div
-              className={cn(
-                'hidden items-center border-b border-line px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted md:grid',
-                isAdvertiser ? GRID_ADVERTISER : GRID_ADMIN,
-              )}
-            >
-              <span className="flex items-center gap-2.5">
-                <span className="w-5 shrink-0">№</span>
-                Кампания
-              </span>
-              <span >Статус</span>
-              <span >Период</span>
-              {showBudget && (
-                <span className="flex justify-center">
-                  {isAdvertiser ? 'Бюджет / Оплачено' : 'Бюджет / Прибыль'}
-                </span>
-              )}
-              <span className="text-center">Действия</span>
-            </div>
-
-            <div className="divide-y divide-line">
-              {filtered.map((c, index) => {
-                const adv = advertiserById(c.advertiserId)
-                const pacing = c.budget ? (c.spent / c.budget) * 100 : 0
-                return (
-                  <div
-                    key={c.id}
-                    className={cn(
-                      'flex items-center gap-2.5 px-5 py-3.5 transition-colors hover:bg-ink/[0.015] md:grid',
-                      isAdvertiser ? GRID_ADVERTISER : GRID_ADMIN,
-                    )}
+        <Card>
+          {filtered.length === 0 ? (
+            <EmptyState
+              icon={Megaphone}
+              title="Кампаний нет"
+              description={
+                isAdvertiser
+                  ? 'Измените фильтры или создайте новую кампанию.'
+                  : 'По выбранным фильтрам кампаний нет.'
+              }
+              action={
+                isAdvertiser ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setModal({ open: true, initial: null })}
                   >
-                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                      <span className="relative w-5 shrink-0 text-[12px] text-ink-muted tnum">
-                        {index + 1}
-                        {/* Точка над номером — статус кампании. */}
-                        {STATUS_MARKS[c.status] && (
-                          <span
-                            className={cn(
-                              'absolute -top-[6px] right-[1px] h-2.5 w-2.5 animate-pulse rounded-full',
-                              STATUS_MARKS[c.status],
-                            )}
-                            title={statusLabel(c.status)}
+                    <Plus size={16} />
+                    Создать
+                  </Button>
+                ) : null
+              }
+            />
+          ) : (
+            <>
+              {/* Заголовки колонок */}
+              <div
+                className={cn(
+                  'hidden items-center border-b border-line px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted md:grid',
+                  isAdvertiser ? GRID_ADVERTISER : GRID_ADMIN,
+                )}
+              >
+                <span className="flex items-center gap-2.5">
+                  <span className="w-5 shrink-0">№</span>
+                  Кампания
+                </span>
+                <span>Статус</span>
+                <span>Период</span>
+                {showBudget && (
+                  <span className="flex justify-center">
+                    {isAdvertiser ? 'Бюджет / Оплачено' : 'Бюджет / Прибыль'}
+                  </span>
+                )}
+                <span className="text-center">Действия</span>
+              </div>
+
+              <div className="divide-y divide-line">
+                {filtered.map((c, index) => {
+                  const adv = advertiserById(c.advertiserId)
+                  const pacing = c.budget ? (c.spent / c.budget) * 100 : 0
+                  return (
+                    <div
+                      key={c.id}
+                      className={cn(
+                        'flex items-center gap-2.5 px-5 py-3.5 transition-colors hover:bg-ink/[0.015] md:grid',
+                        isAdvertiser ? GRID_ADVERTISER : GRID_ADMIN,
+                      )}
+                    >
+                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <span className="relative w-5 shrink-0 text-[12px] text-ink-muted tnum">
+                          {index + 1}
+                          {/* Точка над номером — статус кампании. */}
+                          {STATUS_MARKS[c.status] && (
+                            <span
+                              className={cn(
+                                'absolute -top-[6px] right-[1px] h-2.5 w-2.5 animate-pulse rounded-full',
+                                STATUS_MARKS[c.status],
+                              )}
+                              title={statusLabel(c.status)}
+                            />
+                          )}
+                        </span>
+                        {isAdmin && adv && (
+                          <Avatar
+                            name={adv.name}
+                            color={adv.color}
+                            src={adv.logo}
+                            size="sm"
                           />
                         )}
-                      </span>
-                      {isAdmin && adv && (
-                        <Avatar
-                          name={adv.name}
-                          color={adv.color}
-                          src={adv.logo}
-                          size="sm"
-                        />
-                      )}
-                      <div className="min-w-0">
-                        {c.creativeUrl ? (
-                          <a
-                            href={c.creativeUrl}
-                            download
-                            className="block truncate text-sm font-medium text-black underline-offset-2 hover:text-indigo-400 hover:underline focus-ring"
-                          >
-                            {c.name}
-                          </a>
-                        ) : (
-                          <p className="truncate text-sm font-medium text-ink">
-                            {c.name}
-                          </p>
-                        )}
-                        <p className="truncate text-[12px] text-ink-muted">
-                          {showBudget && (
-                            <span className="md:hidden">
-                              {' · '}
-                              {formatMoneyCompact(c.spent)}
-                            </span>
+                        <div className="min-w-0">
+                          {c.creativeUrl ? (
+                            <a
+                              href={c.creativeUrl}
+                              download
+                              className="block truncate text-sm font-medium text-black underline-offset-2 hover:text-indigo-400 hover:underline focus-ring"
+                            >
+                              {c.name}
+                            </a>
+                          ) : (
+                            <p className="truncate text-sm font-medium text-ink">
+                              {c.name}
+                            </p>
                           )}
+                          <p className="truncate text-[12px] text-ink-muted">
+                            {showBudget && (
+                              <span className="md:hidden">
+                                {' · '}
+                                {formatMoneyCompact(c.spent)}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="hidden sm:block md:w-auto">
+                        <CampaignStatusPill
+                          status={c.status}
+                          pacing={timeProgress(c)}
+                          createdAt={c.createdAt}
+                        />
+                      </div>
+
+                      {/* Период — дата под датой: так колонка остаётся узкой. */}
+                      <div className="hidden min-w-0 md:block">
+                        <p
+                          className="flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-ink-soft tnum"
+                          title={`Старт: ${formatDateNumeric(c.startDate)}`}
+                        >
+                          <CalendarPlus
+                            size={13}
+                            className="shrink-0 text-emerald-600"
+                            aria-hidden="true"
+                          />
+                          {formatDateNumeric(c.startDate)}
+                        </p>
+                        <p
+                          className="mt-1 flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-ink-soft tnum"
+                          title={`Финиш: ${formatDateNumeric(c.endDate)}`}
+                        >
+                          <CalendarCheck
+                            size={13}
+                            className="shrink-0 text-ink-muted"
+                            aria-hidden="true"
+                          />
+                          {formatDateNumeric(c.endDate)}
                         </p>
                       </div>
-                    </div>
 
-                    <div className="hidden sm:block md:w-auto">
-                      <CampaignStatusPill
-                        status={c.status}
-                        pacing={timeProgress(c)}
-                        createdAt={c.createdAt}
-                      />
-                    </div>
-
-                    {/* Период — дата под датой: так колонка остаётся узкой. */}
-                    <div className="hidden min-w-0 md:block">
-                      <p
-                        className="flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-ink-soft tnum"
-                        title={`Старт: ${formatDateNumeric(c.startDate)}`}
-                      >
-                        <CalendarPlus
-                          size={13}
-                          className="shrink-0 text-emerald-600"
-                          aria-hidden="true"
-                        />
-                        {formatDateNumeric(c.startDate)}
-                      </p>
-                      <p
-                        className="mt-1 flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-ink-soft tnum"
-                        title={`Финиш: ${formatDateNumeric(c.endDate)}`}
-                      >
-                        <CalendarCheck
-                          size={13}
-                          className="shrink-0 text-ink-muted"
-                          aria-hidden="true"
-                        />
-                        {formatDateNumeric(c.endDate)}
-                      </p>
-                    </div>
-
-                    {showBudget && (
-                      <div className="hidden md:block">
-                        <button
-                          type="button"
-                          onClick={(e) =>
-                            setMoney({ id: c.id, el: e.currentTarget })
-                          }
-                          title={
-                            !canEditMoney
-                              ? 'История выплат'
-                              : c.status === 'completed'
-                                ? 'Завершённая кампания — только история выплат'
-                                : 'Изменить суммы и внести поступление'
-                          }
-                          className="group w-full rounded-lg px-1 py-0.5 text-left transition-colors enabled:hover:bg-ink/[0.04] disabled:cursor-default focus-ring"
-                        >
-                          <span className="flex items-center gap-1.5 text-[12px]">
-                            <span className="text-ink-muted tnum">
-                              {formatMoneyCompact(c.budget)}
-                            </span>
-                            <span className="ml-auto font-medium text-ink tnum">
-                              {formatMoneyCompact(c.spent)}
-                            </span>
-                            {canEditMoney && c.status !== 'completed' && (
-                              <Pencil
-                                size={12}
-                                aria-hidden="true"
-                                className="shrink-0 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100"
-                              />
-                            )}
-                          </span>
-                          {/* Полоса про деньги: сколько из суммы уже оплачено. */}
-                          <Progress
-                            value={pacing}
-                            label={formatPct(pacing, 0)}
-                            className="mt-1.5"
-                          />
-                        </button>
-                      </div>
-                    )}
-
-                    {showStats && (
-                      <div className="flex justify-center">
-                        {c.status === 'active' ||
-                        c.status === 'completed' ||
-                        c.status === 'awaiting_payment' ||
-                        c.status === 'paid' ? (
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="w-fit shrink-0 border-indigo-200 bg-indigo-50 px-2.5 text-indigo-900 hover:border-indigo-400 hover:bg-indigo-100"
-                            onClick={() => navigate(`/app/campaigns/${c.id}`)}
-                            aria-label={`Статистика кампании ${c.name}`}
-                            title="Статистика"
+                      {showBudget && (
+                        <div className="hidden md:block">
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              setMoney({ id: c.id, el: e.currentTarget })
+                            }
+                            title={
+                              !canEditMoney
+                                ? 'История выплат'
+                                : c.status === 'completed'
+                                  ? 'Завершённая кампания — только история выплат'
+                                  : 'Изменить суммы и внести поступление'
+                            }
+                            className="group w-full rounded-lg px-1 py-0.5 text-left transition-colors enabled:hover:bg-ink/[0.04] disabled:cursor-default focus-ring"
                           >
-                            <BarChart3 size={15} />
-                          </Button>
-                        ) : (
-                          <span
-                            className="text-sm text-ink-muted"
-                            aria-hidden="true"
-                          >
-                            —
-                          </span>
-                        )}
-                      </div>
-                    )}
+                            <span className="flex items-center gap-1.5 text-[12px]">
+                              <span className="text-ink-muted tnum">
+                                {formatMoneyCompact(c.budget)}
+                              </span>
+                              <span className="ml-auto font-medium text-ink tnum">
+                                {formatMoneyCompact(c.spent)}
+                              </span>
+                              {canEditMoney && c.status !== 'completed' && (
+                                <Pencil
+                                  size={12}
+                                  aria-hidden="true"
+                                  className="shrink-0 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100"
+                                />
+                              )}
+                            </span>
+                            {/* Полоса про деньги: сколько из суммы уже оплачено. */}
+                            <Progress
+                              value={pacing}
+                              label={formatPct(pacing, 0)}
+                              className="mt-1.5"
+                            />
+                          </button>
+                        </div>
+                      )}
 
-                    <div className="flex items-center justify-center gap-1.5">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="h-9 w-9 shrink-0 px-0"
-                        onClick={() => setPreview(c)}
-                        aria-label={`Открыть кампанию ${c.name}`}
-                        title="Открыть"
-                      >
-                        <FolderOpen size={16} />
-                      </Button>
-                      {showActions && (
-                        <>
-                        {/* Админ правит кампанию в любом статусе. */}
+                      {showStats && (
+                        <div className="flex justify-center">
+                          {c.status === 'active' ||
+                          c.status === 'completed' ||
+                          c.status === 'awaiting_payment' ||
+                          c.status === 'paid' ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="w-fit shrink-0 border-indigo-200 bg-indigo-50 px-2.5 text-indigo-900 hover:border-indigo-400 hover:bg-indigo-100"
+                              onClick={() => navigate(`/app/campaigns/${c.id}`)}
+                              aria-label={`Статистика кампании ${c.name}`}
+                              title="Статистика"
+                            >
+                              <BarChart3 size={15} />
+                            </Button>
+                          ) : (
+                            <span
+                              className="text-sm text-ink-muted"
+                              aria-hidden="true"
+                            >
+                              —
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-center gap-1.5">
                         <Button
                           variant="secondary"
                           size="sm"
                           className="h-9 w-9 shrink-0 px-0"
-                          onClick={() => setModal({ open: true, initial: c })}
-                          aria-label={`Редактировать кампанию ${c.name}`}
-                          title="Редактировать"
+                          onClick={() => setPreview(c)}
+                          aria-label={`Открыть кампанию ${c.name}`}
+                          title="Открыть"
                         >
-                          <Pencil size={16} />
+                          <FolderOpen size={16} />
                         </Button>
-                        {/* Удаление кампании временно скрыто.
+                        {showActions && (
+                          <>
+                            {/* Админ правит кампанию в любом статусе. */}
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="h-9 w-9 shrink-0 px-0"
+                              onClick={() =>
+                                setModal({ open: true, initial: c })
+                              }
+                              aria-label={`Редактировать кампанию ${c.name}`}
+                              title="Редактировать"
+                            >
+                              <Pencil size={16} />
+                            </Button>
+                            {/* Удаление кампании временно скрыто.
                             Запущенную и завершённую кампанию удалять нельзя.
                         {c.status !== 'active' && c.status !== 'completed' && (
                           <Button
@@ -1072,16 +1056,16 @@ export default function Campaigns() {
                           </Button>
                         )}
                         */}
-                        </>
-                      )}
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        )}
-      </Card>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </Card>
       )}
 
       {showMonthReport && (
@@ -1089,7 +1073,8 @@ export default function Campaigns() {
           <div className="mb-3 flex items-center gap-2">
             <BarChart3 size={18} className="text-indigo-800" />
             <h2 className="font-display text-base font-semibold text-ink">
-              Статистика за {MONTHS_FULL[activeMonth].toLowerCase()} {activeYear}
+              Статистика за {MONTHS_FULL[activeMonth].toLowerCase()}{' '}
+              {activeYear}
             </h2>
           </div>
           {/* Состав вкладок отчёта свой у каждого договора. */}
@@ -1146,11 +1131,9 @@ export default function Campaigns() {
       <CampaignPreviewModal
         campaign={preview}
         advertiser={previewAdvertiser}
-        channels={previewChannels}
         onClose={() => setPreview(null)}
         onOpenStats={() => navigate(`/app/campaigns/${preview.id}`)}
       />
-
     </div>
   )
 }

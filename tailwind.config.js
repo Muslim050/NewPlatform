@@ -48,14 +48,28 @@ export default {
         // заголовки и логотип — её узкое начертание Light Semi Cond,
         // наборный текст — Noto Sans.
         display: ['Setantica', 'system-ui', 'sans-serif'],
-        'display-cond': ['"Setantica Cond"', 'Setantica', 'system-ui', 'sans-serif'],
+        'display-cond': [
+          '"Setantica Cond"',
+          'Setantica',
+          'system-ui',
+          'sans-serif',
+        ],
         sans: ['"Noto Sans"', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {
-        'display-xl': ['clamp(2.6rem, 5vw, 4rem)', { lineHeight: '1.02', letterSpacing: '-0.03em' }],
-        'display-lg': ['clamp(2rem, 3.5vw, 2.9rem)', { lineHeight: '1.05', letterSpacing: '-0.025em' }],
-        'display-md': ['1.65rem', { lineHeight: '1.1', letterSpacing: '-0.02em' }],
+        'display-xl': [
+          'clamp(2.6rem, 5vw, 4rem)',
+          { lineHeight: '1.02', letterSpacing: '-0.03em' },
+        ],
+        'display-lg': [
+          'clamp(2rem, 3.5vw, 2.9rem)',
+          { lineHeight: '1.05', letterSpacing: '-0.025em' },
+        ],
+        'display-md': [
+          '1.65rem',
+          { lineHeight: '1.1', letterSpacing: '-0.02em' },
+        ],
       },
       borderRadius: {
         md: '10px',

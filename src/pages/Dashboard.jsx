@@ -18,7 +18,7 @@ import {
   UsersRound,
   X,
 } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
@@ -27,7 +27,7 @@ import { formatCompact, formatPct, formatNumber } from '@/lib/format.js'
 import { cloneOverview } from '@/lib/overviewSeed.js'
 import { PageHeader } from '@/components/PageHeader.jsx'
 import { Card } from '@/components/ui/Card.jsx'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { DonutChart } from '@/components/charts/DonutChart.jsx'
 import { uid } from '@/lib/id.js'
 import { cn } from '@/lib/cn.js'
@@ -305,9 +305,7 @@ function MediaSummary({ data, editing, patch }) {
               <EditText
                 editing={editing}
                 value={summary.title}
-                onChange={(title) =>
-                  patch({ summary: { ...summary, title } })
-                }
+                onChange={(title) => patch({ summary: { ...summary, title } })}
               />
             </h2>
             <div className="mt-1 max-w-xl text-sm text-ink-muted">
@@ -437,7 +435,9 @@ function ShareList({ items, editing, onChange, itemClassName, addLabel }) {
             editing={editing}
             value={item.color}
             onChange={(color) =>
-              onChange(items.map((i) => (i.id === item.id ? { ...i, color } : i)))
+              onChange(
+                items.map((i) => (i.id === item.id ? { ...i, color } : i)),
+              )
             }
             className="h-2.5 w-2.5"
           />
@@ -659,7 +659,10 @@ function AudienceAgeReport({ data, editing, patch }) {
             </thead>
             <tbody className="divide-y divide-line">
               {leagueAgeRows.map((row) => (
-                <tr key={row.id} className="transition-colors hover:bg-indigo-50/70">
+                <tr
+                  key={row.id}
+                  className="transition-colors hover:bg-indigo-50/70"
+                >
                   <td className="px-5 py-3.5 font-semibold text-ink">
                     <EditText
                       editing={editing}
@@ -867,7 +870,9 @@ function AudienceBreakdown({ data, editing, patch }) {
                       <RemoveButton
                         onClick={() =>
                           patch({
-                            cityShare: cityShare.filter((c) => c.id !== city.id),
+                            cityShare: cityShare.filter(
+                              (c) => c.id !== city.id,
+                            ),
                           })
                         }
                         label={`Удалить ${city.name}`}
@@ -962,15 +967,22 @@ export default function Dashboard() {
           editing
             ? 'Правьте цифры прямо в карточках — изменения сохранятся по кнопке.'
             : `Сводка ${
-                isAdvertiser ? 'по вашим медиаразмещениям' : 'медиаразмещений и социальных сетей'
+                isAdvertiser
+                  ? 'по вашим медиаразмещениям'
+                  : 'медиаразмещений и социальных сетей'
               } за ${MONTHS_FULL[month].toLowerCase()} ${year}.`
         }
       >
         {/* Данные обзора ведёт площадка: наблюдателю кнопки не показываем. */}
-        {canEdit && !isAdvertiser && (
-          editing ? (
+        {canEdit &&
+          !isAdvertiser &&
+          (editing ? (
             <>
-              <Button variant="ghost" onClick={reset} title="Вернуть демо-данные">
+              <Button
+                variant="ghost"
+                onClick={reset}
+                title="Вернуть демо-данные"
+              >
                 <RotateCcw size={16} />
                 Сбросить
               </Button>
@@ -991,8 +1003,7 @@ export default function Dashboard() {
               <Pencil size={16} />
               Редактировать
             </Button>
-          )
-        )}
+          ))}
       </PageHeader>
 
       {/* Период обзора: цифры на странице ведутся помесячно. */}

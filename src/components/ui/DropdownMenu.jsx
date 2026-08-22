@@ -10,7 +10,8 @@ export function DropdownMenu({ items, trigger, align = 'right' }) {
   const ref = useRef(null)
 
   useEffect(() => {
-    const h = (e) => ref.current && !ref.current.contains(e.target) && setOpen(false)
+    const h = (e) =>
+      ref.current && !ref.current.contains(e.target) && setOpen(false)
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])

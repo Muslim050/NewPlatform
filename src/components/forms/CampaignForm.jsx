@@ -8,15 +8,15 @@ import {
   X,
 } from 'lucide-react'
 import { useData } from '@/context/DataContext.jsx'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
-import { Button } from '@/components/ui/Button.jsx'
-import { Field, Input, Select } from '@/components/ui/Field.jsx'
+import { Button } from '@/components/ui/Button'
+import { Field, Input, Select } from '@/components/ui/Field'
 import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { CreativeLink } from '@/components/campaigns/CreativePlayer.jsx'
-import { Logo } from '@/components/Logo.jsx'
-import { LEAGUES, PACKAGES, STATUS, statusLabel } from '@/lib/metrics.js'
+import { Logo } from '@/components/Logo'
+import { LEAGUES, STATUS, statusLabel } from '@/lib/metrics.js'
 import { cn } from '@/lib/cn.js'
 
 // Договор храним прямо в базе (localStorage), поэтому ограничиваем размер.
@@ -67,7 +67,7 @@ function fileNameFromUrl(url) {
 }
 
 export function CampaignForm({ open, onClose, initial }) {
-  const { advertisers, channels, create, update } = useData()
+  const { advertisers, create, update } = useData()
   const { user, isAdmin } = useAuth()
   const toast = useToast()
   const editing = !!initial
@@ -76,7 +76,8 @@ export function CampaignForm({ open, onClose, initial }) {
 
   const advertiserOf = (advertiserId) =>
     advertisers.find((a) => a.id === advertiserId)
-  const legalNameOf = (advertiserId) => advertiserOf(advertiserId)?.legalName || ''
+  const legalNameOf = (advertiserId) =>
+    advertiserOf(advertiserId)?.legalName || ''
   // Договоры бренда — из них выбирается номер и подтягиваются условия.
   const contracts = advertiserOf(form.advertiserId)?.contracts ?? []
   const selectedContract = contracts.find(
@@ -172,18 +173,11 @@ export function CampaignForm({ open, onClose, initial }) {
           : f.legalName,
     }))
 
-  const toggleChannel = (id) =>
-    setForm((f) => ({
-      ...f,
-      channelIds: f.channelIds.includes(id)
-        ? f.channelIds.filter((x) => x !== id)
-        : [...f.channelIds, id],
-    }))
-
   const submit = () => {
     const err = {}
     if (!form.name.trim()) err.name = 'Укажите название'
-    if (isAdmin && !form.advertiserId) err.advertiserId = 'Выберите рекламодателя'
+    if (isAdmin && !form.advertiserId)
+      err.advertiserId = 'Выберите рекламодателя'
     if (!form.startDate) err.startDate = 'Укажите начало периода'
     if (!form.endDate) err.endDate = 'Укажите окончание периода'
     if (form.startDate && form.endDate && form.endDate < form.startDate) {
@@ -346,7 +340,9 @@ export function CampaignForm({ open, onClose, initial }) {
           >
             <Input
               list={
-                selectedContract?.campaignName ? 'contract-campaigns' : undefined
+                selectedContract?.campaignName
+                  ? 'contract-campaigns'
+                  : undefined
               }
               value={form.name}
               onChange={(e) => selectCampaign(e.target.value)}
@@ -392,7 +388,6 @@ export function CampaignForm({ open, onClose, initial }) {
               </Select>
             </Field>
           )}
-
         </div>
 
         {/* Лиги и ролик — одной строкой. */}
@@ -438,19 +433,16 @@ export function CampaignForm({ open, onClose, initial }) {
 
         {/* Условия договора — одинаковые при создании и редактировании. */}
         <div className="space-y-4 rounded-2xl ">
-
           {/* Юр. лицо ведёт админ — рекламодателю его не показываем. */}
           {isAdmin && (
             <Field label="Наименование юр. лица">
               <Input
                 value={form.legalName}
                 onChange={(e) => set('legalName', e.target.value)}
-                placeholder='ООО «Пример»'
+                placeholder="ООО «Пример»"
               />
             </Field>
           )}
-
-         
 
           <div>
             <p className="mb-2 text-[13px] font-medium text-ink-soft">
@@ -521,7 +513,9 @@ function FilePicker({
       return
     }
     onPick({ name: picked.name, url: URL.createObjectURL(picked) })
-    toast.info('Файл больше 2 МБ — ссылка на него живёт до перезагрузки страницы')
+    toast.info(
+      'Файл больше 2 МБ — ссылка на него живёт до перезагрузки страницы',
+    )
   }
 
   return (
@@ -623,7 +617,9 @@ function ContractFile({ file, onChange, readOnly = false }) {
 
   return (
     <div>
-      <p className="mb-2 text-[13px] font-medium text-ink-soft">Файл договора</p>
+      <p className="mb-2 text-[13px] font-medium text-ink-soft">
+        Файл договора
+      </p>
       <input
         ref={inputRef}
         type="file"

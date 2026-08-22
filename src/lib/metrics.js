@@ -1,14 +1,12 @@
 // Производные рекламные метрики.
 
-export const ctr = (c) =>
-  c.impressions ? (c.clicks / c.impressions) * 100 : 0
+export const ctr = (c) => (c.impressions ? (c.clicks / c.impressions) * 100 : 0)
 
 export const cvr = (c) => (c.clicks ? (c.conversions / c.clicks) * 100 : 0)
 
 export const cpa = (c) => (c.conversions ? c.spent / c.conversions : 0)
 
-export const cpm = (c) =>
-  c.impressions ? (c.spent / c.impressions) * 1000 : 0
+export const cpm = (c) => (c.impressions ? (c.spent / c.impressions) * 1000 : 0)
 
 export const pacing = (c) => (c.budget ? (c.spent / c.budget) * 100 : 0)
 
@@ -45,10 +43,6 @@ export function aggregate(campaigns) {
   t.count = campaigns.length
   return t
 }
-
-
-
-
 
 export const STATUS = {
   // Заявка от рекламодателя: сначала «Отправлен», в «Получен» её переводит админ.
@@ -94,8 +88,7 @@ export const LEAGUES = [
   { id: 'nhl', label: 'NHL' },
 ]
 
-export const leagueLabel = (id) =>
-  LEAGUES.find((l) => l.id === id)?.label || id
+export const leagueLabel = (id) => LEAGUES.find((l) => l.id === id)?.label || id
 
 export const statusLabel = (status) => STATUS[status]?.label || status
 

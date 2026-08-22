@@ -1,7 +1,7 @@
 import { createContext, useContext, useCallback, useRef, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { Modal } from './Modal.jsx'
-import { Button } from './Button.jsx'
+import { Button } from './Button'
 
 const ConfirmCtx = createContext(null)
 
@@ -63,6 +63,7 @@ export function ConfirmProvider({ children }) {
 
 export function useConfirm() {
   const ctx = useContext(ConfirmCtx)
-  if (!ctx) throw new Error('useConfirm должен вызываться внутри <ConfirmProvider>')
+  if (!ctx)
+    throw new Error('useConfirm должен вызываться внутри <ConfirmProvider>')
   return ctx
 }

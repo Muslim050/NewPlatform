@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { Button } from '@/components/ui/Button.jsx'
-import { Field, Input } from '@/components/ui/Field.jsx'
+import { Button } from '@/components/ui/Button'
+import { Field, Input } from '@/components/ui/Field'
 import { MONTHS_SHORT, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
 import { formatDateTime } from '@/lib/format.js'
 import { cn } from '@/lib/cn.js'
@@ -150,7 +150,9 @@ export function StatusPopover({
   const tabClass = (name) =>
     cn(
       'flex-1 rounded-lg px-2 py-1 text-[12px] font-medium transition-colors focus-ring',
-      tab === name ? 'bg-ink/[0.06] text-ink' : 'text-ink-muted hover:text-ink-soft',
+      tab === name
+        ? 'bg-ink/[0.06] text-ink'
+        : 'text-ink-muted hover:text-ink-soft',
     )
 
   const arrowClass =
@@ -230,7 +232,9 @@ export function StatusPopover({
                       : 'border-line bg-surface text-ink-soft hover:border-indigo-200 hover:bg-indigo-50/50',
                   )}
                 >
-                  <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {option.label}
+                  </span>
                   {active && (
                     <Check size={15} className="shrink-0 text-indigo-800" />
                   )}
@@ -349,7 +353,9 @@ export function StatusPopover({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-medium text-ink">
-                      {at ? `${MONTHS_FULL[at.month]} ${at.year}` : 'Без месяца'}
+                      {at
+                        ? `${MONTHS_FULL[at.month]} ${at.year}`
+                        : 'Без месяца'}
                     </span>
                     <span
                       className={cn(

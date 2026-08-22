@@ -1,11 +1,34 @@
-import { forwardRef } from 'react'
+import {
+  forwardRef,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/cn.js'
 
 const baseControl =
   'w-full rounded-xl border border-line bg-surface px-3.5 text-sm text-ink placeholder:text-ink-muted transition-all focus-ring focus-visible:border-indigo-300 disabled:opacity-50'
 
-export function Field({ label, hint, error, required, children, className }) {
+export interface FieldProps {
+  label?: ReactNode
+  hint?: ReactNode
+  /** Текст ошибки. Непустая строка вытесняет hint. */
+  error?: ReactNode
+  required?: boolean
+  children: ReactNode
+  className?: string
+}
+
+export function Field({
+  label,
+  hint,
+  error,
+  required,
+  children,
+  className,
+}: FieldProps) {
   return (
     <label className={cn('block space-y-1.5', className)}>
       {label && (
@@ -24,16 +47,23 @@ export function Field({ label, hint, error, required, children, className }) {
   )
 }
 
-export const Input = forwardRef(function Input({ className, ...props }, ref) {
+export const Input = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement>
+>(function Input({ className, ...props }, ref) {
   return (
-    <input ref={ref} className={cn(baseControl, 'h-11', className)} {...props} />
+    <input
+      ref={ref}
+      className={cn(baseControl, 'h-11', className)}
+      {...props}
+    />
   )
 })
 
-export const Textarea = forwardRef(function Textarea(
-  { className, ...props },
-  ref,
-) {
+export const Textarea = forwardRef<
+  HTMLTextAreaElement,
+  TextareaHTMLAttributes<HTMLTextAreaElement>
+>(function Textarea({ className, ...props }, ref) {
   return (
     <textarea
       ref={ref}
@@ -43,10 +73,10 @@ export const Textarea = forwardRef(function Textarea(
   )
 })
 
-export const Select = forwardRef(function Select(
-  { className, children, ...props },
-  ref,
-) {
+export const Select = forwardRef<
+  HTMLSelectElement,
+  SelectHTMLAttributes<HTMLSelectElement>
+>(function Select({ className, children, ...props }, ref) {
   return (
     <div className="relative">
       <select

@@ -1,9 +1,9 @@
 import { NavLink } from 'react-router-dom'
 import { Eye } from 'lucide-react'
 import { NAV } from '@/lib/nav.js'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
-import { Logo } from '@/components/Logo.jsx'
+import { Logo } from '@/components/Logo'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { cn } from '@/lib/cn.js'
 

@@ -10,7 +10,7 @@ import {
   Pencil,
   Search,
 } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext.jsx'
+import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { CONTRACT_STATUS } from '@/lib/metrics.js'
@@ -23,7 +23,7 @@ import {
 } from '@/lib/format.js'
 import { Card } from '@/components/ui/Card.jsx'
 import { Badge } from '@/components/ui/Badge.jsx'
-import { Button } from '@/components/ui/Button.jsx'
+import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { Progress } from '@/components/ui/Progress.jsx'
@@ -32,7 +32,6 @@ import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
 import { periodKey } from '@/components/campaigns/StatusPopover.jsx'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i)
-
 
 /** Границы месяца в ISO — с ними и сравниваем срок договора. */
 function monthBounds(year, month) {
@@ -118,7 +117,8 @@ export default function ContractOverview() {
 
   // Счётчики на вкладках — сколько договоров действует в каждом месяце.
   const monthCounts = MONTHS.map(
-    (m) => rows.filter(({ contract }) => inMonth(contract, activeYear, m)).length,
+    (m) =>
+      rows.filter(({ contract }) => inMonth(contract, activeYear, m)).length,
   )
 
   // Цвет месяца: красный, если хоть один договор за него не оплачен.
@@ -138,7 +138,9 @@ export default function ContractOverview() {
   const scoped =
     activeMonth == null
       ? rows
-      : rows.filter(({ contract }) => inMonth(contract, activeYear, activeMonth))
+      : rows.filter(({ contract }) =>
+          inMonth(contract, activeYear, activeMonth),
+        )
 
   const query = q.trim().toLowerCase()
   const filtered = scoped.filter(({ contract, advertiser }) =>
@@ -334,7 +336,10 @@ export default function ContractOverview() {
                     key={contract.id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(i, 12) * 0.03, duration: 0.3 }}
+                    transition={{
+                      delay: Math.min(i, 12) * 0.03,
+                      duration: 0.3,
+                    }}
                     className="border-b border-line/20 transition-colors last:border-0 hover:bg-paper"
                   >
                     <Td className="w-10 text-[12px] text-ink-muted tnum">
@@ -424,9 +429,7 @@ export default function ContractOverview() {
                           variant="secondary"
                           size="sm"
                           className="h-9 w-9 shrink-0 px-0 hover:border-indigo-400 hover:bg-indigo-100 hover:text-ink"
-                          onClick={() =>
-                            setPreview({ contract, advertiser })
-                          }
+                          onClick={() => setPreview({ contract, advertiser })}
                           aria-label={`Открыть договор ${contract.number}`}
                           title="Открыть"
                         >
@@ -456,7 +459,6 @@ export default function ContractOverview() {
         advertiser={preview?.advertiser ?? null}
         onClose={() => setPreview(null)}
       />
-
     </div>
   )
 }
@@ -474,7 +476,8 @@ function StatusMenu({ contract, value, onPick }) {
   const ref = useRef(null)
 
   useEffect(() => {
-    const h = (e) => ref.current && !ref.current.contains(e.target) && setOpen(false)
+    const h = (e) =>
+      ref.current && !ref.current.contains(e.target) && setOpen(false)
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])
@@ -514,7 +517,9 @@ function StatusMenu({ contract, value, onPick }) {
                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOTS[meta.tone]}`}
               />
               {meta.label}
-              {key === value && <Check size={14} className="ml-auto shrink-0" />}
+              {key === value && (
+                <Check size={14} className="ml-auto shrink-0" />
+              )}
             </button>
           ))}
         </span>
@@ -530,7 +535,9 @@ function Th({ children, className }) {
 }
 
 function Td({ children, className }) {
-  return <td className={`px-4 py-3 align-middle ${className ?? ''}`}>{children}</td>
+  return (
+    <td className={`px-4 py-3 align-middle ${className ?? ''}`}>{children}</td>
+  )
 }
 
 /** Сумма по всем договорам — как карточка «Бюджет / Прибыль» в кампаниях. */

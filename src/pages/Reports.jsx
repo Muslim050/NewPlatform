@@ -4,9 +4,7 @@ import { TotalStatisticsReport } from '@/components/campaigns/CampaignReportPane
 export default function Reports() {
   return (
     <div>
-      <PageHeader
-
-      />
+      <PageHeader />
       <TotalStatisticsReport />
     </div>
   )
