@@ -73,15 +73,22 @@ npm run typecheck  # tsc --noEmit
 
 Все обращения к API идут через `src/api`, а не из компонентов:
 
+Слой разложен по разделам API — как в Swagger: `auth`, `advertisers`,
+`campaigns`. Запрос к чужому разделу из своего модуля не делаем: счётчик
+кампаний для карточек брендов живёт в `features/campaigns`, а не в
+`features/advertisers`.
+
 ```
 src/api/
   client.ts        — единственная точка выхода в сеть: префикс /api/v1,
                      токен, обновление истёкшего access, разбор ошибок
                      { error: { code, message, fields } }
-  endpoints/       — функции по разделам API (auth, …)
+  endpoints/       — по файлу на раздел API: auth, advertisers, campaigns
+  query.ts         — сборка строки параметров
   token.ts         — держатель пары JWT для транспорта
   types.ts         — доменные типы из схемы API
-src/features/*/queries.ts — хуки TanStack Query поверх endpoints
+src/features/<раздел>/queries.ts — хуки TanStack Query поверх endpoints
+src/lib/paginate.ts — дочитывание курсорной выдачи до конца
 src/stores/       — Zustand: клиентское состояние (сессия)
 src/router.tsx    — дерево маршрутов TanStack Router; доступ к разделам
                     проверяется в beforeLoad, то есть до рендера страницы

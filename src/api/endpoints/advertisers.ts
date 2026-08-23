@@ -1,4 +1,5 @@
 import { request } from '../client'
+import { buildQuery } from '../query'
 import type {
   Advertiser,
   AdvertiserInput,
@@ -7,22 +8,14 @@ import type {
   Paginated,
 } from '../types'
 
-export interface ListParams {
+export type ListParams = {
   cursor?: string | null
   limit?: number
 }
 
-function query({ cursor, limit }: ListParams): string {
-  const params = new URLSearchParams()
-  if (cursor) params.set('cursor', cursor)
-  if (limit) params.set('limit', String(limit))
-  const qs = params.toString()
-  return qs ? `?${qs}` : ''
-}
-
 /** GET /advertisers — одна страница выборки. */
 export function list(params: ListParams = {}): Promise<Paginated<Advertiser>> {
-  return request<Paginated<Advertiser>>(`/advertisers${query(params)}`)
+  return request<Paginated<Advertiser>>(`/advertisers${buildQuery(params)}`)
 }
 
 /** POST /advertisers */

@@ -4,9 +4,9 @@ import { Search, Pencil, Plus, Trash2, Building2, Mail } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
 import {
   useAdvertisers,
-  useCampaignCount,
   useDeleteAdvertiser,
 } from '@/features/advertisers/queries'
+import { useCampaignCountsByAdvertiser } from '@/features/campaigns/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import { ADV_STATUS } from '@/lib/metrics.js'
@@ -21,13 +21,15 @@ import { AdvertiserForm } from '@/components/forms/AdvertiserForm.jsx'
 export default function Advertisers() {
   const { canEdit } = useAuth()
   const { data, isPending, isError, error, refetch } = useAdvertisers()
+  // Счётчики кампаний — одним запросом на весь список, а не на карточку.
+  const { data: campaignCounts } = useCampaignCountsByAdvertiser()
   const { mutate: deleteAdvertiser } = useDeleteAdvertiser()
   const toast = useToast()
   const confirm = useConfirm()
   const [q, setQ] = useState('')
   const [modal, setModal] = useState({ open: false, initial: null })
 
-  const advertisers = data?.items ?? []
+  const advertisers = data ?? []
   const filtered = advertisers.filter((a) =>
     `${a.name} ${a.contact} ${a.category}`
       .toLowerCase()
@@ -181,7 +183,10 @@ export default function Advertisers() {
                       label="Договоров"
                       value={a.contracts?.length ?? 0}
                     />
-                    <CampaignCount advertiserId={a.id} />
+                    <Metric
+                      label="Кампаний"
+                      value={campaignCounts?.get(a.id) ?? 0}
+                    />
                   </div>
                 </Card>
               </motion.div>
@@ -197,12 +202,6 @@ export default function Advertisers() {
       />
     </div>
   )
-}
-
-/** Число кампаний бренда приходит отдельным запросом — своим на карточку. */
-function CampaignCount({ advertiserId }) {
-  const { data, isPending } = useCampaignCount(advertiserId)
-  return <Metric label="Кампаний" value={isPending ? '—' : (data ?? 0)} />
 }
 
 function Metric({ label, value }) {
