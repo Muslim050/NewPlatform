@@ -11,6 +11,8 @@ interface AuthState {
   setSession: (session: TokenPair & { user: User }) => void
   /** Транспорт обновил пару по refresh — пользователь тот же. */
   setTokens: (tokens: TokenPair) => void
+  /** Свежий профиль из GET /auth/me. */
+  setUser: (user: User) => void
   clearSession: () => void
 }
 
@@ -28,6 +30,7 @@ export const useAuthStore = create<AuthState>()(
         setTokens(pair)
         set({ tokens: pair })
       },
+      setUser: (user) => set({ user }),
       clearSession: () => {
         setTokens(null)
         set({ tokens: null, user: null })

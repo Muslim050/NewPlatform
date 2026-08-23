@@ -45,13 +45,25 @@ export function useLogout() {
   })
 }
 
-/** Проверка живости сессии: GET /auth/me. Запускается только с токеном. */
+/**
+ * Текущий пользователь: GET /auth/me. Профиль, полученный при входе, мог
+ * устареть — например, за время, пока вкладка была закрыта, — поэтому при
+ * старте авторизованной части приложения перечитываем его с сервера и
+ * кладём в authStore, откуда его берут шапка и сайдбар.
+ *
+ * Заодно это проверка живости сессии: если refresh погашен, транспорт
+ * не сможет обновить токен и приложение разлогинится.
+ */
 export function useMe() {
   const hasSession = useAuthStore((s) => !!s.tokens)
 
   return useQuery({
     queryKey: authKeys.me(),
-    queryFn: authApi.me,
+    queryFn: async () => {
+      const response = await authApi.me()
+      useAuthStore.getState().setUser(response.user)
+      return response
+    },
     enabled: hasSession,
   })
 }
