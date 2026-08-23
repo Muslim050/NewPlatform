@@ -115,6 +115,13 @@ const newContract = (legalName = '') => ({
   creative: null,
 })
 
+/**
+ * Файл, выбранный в форме, живёт как data:/blob:-URL. Сервер принимает
+ * в `logo` только абсолютную ссылку, поэтому такие значения он отвергает.
+ */
+const isInlineFile = (url) =>
+  !!url && (url.startsWith('data:') || url.startsWith('blob:'))
+
 /** Пустая строка в поле-дате означает «не задано» — сервер ждёт null. */
 const dateOrNull = (value) => (value?.trim() ? value : null)
 
@@ -228,8 +235,10 @@ export function AdvertiserForm({ open, onClose, initial }) {
     // файлов на бэкенде. Ссылку отправляем, файл молча не теряем: прежнее
     // значение остаётся на сервере.
     const logo = form.logo?.url ?? null
-    const inlineLogo = logo?.startsWith('data:') || logo?.startsWith('blob:')
-    if (!inlineLogo) advertiser.logo = logo
+    const inlineLogo = isInlineFile(logo)
+    // Ссылку отправляем, выбранный файл — нет: сервер его не примет,
+    // а прежнее значение при этом остаётся нетронутым.
+    if (!inlineLogo) advertiser.logo = logo ?? ''
 
     // Договоры без номера не сохраняем — из них нечего выбирать в кампании.
     const contracts = form.contracts
@@ -251,7 +260,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
         onSuccess: () => {
           if (inlineLogo) {
             toast.info(
-              'Логотип из файла пока не сохраняется: на сервере нет загрузки файлов',
+              'Файл логотипа не сохранён: сервер принимает только ссылку',
             )
           }
           if (editing) {
@@ -401,8 +410,21 @@ export function AdvertiserForm({ open, onClose, initial }) {
           {/* Логотип показывается вместо инициалов в карточках и таблицах. */}
           <Field
             label="Логотип рекламодателя"
-            hint="PNG или JPG, лучше квадратный."
+            hint="Сервер сохраняет только ссылку: вставьте адрес картинки. Файл можно выбрать для предпросмотра, но на сервер он не уйдёт — там пока нет хранилища файлов."
           >
+            <Input
+              value={isInlineFile(form.logo?.url) ? '' : (form.logo?.url ?? '')}
+              onChange={(e) => {
+                const url = e.target.value.trim()
+                set(
+                  'logo',
+                  url ? { name: url.split('/').pop() || 'Логотип', url } : null,
+                )
+              }}
+              placeholder="https://example.com/logo.png"
+              inputMode="url"
+              className="mb-2"
+            />
             <div className="flex items-center gap-3">
               {form.logo?.url && (
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
