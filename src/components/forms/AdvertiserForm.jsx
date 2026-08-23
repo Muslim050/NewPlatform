@@ -9,7 +9,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Logo } from '@/components/Logo'
-import { useData } from '@/context/DataContext.jsx'
+import { useSaveAdvertiser } from '@/features/advertisers/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button'
@@ -115,8 +115,27 @@ const newContract = (legalName = '') => ({
   creative: null,
 })
 
+/** Пустая строка в поле-дате означает «не задано» — сервер ждёт null. */
+const dateOrNull = (value) => (value?.trim() ? value : null)
+
+/**
+ * Оставляет у договора только то, что принимает API: файлы и суммы он
+ * здесь не редактирует.
+ */
+const toContractInput = (contract) => ({
+  id: contract.id,
+  number: contract.number.trim(),
+  campaignName: (contract.campaignName ?? '').trim(),
+  legalName: (contract.legalName ?? '').trim(),
+  package: contract.package ?? '',
+  leagues: [...(contract.leagues ?? [])],
+  start: dateOrNull(contract.start),
+  end: dateOrNull(contract.end),
+  paymentDate: dateOrNull(contract.paymentDate),
+})
+
 export function AdvertiserForm({ open, onClose, initial }) {
-  const { create, update } = useData()
+  const { mutate: saveAdvertiser, isPending } = useSaveAdvertiser()
   const toast = useToast()
   const editing = !!initial
   const [form, setForm] = useState(emptyForm)
@@ -191,47 +210,73 @@ export function AdvertiserForm({ open, onClose, initial }) {
     setErrors(err)
     if (Object.keys(err).length) return
 
-    const payload = {
+    const advertiser = {
       name: form.name.trim(),
       contact: form.contact.trim(),
       email: form.email.trim(),
       category: form.category,
       status: form.status,
-      balance: Number(form.balance) || 0,
+      // Суммы на сервере — decimal, то есть строка.
+      balance: String(Number(form.balance) || 0),
       legalName: form.legalName.trim(),
       requisites: form.requisites.trim(),
       color: form.color,
-      logo: form.logo?.url ?? null,
-      // Договоры без номера не сохраняем — из них нечего выбирать в кампании.
-      contracts: form.contracts
-        .filter((contract) => contract.number.trim())
-        .map((contract) => ({
-          ...contract,
-          number: contract.number.trim(),
-          campaignName: (contract.campaignName ?? '').trim(),
-          legalName: contract.legalName.trim(),
-        })),
     }
 
-    if (editing) {
-      update('advertisers', initial.id, payload)
-      // Про договоры говорим отдельно — их правят чаще всего остального.
-      const contractsChanged =
-        contractsFingerprint(payload.contracts) !==
-        contractsFingerprint(initial.contracts)
-      toast.success(
-        contractsChanged
-          ? `Раздел «Договоры» у рекламодателя ${payload.name} успешно обновлён`
-          : `Карточка бренда ${payload.name} сохранена`,
-      )
-      // Карточку не закрываем: правки часто идут подряд — договоры, реквизиты.
-      setSaved(true)
-      return
-    }
+    // Логотип API хранит ссылкой не длиннее 500 символов, поэтому файл,
+    // выбранный в форме (data:-URL), отправить нельзя — нужен загрузчик
+    // файлов на бэкенде. Ссылку отправляем, файл молча не теряем: прежнее
+    // значение остаётся на сервере.
+    const logo = form.logo?.url ?? null
+    const inlineLogo = logo?.startsWith('data:') || logo?.startsWith('blob:')
+    if (!inlineLogo) advertiser.logo = logo
 
-    create('advertisers', payload)
-    toast.success(`Рекламодатель ${payload.name} добавлен`)
-    onClose()
+    // Договоры без номера не сохраняем — из них нечего выбирать в кампании.
+    const contracts = form.contracts
+      .filter((contract) => contract.number.trim())
+      .map(toContractInput)
+
+    const contractsChanged =
+      contractsFingerprint(contracts) !==
+      contractsFingerprint(initial?.contracts)
+
+    saveAdvertiser(
+      {
+        id: initial?.id,
+        advertiser,
+        contracts,
+        previousContracts: initial?.contracts ?? [],
+      },
+      {
+        onSuccess: () => {
+          if (inlineLogo) {
+            toast.info(
+              'Логотип из файла пока не сохраняется: на сервере нет загрузки файлов',
+            )
+          }
+          if (editing) {
+            // Про договоры говорим отдельно — их правят чаще остального.
+            toast.success(
+              contractsChanged
+                ? `Раздел «Договоры» у рекламодателя ${advertiser.name} успешно обновлён`
+                : `Карточка бренда ${advertiser.name} сохранена`,
+            )
+            // Карточку не закрываем: правки часто идут подряд.
+            setSaved(true)
+            return
+          }
+          toast.success(`Рекламодатель ${advertiser.name} добавлен`)
+          onClose()
+        },
+        onError: (err) => {
+          // Сервер вернул ошибки по полям — показываем их прямо в форме.
+          if (err.fields && Object.keys(err.fields).length) {
+            setErrors(err.fields)
+          }
+          toast.error(err.message || 'Не удалось сохранить рекламодателя')
+        },
+      },
+    )
   }
 
   return (
@@ -247,12 +292,18 @@ export function AdvertiserForm({ open, onClose, initial }) {
           <Button variant="ghost" onClick={onClose}>
             {editing ? 'Закрыть' : 'Отмена'}
           </Button>
-          <Button variant="primary" onClick={submit} disabled={saved}>
+          <Button
+            variant="primary"
+            onClick={submit}
+            disabled={saved || isPending}
+          >
             {saved ? (
               <>
                 <Check size={16} />
                 Сохранено
               </>
+            ) : isPending ? (
+              'Сохраняем…'
             ) : editing ? (
               'Сохранить'
             ) : (

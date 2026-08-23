@@ -2,7 +2,11 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Search, Pencil, Plus, Trash2, Building2, Mail } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
-import { useData } from '@/context/DataContext.jsx'
+import {
+  useAdvertisers,
+  useCampaignCount,
+  useDeleteAdvertiser,
+} from '@/features/advertisers/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import { ADV_STATUS } from '@/lib/metrics.js'
@@ -16,34 +20,33 @@ import { AdvertiserForm } from '@/components/forms/AdvertiserForm.jsx'
 
 export default function Advertisers() {
   const { canEdit } = useAuth()
-  const { advertisers, campaigns, remove } = useData()
+  const { data, isPending, isError, error, refetch } = useAdvertisers()
+  const { mutate: deleteAdvertiser } = useDeleteAdvertiser()
   const toast = useToast()
   const confirm = useConfirm()
   const [q, setQ] = useState('')
   const [modal, setModal] = useState({ open: false, initial: null })
 
+  const advertisers = data?.items ?? []
   const filtered = advertisers.filter((a) =>
     `${a.name} ${a.contact} ${a.category}`
       .toLowerCase()
       .includes(q.trim().toLowerCase()),
   )
 
-  const campaignCount = (id) =>
-    campaigns.filter((c) => c.advertiserId === id).length
-
   const del = async (a) => {
-    const count = campaignCount(a.id)
     const ok = await confirm({
       title: 'Удалить рекламодателя?',
       description: a.name,
-      body: count
-        ? `У рекламодателя ${count} кампаний. Они останутся, но без привязки к бренду.`
-        : 'Действие нельзя отменить.',
+      body: 'Вместе с брендом удалятся его договоры. Действие нельзя отменить.',
     })
-    if (ok) {
-      remove('advertisers', a.id)
-      toast.info('Рекламодатель удалён')
-    }
+    if (!ok) return
+
+    deleteAdvertiser(a.id, {
+      onSuccess: () => toast.info('Рекламодатель удалён'),
+      onError: (err) =>
+        toast.error(err.message || 'Не удалось удалить рекламодателя'),
+    })
   }
 
   return (
@@ -75,7 +78,28 @@ export default function Advertisers() {
         )}
       </div>
 
-      {filtered.length === 0 ? (
+      {isPending ? (
+        <Card>
+          <EmptyState
+            icon={Building2}
+            title="Загружаем рекламодателей…"
+            description="Забираем список с сервера."
+          />
+        </Card>
+      ) : isError ? (
+        <Card>
+          <EmptyState
+            icon={Building2}
+            title="Не удалось загрузить рекламодателей"
+            description={error?.message ?? 'Попробуйте ещё раз.'}
+            action={
+              <Button variant="secondary" onClick={() => refetch()}>
+                Повторить
+              </Button>
+            }
+          />
+        </Card>
+      ) : filtered.length === 0 ? (
         <Card>
           <EmptyState
             icon={Building2}
@@ -157,7 +181,7 @@ export default function Advertisers() {
                       label="Договоров"
                       value={a.contracts?.length ?? 0}
                     />
-                    <Metric label="Кампаний" value={campaignCount(a.id)} />
+                    <CampaignCount advertiserId={a.id} />
                   </div>
                 </Card>
               </motion.div>
@@ -173,6 +197,12 @@ export default function Advertisers() {
       />
     </div>
   )
+}
+
+/** Число кампаний бренда приходит отдельным запросом — своим на карточку. */
+function CampaignCount({ advertiserId }) {
+  const { data, isPending } = useCampaignCount(advertiserId)
+  return <Metric label="Кампаний" value={isPending ? '—' : (data ?? 0)} />
 }
 
 function Metric({ label, value }) {
