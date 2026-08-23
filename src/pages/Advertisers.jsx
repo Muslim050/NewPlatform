@@ -2,7 +2,11 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Search, Pencil, Plus, Trash2, Building2, Mail } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
-import { useData } from '@/context/DataContext.jsx'
+import {
+  useAdvertisers,
+  useDeleteAdvertiser,
+} from '@/features/advertisers/queries'
+import { useCampaignCountsByAdvertiser } from '@/features/campaigns/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import { ADV_STATUS } from '@/lib/metrics.js'
@@ -11,39 +15,41 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge.jsx'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { DropdownMenu } from '@/components/ui/DropdownMenu.jsx'
 import { AdvertiserForm } from '@/components/forms/AdvertiserForm.jsx'
 
 export default function Advertisers() {
   const { canEdit } = useAuth()
-  const { advertisers, campaigns, remove } = useData()
+  const { data, isPending, isError, error, refetch } = useAdvertisers()
+  // Счётчики кампаний — одним запросом на весь список, а не на карточку.
+  const { data: campaignCounts } = useCampaignCountsByAdvertiser()
+  const { mutate: deleteAdvertiser } = useDeleteAdvertiser()
   const toast = useToast()
   const confirm = useConfirm()
   const [q, setQ] = useState('')
   const [modal, setModal] = useState({ open: false, initial: null })
 
+  const advertisers = data ?? []
   const filtered = advertisers.filter((a) =>
     `${a.name} ${a.contact} ${a.category}`
       .toLowerCase()
       .includes(q.trim().toLowerCase()),
   )
 
-  const campaignCount = (id) =>
-    campaigns.filter((c) => c.advertiserId === id).length
-
   const del = async (a) => {
-    const count = campaignCount(a.id)
     const ok = await confirm({
       title: 'Удалить рекламодателя?',
       description: a.name,
-      body: count
-        ? `У рекламодателя ${count} кампаний. Они останутся, но без привязки к бренду.`
-        : 'Действие нельзя отменить.',
+      body: 'Вместе с брендом удалятся его договоры. Действие нельзя отменить.',
     })
-    if (ok) {
-      remove('advertisers', a.id)
-      toast.info('Рекламодатель удалён')
-    }
+    if (!ok) return
+
+    deleteAdvertiser(a.id, {
+      onSuccess: () => toast.info('Рекламодатель удалён'),
+      onError: (err) =>
+        toast.error(err.message || 'Не удалось удалить рекламодателя'),
+    })
   }
 
   return (
@@ -75,7 +81,26 @@ export default function Advertisers() {
         )}
       </div>
 
-      {filtered.length === 0 ? (
+      {isPending ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }, (_, i) => (
+            <AdvertiserCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : isError ? (
+        <Card>
+          <EmptyState
+            icon={Building2}
+            title="Не удалось загрузить рекламодателей"
+            description={error?.message ?? 'Попробуйте ещё раз.'}
+            action={
+              <Button variant="secondary" onClick={() => refetch()}>
+                Повторить
+              </Button>
+            }
+          />
+        </Card>
+      ) : filtered.length === 0 ? (
         <Card>
           <EmptyState
             icon={Building2}
@@ -157,7 +182,10 @@ export default function Advertisers() {
                       label="Договоров"
                       value={a.contracts?.length ?? 0}
                     />
-                    <Metric label="Кампаний" value={campaignCount(a.id)} />
+                    <Metric
+                      label="Кампаний"
+                      value={campaignCounts?.get(a.id) ?? 0}
+                    />
                   </div>
                 </Card>
               </motion.div>
@@ -172,6 +200,38 @@ export default function Advertisers() {
         onClose={() => setModal({ open: false, initial: null })}
       />
     </div>
+  )
+}
+
+/** Повторяет геометрию карточки бренда, чтобы список не прыгал при загрузке. */
+function AdvertiserCardSkeleton() {
+  return (
+    <Card className="p-5">
+      <div className="flex items-start justify-between">
+        <div className="flex min-w-0 flex-1 gap-3">
+          <Skeleton circle className="h-12 w-12 shrink-0" />
+          <div className="min-w-0 flex-1 space-y-2 pt-1">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-3 w-2/5" />
+          </div>
+        </div>
+        <Skeleton className="h-4 w-4 shrink-0" />
+      </div>
+
+      <div className="mt-3 flex items-center gap-2">
+        <Skeleton className="h-6 w-20 rounded-full" />
+        <Skeleton className="h-3 w-1/2" />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4">
+        {[0, 1].map((i) => (
+          <div key={i} className="space-y-2">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-4 w-8" />
+          </div>
+        ))}
+      </div>
+    </Card>
   )
 }
 
