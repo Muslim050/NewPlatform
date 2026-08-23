@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { campaignStatsRoute } from '@/router'
 import {
   ArrowLeft,
   CalendarDays,
@@ -66,14 +67,20 @@ function MetricCard({ icon: Icon, label, value, hint }) {
 }
 
 export default function CampaignStats() {
-  const { campaignId } = useParams()
+  const { campaignId } = campaignStatsRoute.useParams()
   const navigate = useNavigate()
   const campaigns = useScopedCampaigns()
   const { advertiserById, channelById } = useData()
   const [metric, setMetric] = useState('spent')
 
   const campaign = campaigns.find((item) => item.id === campaignId)
-  if (!campaign) return <Navigate to="/app/campaigns" replace />
+
+  // Кампании с таким id нет (например, её удалили) — возвращаемся к списку.
+  useEffect(() => {
+    if (!campaign) navigate({ to: '/app/campaigns', replace: true })
+  }, [campaign, navigate])
+
+  if (!campaign) return null
 
   const advertiser = advertiserById(campaign.advertiserId)
   // Медиаплан и отчётные вкладки доступны у всех запущенных кампаний.
@@ -100,7 +107,10 @@ export default function CampaignStats() {
         title="Статистика кампании"
         subtitle="Подробные показатели, динамика и распределение бюджета."
       >
-        <Button variant="secondary" onClick={() => navigate('/app/campaigns')}>
+        <Button
+          variant="secondary"
+          onClick={() => navigate({ to: '/app/campaigns' })}
+        >
           <ArrowLeft size={17} />
           Назад
         </Button>

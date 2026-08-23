@@ -49,9 +49,12 @@ npm run dev
 
 ## Стек
 
-React 18 · Vite 5 · React Router 6 · Tailwind CSS · TanStack Query · Zustand ·
-Framer Motion · lucide-react. Графики — собственные на чистом SVG
+React 19 · Vite 8 · Tailwind CSS 4 · TanStack Router · TanStack Query ·
+Zustand · Framer Motion · lucide-react. Графики — собственные на чистом SVG
 (без сторонних чарт-библиотек).
+
+Тема оформления живёт в CSS-блоке `@theme` в `src/index.css` —
+отдельного `tailwind.config.js` в Tailwind 4 нет.
 
 Проект переезжает на TypeScript постепенно: новый код пишем на `.ts`/`.tsx`,
 старый остаётся на `.jsx` и не проверяется (`checkJs: false`).
@@ -75,6 +78,8 @@ src/api/
   types.ts         — доменные типы из docs/backend-spec.md
 src/features/*/queries.ts — хуки TanStack Query поверх endpoints
 src/stores/       — Zustand: клиентское состояние (сессия)
+src/router.tsx    — дерево маршрутов TanStack Router; доступ к разделам
+                    проверяется в beforeLoad, то есть до рендера страницы
 ```
 
 Пока `VITE_API_URL` пуст, запросы обслуживает мок-транспорт. Появится сервер —

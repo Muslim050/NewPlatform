@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from '@tanstack/react-router'
 import {
   Menu,
   Bell,
@@ -17,7 +17,6 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
   const { user, logout } = useAuth()
   const { advertiserById } = useData()
   const loc = useLocation()
-  const navigate = useNavigate()
   const [menu, setMenu] = useState(false)
   const ref = useRef(null)
 
@@ -104,7 +103,6 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
               <button
                 onClick={() => {
                   logout()
-                  navigate('/login')
                 }}
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger transition-colors hover:bg-danger/8"
               >
