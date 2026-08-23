@@ -18,20 +18,26 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: (credentials: LoginRequest) => authApi.login(credentials),
-    onSuccess: ({ token, user }) => {
-      setSession({ token, user })
+    onSuccess: ({ access, refresh, user }) => {
+      setSession({ access, refresh, user })
       client.setQueryData(authKeys.me(), { user })
     },
   })
 }
 
-/** Выход. Локальную сессию чистим в любом случае — даже если запрос упал. */
+/**
+ * Выход. Просим сервер погасить refresh, но локальную сессию чистим в любом
+ * случае: даже если запрос не дошёл, на этом устройстве пользователь вышел.
+ */
 export function useLogout() {
   const clearSession = useAuthStore((s) => s.clearSession)
   const client = useQueryClient()
 
   return useMutation({
-    mutationFn: () => authApi.logout(),
+    mutationFn: async () => {
+      const refresh = useAuthStore.getState().tokens?.refresh
+      if (refresh) await authApi.logout(refresh)
+    },
     onSettled: () => {
       clearSession()
       client.clear()
@@ -39,13 +45,25 @@ export function useLogout() {
   })
 }
 
-/** Проверка живости сессии: `GET /auth/me`. Запускается только с токеном. */
+/**
+ * Текущий пользователь: GET /auth/me. Профиль, полученный при входе, мог
+ * устареть — например, за время, пока вкладка была закрыта, — поэтому при
+ * старте авторизованной части приложения перечитываем его с сервера и
+ * кладём в authStore, откуда его берут шапка и сайдбар.
+ *
+ * Заодно это проверка живости сессии: если refresh погашен, транспорт
+ * не сможет обновить токен и приложение разлогинится.
+ */
 export function useMe() {
-  const token = useAuthStore((s) => s.token)
+  const hasSession = useAuthStore((s) => !!s.tokens)
 
   return useQuery({
     queryKey: authKeys.me(),
-    queryFn: authApi.me,
-    enabled: !!token,
+    queryFn: async () => {
+      const response = await authApi.me()
+      useAuthStore.getState().setUser(response.user)
+      return response
+    },
+    enabled: hasSession,
   })
 }

@@ -1,7 +1,12 @@
 import { request } from '../client'
-import type { LoginRequest, LoginResponse, MeResponse } from '../types'
+import type {
+  LoginRequest,
+  LoginResponse,
+  MeResponse,
+  RefreshResponse,
+} from '../types'
 
-/** §5 спеки: `POST /auth/login` → `{ token, user }`. */
+/** POST /auth/login → пара токенов и профиль. */
 export function login(credentials: LoginRequest): Promise<LoginResponse> {
   return request<LoginResponse>('/auth/login', {
     method: 'POST',
@@ -9,12 +14,24 @@ export function login(credentials: LoginRequest): Promise<LoginResponse> {
   })
 }
 
-/** §5 спеки: `POST /auth/logout`. */
-export function logout(): Promise<void> {
-  return request<void>('/auth/logout', { method: 'POST' })
+/**
+ * POST /auth/logout → 204. Гасит присланный refresh: сессия на этом
+ * устройстве больше не продлевается. Ранее выданный access доживает
+ * свои минуты — отозвать сам JWT нельзя.
+ */
+export function logout(refresh: string): Promise<void> {
+  return request<void>('/auth/logout', { method: 'POST', body: { refresh } })
 }
 
-/** §5 спеки: `GET /auth/me` → `{ user }`. */
+/** POST /auth/refresh → новая пара. Обычно вызывается транспортом сам. */
+export function refresh(token: string): Promise<RefreshResponse> {
+  return request<RefreshResponse>('/auth/refresh', {
+    method: 'POST',
+    body: { refresh: token },
+  })
+}
+
+/** GET /auth/me → текущий пользователь. */
 export function me(): Promise<MeResponse> {
   return request<MeResponse>('/auth/me')
 }

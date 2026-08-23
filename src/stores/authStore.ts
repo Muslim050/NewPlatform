@@ -1,37 +1,47 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { setAuthToken } from '@/api/token'
-import type { Role, User } from '@/api/types'
+import { setTokens } from '@/api/token'
+import type { Role, TokenPair, User } from '@/api/types'
 
-const STORAGE_KEY = 'setanta.auth.v2'
+const STORAGE_KEY = 'setanta.auth.v3'
 
 interface AuthState {
-  token: string | null
+  tokens: TokenPair | null
   user: User | null
-  setSession: (session: { token: string; user: User }) => void
+  setSession: (session: TokenPair & { user: User }) => void
+  /** Транспорт обновил пару по refresh — пользователь тот же. */
+  setTokens: (tokens: TokenPair) => void
+  /** Свежий профиль из GET /auth/me. */
+  setUser: (user: User) => void
   clearSession: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      token: null,
+      tokens: null,
       user: null,
-      setSession: ({ token, user }) => {
-        setAuthToken(token)
-        set({ token, user })
+      setSession: ({ access, refresh, user }) => {
+        const pair = { access, refresh }
+        setTokens(pair)
+        set({ tokens: pair, user })
       },
+      setTokens: (pair) => {
+        setTokens(pair)
+        set({ tokens: pair })
+      },
+      setUser: (user) => set({ user }),
       clearSession: () => {
-        setAuthToken(null)
-        set({ token: null, user: null })
+        setTokens(null)
+        set({ tokens: null, user: null })
       },
     }),
     {
       name: STORAGE_KEY,
-      // Токен восстанавливаем в транспорт сразу после гидрации из
-      // localStorage — иначе первый же запрос уйдёт без Authorization.
+      // Токены возвращаем в транспорт сразу после гидрации из localStorage —
+      // иначе первый же запрос уйдёт без Authorization.
       onRehydrateStorage: () => (state) => {
-        setAuthToken(state?.token ?? null)
+        setTokens(state?.tokens ?? null)
       },
     },
   ),

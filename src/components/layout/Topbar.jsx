@@ -12,6 +12,7 @@ import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { NAV } from '@/lib/nav.js'
 import { Avatar } from '@/components/ui/Avatar.jsx'
+import { userSubtitle, userTitle } from '@/features/auth/user'
 
 export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
   const { user, logout } = useAuth()
@@ -37,6 +38,10 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
       .sort((a, b) => b.to.length - a.to.length)[0] || NAV[0]
 
   const adv = user.advertiserId ? advertiserById(user.advertiserId) : null
+
+  // Рекламодателя подписываем его брендом, остальных — данными учётной записи.
+  const title = adv ? adv.name : userTitle(user)
+  const subtitle = adv ? adv.email : userSubtitle(user)
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line glass px-5 sm:px-8">
@@ -83,7 +88,7 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
             className="flex items-center gap-2 rounded-xl border border-transparent p-1 pr-2 transition-colors hover:bg-ink/4 focus-ring"
           >
             <Avatar
-              name={adv ? adv.name : user.name}
+              name={title}
               color={adv ? adv.color : '#FFD106'}
               src={adv?.logo}
               size="sm"
@@ -95,9 +100,11 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
             <div className="absolute right-0 top-full mt-2 w-60 overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-lift">
               <div className="px-3 py-2.5">
                 <p className="truncate text-sm font-semibold text-ink">
-                  {adv ? adv.name : user.name}
+                  {title}
                 </p>
-                <p className="truncate text-xs text-ink-muted">{user.email}</p>
+                {subtitle && (
+                  <p className="truncate text-xs text-ink-muted">{subtitle}</p>
+                )}
               </div>
               <div className="my-1 h-px bg-line" />
               <button
