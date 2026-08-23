@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { Link } from '@tanstack/react-router'
 import { Eye } from 'lucide-react'
 import { NAV } from '@/lib/nav.js'
 import { useAuth } from '@/features/auth/useAuth'
@@ -39,21 +39,23 @@ export function Sidebar({ onNavigate, collapsed = false }) {
           </p>
         )}
         {items.map((it) => (
-          <NavLink
+          <Link
             key={it.to}
             to={it.to}
-            end={it.end}
+            activeOptions={{ exact: it.end ?? false }}
             onClick={onNavigate}
             title={collapsed ? it.label : undefined}
-            className={({ isActive }) =>
-              cn(
-                'group relative flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all duration-200',
-                collapsed ? 'justify-center px-0' : 'px-3',
-                isActive
-                  ? 'bg-indigo-500 text-ink shadow-[0_10px_24px_-10px_rgba(255,209,6,0.72)]'
-                  : 'text-ink-soft hover:bg-paper hover:text-ink',
-              )
-            }
+            className={cn(
+              'group relative flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all duration-200',
+              collapsed ? 'justify-center px-0' : 'px-3',
+            )}
+            activeProps={{
+              className:
+                'bg-indigo-500 text-ink shadow-[0_10px_24px_-10px_rgba(255,209,6,0.72)]',
+            }}
+            inactiveProps={{
+              className: 'text-ink-soft hover:bg-paper hover:text-ink',
+            }}
           >
             {({ isActive }) => (
               <>
@@ -77,7 +79,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
                 )}
               </>
             )}
-          </NavLink>
+          </Link>
         ))}
       </nav>
 

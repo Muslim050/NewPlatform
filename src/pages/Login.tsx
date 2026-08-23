@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 import { ArrowRight, VolumeX } from 'lucide-react'
 import { isApiError } from '@/api/errors'
@@ -198,7 +198,7 @@ export default function Login() {
     event.preventDefault()
     signIn(
       { login: username.trim(), password },
-      { onSuccess: () => navigate('/app') },
+      { onSuccess: () => navigate({ to: '/app/campaigns' }) },
     )
   }
 

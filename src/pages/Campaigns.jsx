@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@tanstack/react-router'
 import {
   Plus,
   Search,
@@ -998,7 +998,12 @@ export default function Campaigns() {
                               variant="secondary"
                               size="sm"
                               className="w-fit shrink-0 border-indigo-200 bg-indigo-50 px-2.5 text-indigo-900 hover:border-indigo-400 hover:bg-indigo-100"
-                              onClick={() => navigate(`/app/campaigns/${c.id}`)}
+                              onClick={() =>
+                                navigate({
+                                  to: '/app/campaigns/$campaignId',
+                                  params: { campaignId: c.id },
+                                })
+                              }
                               aria-label={`Статистика кампании ${c.name}`}
                               title="Статистика"
                             >
@@ -1132,7 +1137,12 @@ export default function Campaigns() {
         campaign={preview}
         advertiser={previewAdvertiser}
         onClose={() => setPreview(null)}
-        onOpenStats={() => navigate(`/app/campaigns/${preview.id}`)}
+        onOpenStats={() =>
+          navigate({
+            to: '/app/campaigns/$campaignId',
+            params: { campaignId: preview.id },
+          })
+        }
       />
     </div>
   )

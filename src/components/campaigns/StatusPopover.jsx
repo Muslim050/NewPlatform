@@ -150,9 +150,7 @@ export function StatusPopover({
   const tabClass = (name) =>
     cn(
       'flex-1 rounded-lg px-2 py-1 text-[12px] font-medium transition-colors focus-ring',
-      tab === name
-        ? 'bg-ink/6 text-ink'
-        : 'text-ink-muted hover:text-ink-soft',
+      tab === name ? 'bg-ink/6 text-ink' : 'text-ink-muted hover:text-ink-soft',
     )
 
   const arrowClass =
