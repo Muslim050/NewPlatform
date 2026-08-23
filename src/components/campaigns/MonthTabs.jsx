@@ -37,14 +37,14 @@ export const MONTHS_FULL = [
  * по шаблону.
  */
 const MONTH_FILLS = [
-  'bg-[#FFFCEB]',
+  'bg-lime-50',
   'bg-[#FFFAE0]',
   'bg-[#FFF8D2]',
-  'bg-[#FFF6C8]',
-  'bg-[#FFF3B0]',
+  'bg-lime-100',
+  'bg-indigo-100',
   'bg-[#FFEE9A]',
-  'bg-[#FFE977]',
-  'bg-[#FFE36A]',
+  'bg-lime-200',
+  'bg-indigo-200',
   'bg-[#FFDF52]',
   'bg-[#FFD93B]',
   'bg-[#FFD520]',
@@ -52,7 +52,7 @@ const MONTH_FILLS = [
 ]
 
 // Месяцы, которые ещё не наступили, — серые и без кампаний.
-const FUTURE_FILL = 'bg-ink/[0.03] text-ink-muted/70 cursor-default'
+const FUTURE_FILL = 'bg-ink/3 text-ink-muted/70 cursor-default'
 
 // Месяц со статусом оплаты перекрашивается: зелёный — оплачен, красный — ждём.
 const STATUS_FILLS = {
@@ -61,7 +61,7 @@ const STATUS_FILLS = {
 }
 
 const arrowClass =
-  'flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted transition-colors focus-ring enabled:hover:bg-ink/[0.06] enabled:hover:text-ink-soft disabled:opacity-35'
+  'flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted transition-colors focus-ring enabled:hover:bg-ink/6 enabled:hover:text-ink-soft disabled:opacity-35'
 
 /**
  * Фильтр периода: слева выбор года стрелками, справа 12 месяцев.

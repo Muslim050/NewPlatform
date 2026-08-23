@@ -35,7 +35,7 @@ const PILLS = {
     dot: 'bg-emerald-500',
   },
   completed: {
-    shell: 'border-line bg-ink/[0.05] text-ink-soft',
+    shell: 'border-line bg-ink/5 text-ink-soft',
     dot: 'bg-ink-muted',
   },
   terminated: {
@@ -155,7 +155,7 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
     >
       {contract && (
         <div>
-          <div className="relative overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-surface via-indigo-50 to-indigo-100 p-5">
+          <div className="relative overflow-hidden rounded-2xl border border-indigo-200 bg-linear-to-br from-surface via-indigo-50 to-indigo-100 p-5">
             <div className="pointer-events-none absolute -right-12 -top-16 h-36 w-36 rounded-full border border-indigo-300/60" />
             <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -204,8 +204,8 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
                         className={cn(
                           'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
                           key === status
-                            ? 'bg-ink/[0.05] text-ink'
-                            : 'text-ink-soft hover:bg-ink/[0.05] hover:text-ink',
+                            ? 'bg-ink/5 text-ink'
+                            : 'text-ink-soft hover:bg-ink/5 hover:text-ink',
                         )}
                       >
                         <span

@@ -99,7 +99,7 @@ export default function Channels() {
                 return (
                   <div
                     key={c.id}
-                    className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-ink/[0.015]"
+                    className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-ink/1.5"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       <span

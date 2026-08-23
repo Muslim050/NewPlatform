@@ -145,7 +145,7 @@ function StatValue({ editing, value, onChange, className, suffix }) {
       onChange={(e) => onChange(groupDigits(e.target.value))}
       inputMode="numeric"
       className={cn(
-        'w-full rounded-lg border border-line bg-surface px-2 py-1 font-display font-semibold text-ink outline-none transition-colors tnum focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200',
+        'w-full rounded-lg border border-line bg-surface px-2 py-1 font-display font-semibold text-ink outline-hidden transition-colors tnum focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200',
         className,
       )}
     />
@@ -258,8 +258,8 @@ function ChannelMetric({
 }) {
   const accentClass =
     accent === 'green'
-      ? 'border-success/20 bg-gradient-to-br from-surface to-success/[0.06]'
-      : 'border-indigo-200 bg-gradient-to-br from-surface to-indigo-50'
+      ? 'border-success/20 bg-linear-to-br from-surface to-success/6'
+      : 'border-indigo-200 bg-linear-to-br from-surface to-indigo-50'
 
   return (
     <div className={`rounded-2xl border p-4 shadow-soft ${accentClass}`}>
@@ -294,7 +294,7 @@ function ChannelPanel({ channel, editing, onChange }) {
               value={channel.name}
               onChange={(e) => set('name')(e.target.value)}
               aria-label="Название канала"
-              className="w-full rounded-lg border border-line bg-surface px-2 py-1 font-display text-lg font-semibold text-ink outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+              className="w-full rounded-lg border border-line bg-surface px-2 py-1 font-display text-lg font-semibold text-ink outline-hidden transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
             />
           ) : (
             <h4 className="font-display text-lg font-semibold text-ink">
@@ -367,7 +367,7 @@ export function ChannelSummaryReport() {
     })
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">
+    <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-linear-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">
       <div className="pointer-events-none absolute -right-24 -top-28 h-64 w-64 rounded-full border border-indigo-300/60" />
       <div className="pointer-events-none absolute -left-20 bottom-0 h-48 w-48 rounded-full bg-indigo-100/70 blur-3xl" />
       <div className="relative flex flex-wrap items-start justify-between gap-3">
@@ -583,7 +583,7 @@ function SocialReportCard({ channel, storageKey }) {
                 }
                 inputMode="numeric"
                 aria-label={metric.label}
-                className="mt-1 h-9 w-full rounded-lg border border-line bg-surface px-2 font-display text-lg font-semibold text-ink outline-none transition-colors tnum focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                className="mt-1 h-9 w-full rounded-lg border border-line bg-surface px-2 font-display text-lg font-semibold text-ink outline-hidden transition-colors tnum focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
               />
             ) : (
               <p className="mt-1 font-display text-xl font-semibold text-ink tnum">
@@ -610,7 +610,7 @@ function SocialReportCard({ channel, storageKey }) {
                 value={row.link}
                 onChange={(e) => updateRow(row.id, 'link', e.target.value)}
                 aria-label="Ссылка на публикацию"
-                className="h-9 w-full min-w-0 rounded-lg border border-line bg-surface px-2 text-[12px] text-ink outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                className="h-9 w-full min-w-0 rounded-lg border border-line bg-surface px-2 text-[12px] text-ink outline-hidden transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
               />
             ) : (
               <span className="truncate py-1 text-[12px] font-medium text-ink-soft">
@@ -625,7 +625,7 @@ function SocialReportCard({ channel, storageKey }) {
                 }
                 inputMode="numeric"
                 aria-label="Показы"
-                className="h-9 w-28 rounded-lg border border-line bg-surface px-2 text-right text-[12px] text-ink outline-none transition-colors tnum focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                className="h-9 w-28 rounded-lg border border-line bg-surface px-2 text-right text-[12px] text-ink outline-hidden transition-colors tnum focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
               />
             ) : (
               <span className="py-1 text-[12px] font-semibold text-ink tnum">
@@ -657,7 +657,7 @@ export function SocialMediaReport({ channel: name, channelKey }) {
 
   return (
     <div>
-      <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">
+      <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-linear-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">
         <div className="pointer-events-none absolute -right-12 -top-20 h-44 w-44 rounded-full border border-indigo-300/60" />
         <ReportHeader
           eyebrow="Social media report"
@@ -781,7 +781,7 @@ export function TotalStatisticsReport() {
 
   return (
     <div>
-      <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">
+      <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-linear-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">
         <div className="pointer-events-none absolute -right-20 -top-28 h-64 w-64 rounded-full border border-indigo-300/60" />
         <div className="pointer-events-none absolute right-32 top-0 h-32 w-32 rounded-full bg-indigo-200/50 blur-3xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-3">
@@ -922,7 +922,7 @@ export function TotalStatisticsReport() {
                             setDevice(index, { label: e.target.value })
                           }
                           aria-label="Устройство"
-                          className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-surface px-2 text-[13px] text-ink outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                          className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-surface px-2 text-[13px] text-ink outline-hidden transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
                         />
                         <input
                           value={item.value}
@@ -933,7 +933,7 @@ export function TotalStatisticsReport() {
                           }
                           inputMode="numeric"
                           aria-label="Доля, %"
-                          className="h-8 w-16 rounded-lg border border-line bg-surface px-2 text-right text-[13px] text-ink outline-none transition-colors tnum focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                          className="h-8 w-16 rounded-lg border border-line bg-surface px-2 text-right text-[13px] text-ink outline-hidden transition-colors tnum focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
                         />
                       </>
                     ) : (
@@ -973,7 +973,7 @@ export function TotalStatisticsReport() {
             </div>
             <div className="max-h-[470px] overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-paper/95 backdrop-blur">
+                <thead className="sticky top-0 z-10 bg-paper/95 backdrop-blur-sm">
                   <tr className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
                     <th className="w-10 py-2.5 pl-5 text-left">№</th>
                     <th className="py-2.5 pl-2.5 pr-5 text-left">Город</th>
@@ -984,7 +984,7 @@ export function TotalStatisticsReport() {
                   {data.cities.map((city, index) => (
                     <tr
                       key={`${city.name}-${index}`}
-                      className="hover:bg-ink/[0.015]"
+                      className="hover:bg-ink/1.5"
                     >
                       <td className="py-2.5 pl-5 text-[12px] text-ink-muted tnum">
                         {index + 1}
@@ -997,7 +997,7 @@ export function TotalStatisticsReport() {
                               setCity(index, { name: e.target.value })
                             }
                             aria-label="Город"
-                            className="h-8 w-full rounded-lg border border-line bg-surface px-2 text-[13px] text-ink outline-none transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                            className="h-8 w-full rounded-lg border border-line bg-surface px-2 text-[13px] text-ink outline-hidden transition-colors focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
                           />
                         ) : (
                           city.name
@@ -1015,7 +1015,7 @@ export function TotalStatisticsReport() {
                               }
                               inputMode="decimal"
                               aria-label="Доля зрителей, %"
-                              className="h-8 w-20 rounded-lg border border-line bg-surface px-2 text-right text-[13px] text-ink outline-none transition-colors tnum focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+                              className="h-8 w-20 rounded-lg border border-line bg-surface px-2 text-right text-[13px] text-ink outline-hidden transition-colors tnum focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
                             />
                             <button
                               type="button"

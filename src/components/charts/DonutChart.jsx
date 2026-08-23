@@ -22,7 +22,7 @@ export function DonutChart({
           r={radius}
           fill="none"
           stroke="currentColor"
-          className="text-ink/[0.06]"
+          className="text-ink/6"
           strokeWidth={thickness}
         />
         {data.map((d, i) => {

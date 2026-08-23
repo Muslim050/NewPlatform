@@ -106,7 +106,7 @@ export default function CampaignStats() {
         </Button>
       </PageHeader>
 
-      <section className="relative mb-4 overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-surface via-indigo-50 to-indigo-100 p-5 shadow-soft sm:p-6">
+      <section className="relative mb-4 overflow-hidden rounded-3xl border border-indigo-200 bg-linear-to-br from-surface via-indigo-50 to-indigo-100 p-5 shadow-soft sm:p-6">
         <div className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full border border-indigo-300/50" />
         <div className="pointer-events-none absolute right-16 top-4 h-20 w-20 rounded-full bg-indigo-200/40 blur-2xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -138,7 +138,7 @@ export default function CampaignStats() {
         <MediaReport scopeId={campaign.contractNumber || campaign.id} />
       ) : (
         <>
-          <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">
+          <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-linear-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">
             <div className="pointer-events-none absolute -right-20 -top-28 h-64 w-64 rounded-full border border-indigo-300/60" />
             <div className="pointer-events-none absolute right-24 top-0 h-32 w-32 rounded-full bg-indigo-200/45 blur-3xl" />
             <div className="relative">

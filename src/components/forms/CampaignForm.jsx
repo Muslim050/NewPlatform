@@ -554,7 +554,7 @@ function FilePicker({
               e.stopPropagation()
               onPick(null)
             }}
-            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink"
+            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/6 hover:text-ink"
           >
             <X size={14} />
           </span>

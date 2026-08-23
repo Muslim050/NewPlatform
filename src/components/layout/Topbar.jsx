@@ -44,7 +44,7 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
       <button
         onClick={onBurger}
         aria-label="Открыть меню"
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-ink/[0.05] lg:hidden focus-ring"
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-ink/5 lg:hidden focus-ring"
       >
         <Menu size={20} />
       </button>
@@ -56,7 +56,7 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
           title={sidebarCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
           aria-label={sidebarCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
           aria-expanded={!sidebarCollapsed}
-          className="hidden h-9 w-9 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-ink/[0.05] lg:flex focus-ring"
+          className="hidden h-9 w-9 items-center justify-center rounded-lg text-ink-soft transition-colors hover:bg-ink/5 lg:flex focus-ring"
         >
           {sidebarCollapsed ? (
             <PanelLeftOpen size={19} />
@@ -73,7 +73,7 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <button className="relative flex h-10 w-10 items-center justify-center rounded-xl text-ink-soft transition-colors hover:bg-ink/[0.05] focus-ring">
+        <button className="relative flex h-10 w-10 items-center justify-center rounded-xl text-ink-soft transition-colors hover:bg-ink/5 focus-ring">
           <Bell size={18} />
           <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-lime-400 ring-2 ring-paper" />
         </button>
@@ -81,7 +81,7 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
         <div className="relative" ref={ref}>
           <button
             onClick={() => setMenu((v) => !v)}
-            className="flex items-center gap-2 rounded-xl border border-transparent p-1 pr-2 transition-colors hover:bg-ink/[0.04] focus-ring"
+            className="flex items-center gap-2 rounded-xl border border-transparent p-1 pr-2 transition-colors hover:bg-ink/4 focus-ring"
           >
             <Avatar
               name={adv ? adv.name : user.name}
@@ -106,7 +106,7 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
                   logout()
                   navigate('/login')
                 }}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger transition-colors hover:bg-danger/[0.08]"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger transition-colors hover:bg-danger/8"
               >
                 <LogOut size={15} />
                 Выйти

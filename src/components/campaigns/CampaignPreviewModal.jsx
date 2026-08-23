@@ -132,7 +132,7 @@ export function CreativeTile({ url, addedAt }) {
           <span className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
             Ролик
           </span>
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink/[0.06] text-ink-muted">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink/6 text-ink-muted">
             <Film size={16} />
           </span>
         </div>
@@ -191,7 +191,7 @@ export function ContractTile({ icon: Icon, label, value, file }) {
           <Icon size={16} />
         </span>
       </div>
-      <p className="mt-3 break-words text-[15px] font-semibold leading-snug text-ink">
+      <p className="mt-3 wrap-break-word text-[15px] font-semibold leading-snug text-ink">
         {value}
       </p>
       {file && (
@@ -335,7 +335,7 @@ export function CampaignPreviewModal({
     >
       {campaign && (
         <div>
-          <div className="relative overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-surface via-indigo-50 to-indigo-100 p-5">
+          <div className="relative overflow-hidden rounded-2xl border border-indigo-200 bg-linear-to-br from-surface via-indigo-50 to-indigo-100 p-5">
             <div className="pointer-events-none absolute -right-12 -top-16 h-36 w-36 rounded-full border border-indigo-300/60" />
             <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>

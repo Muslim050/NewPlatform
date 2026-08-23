@@ -44,7 +44,7 @@ export function ToastProvider({ children }) {
     <ToastCtx.Provider value={api}>
       {children}
       {createPortal(
-        <div className="pointer-events-none fixed bottom-5 right-5 z-[60] flex w-[340px] max-w-[calc(100vw-2.5rem)] flex-col gap-2.5">
+        <div className="pointer-events-none fixed bottom-5 right-5 z-60 flex w-[340px] max-w-[calc(100vw-2.5rem)] flex-col gap-2.5">
           <AnimatePresence>
             {toasts.map((t) => {
               const Icon = icons[t.type]
@@ -56,7 +56,7 @@ export function ToastProvider({ children }) {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, x: 40, scale: 0.95 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                  className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-line bg-surface/95 p-3 pr-3.5 shadow-lift backdrop-blur"
+                  className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-line bg-surface/95 p-3 pr-3.5 shadow-lift backdrop-blur-sm"
                 >
                   <span
                     className={cn(

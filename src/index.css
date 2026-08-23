@@ -1,53 +1,224 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-/* Шрифты Setanta Sports: заголовки — фирменная Setantica 2023
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-paper: #f6f5f1;
+  --color-surface: #ffffff;
+
+  --color-ink: #17161c;
+  --color-ink-soft: #57545f;
+  --color-ink-muted: #8e8b98;
+
+  --color-line: rgba(23, 22, 28, 0.08);
+
+  --color-indigo-50: #fffbe5;
+  --color-indigo-100: #fff3b0;
+  --color-indigo-200: #ffe36a;
+  --color-indigo-300: #ffd82b;
+  --color-indigo-400: #ffd106;
+  --color-indigo-500: #ffd106;
+  --color-indigo-600: #f0c300;
+  --color-indigo-700: #c39d00;
+  --color-indigo-800: #806600;
+  --color-indigo-900: #4d3d00;
+
+  --color-lime-50: #fffceb;
+  --color-lime-100: #fff6c8;
+  --color-lime-200: #ffe977;
+  --color-lime-300: #ffd106;
+  --color-lime-400: #f7c900;
+  --color-lime-500: #d9af00;
+  --color-lime-600: #8a6f00;
+
+  --color-success: #12a150;
+  --color-warning: #d98a00;
+  --color-danger: #e5484d;
+
+  --font-display: Setantica, system-ui, sans-serif;
+  --font-display-cond: 'Setantica Cond', Setantica, system-ui, sans-serif;
+  --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, monospace;
+
+  --text-display-xl: clamp(2.6rem, 5vw, 4rem);
+  --text-display-xl--line-height: 1.02;
+  --text-display-xl--letter-spacing: -0.03em;
+  --text-display-lg: clamp(2rem, 3.5vw, 2.9rem);
+  --text-display-lg--line-height: 1.05;
+  --text-display-lg--letter-spacing: -0.025em;
+  --text-display-md: 1.65rem;
+  --text-display-md--line-height: 1.1;
+  --text-display-md--letter-spacing: -0.02em;
+
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 26px;
+  --radius-3xl: 34px;
+
+  --shadow-soft:
+    0 1px 2px rgba(16, 15, 25, 0.04), 0 4px 14px rgba(16, 15, 25, 0.05);
+  --shadow-lift:
+    0 10px 34px rgba(16, 15, 25, 0.1), 0 2px 6px rgba(16, 15, 25, 0.04);
+  --shadow-pop: 0 18px 50px rgba(255, 209, 6, 0.24);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  --background-image-grid-fade: radial-gradient(
+    circle at 1px 1px,
+    rgba(23, 22, 28, 0.05) 1px,
+    transparent 0
+  );
+  --background-image-aurora:
+    radial-gradient(
+      60% 60% at 20% 10%,
+      rgba(255, 209, 6, 0.16) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      50% 50% at 90% 20%,
+      rgba(255, 209, 6, 0.2) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      60% 60% at 70% 90%,
+      rgba(255, 209, 6, 0.1) 0%,
+      transparent 60%
+    );
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-shimmer: shimmer 1.5s infinite;
+
+  @keyframes fade-up {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility glass {
+  /* Стеклянная поверхность */
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+
+@utility focus-ring {
+  /* Фокус-кольцо в фирменном жёлтом Setanta Sports */
+  outline: none;
+  &:focus-visible {
+    box-shadow:
+      0 0 0 2px var(--color-paper),
+      0 0 0 4px var(--color-indigo-500);
+  }
+}
+
+@utility text-gradient {
+  /* Градиентный текст-акцент */
+  background: linear-gradient(
+    100deg,
+    var(--color-ink) 30%,
+    var(--color-indigo-600) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@utility no-scrollbar {
+  /* Скрытие скроллбара там, где нужен чистый вид */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@utility tnum {
+  /* Числовые таблицы — моноширинные цифры для ровных колонок */
+  font-variant-numeric: tabular-nums;
+}
+
+@utility animate-pulse-ring {
+  /* Пульсирующая подсветка рамки — для того, что ждёт действия. */
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+@layer utilities {
+  /* Шрифты Setanta Sports: заголовки — фирменная Setantica 2023
    (Light Semi Cond и Regular Reg), текст — Noto Sans. Setantica юникейсная,
    поэтому в наборном тексте её не используем. Файлы лежат в /public/fonts,
    интернет не нужен. Диапазон font-weight: 100 900 у Setantica отключает
    искусственную жирность — начертаний с другим весом в семействе нет. */
-@font-face {
-  font-family: 'Setantica';
-  src: url('/fonts/Setantica2023-RegularReg.woff2') format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Setantica Cond';
-  src: url('/fonts/Setantica2023-LightSemiCond.woff2') format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Noto Sans';
-  src: url('/fonts/NotoSans-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Noto Sans';
-  src: url('/fonts/NotoSans-Medium.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Noto Sans';
-  src: url('/fonts/NotoSans-SemiBold.woff2') format('woff2');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Noto Sans';
-  src: url('/fonts/NotoSans-Bold.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
+  @font-face {
+    font-family: 'Setantica';
+    src: url('/fonts/Setantica2023-RegularReg.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Setantica Cond';
+    src: url('/fonts/Setantica2023-LightSemiCond.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Noto Sans';
+    src: url('/fonts/NotoSans-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Noto Sans';
+    src: url('/fonts/NotoSans-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Noto Sans';
+    src: url('/fonts/NotoSans-SemiBold.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Noto Sans';
+    src: url('/fonts/NotoSans-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+  }
 }
 
 @layer base {
@@ -56,7 +227,7 @@
   }
 
   * {
-    border-color: theme('colors.line');
+    border-color: var(--color-line);
   }
 
   html {
@@ -66,9 +237,9 @@
 
   body {
     margin: 0;
-    background-color: theme('colors.paper');
-    color: theme('colors.ink.DEFAULT');
-    font-family: theme('fontFamily.sans');
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
@@ -77,13 +248,13 @@
   h2,
   h3,
   h4 {
-    font-family: theme('fontFamily.display');
+    font-family: var(--font-display);
     font-weight: 600;
   }
 
   ::selection {
-    background: theme('colors.indigo.500');
-    color: theme('colors.ink.DEFAULT');
+    background: var(--color-indigo-500);
+    color: var(--color-ink);
   }
 
   /* Тонкий скроллбар в стиле платформы */
@@ -103,53 +274,7 @@
   }
 }
 
-@layer components {
-  /* Стеклянная поверхность */
-  .glass {
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(18px) saturate(1.2);
-    -webkit-backdrop-filter: blur(18px) saturate(1.2);
-  }
-
-  /* Фокус-кольцо в фирменном жёлтом Setanta Sports */
-  .focus-ring {
-    outline: none;
-  }
-  .focus-ring:focus-visible {
-    box-shadow:
-      0 0 0 2px theme('colors.paper'),
-      0 0 0 4px theme('colors.indigo.500');
-  }
-
-  /* Градиентный текст-акцент */
-  .text-gradient {
-    background: linear-gradient(
-      100deg,
-      theme('colors.ink.DEFAULT') 30%,
-      theme('colors.indigo.600') 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-}
-
 @layer utilities {
-  /* Скрытие скроллбара там, где нужен чистый вид */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  /* Числовые таблицы — моноширинные цифры для ровных колонок */
-  .tnum {
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Пульсирующая подсветка рамки — для того, что ждёт действия. */
   @keyframes pulse-ring {
     0%,
     100% {
@@ -158,8 +283,5 @@
     50% {
       box-shadow: 0 0 0 6px rgba(229, 72, 77, 0);
     }
-  }
-  .animate-pulse-ring {
-    animation: pulse-ring 2s ease-in-out infinite;
   }
 }

@@ -84,7 +84,7 @@ const ALL_BRANDS = 'all'
 const CONTRACT_PAYMENT = {
   awaiting: {
     label: 'Ожидает оплату',
-    card: 'border-danger/60 bg-danger/[0.1] hover:border-danger/70 hover:bg-danger/10 animate-pulse-ring',
+    card: 'border-danger/60 bg-danger/10 hover:border-danger/70 hover:bg-danger/10 animate-pulse-ring',
     badge: 'bg-danger/20 text-danger',
     caption: 'text-danger',
     pencil: 'text-danger',
@@ -569,7 +569,7 @@ export default function Campaigns() {
               type="button"
               onClick={() => setQ('')}
               aria-label="Очистить поиск"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/6 hover:text-ink focus-ring"
             >
               <X size={14} />
             </button>
@@ -862,7 +862,7 @@ export default function Campaigns() {
                     <div
                       key={c.id}
                       className={cn(
-                        'flex items-center gap-2.5 px-5 py-3.5 transition-colors hover:bg-ink/[0.015] md:grid',
+                        'flex items-center gap-2.5 px-5 py-3.5 transition-colors hover:bg-ink/1.5 md:grid',
                         isAdvertiser ? GRID_ADVERTISER : GRID_ADMIN,
                       )}
                     >
@@ -873,7 +873,7 @@ export default function Campaigns() {
                           {STATUS_MARKS[c.status] && (
                             <span
                               className={cn(
-                                'absolute -top-[6px] right-[1px] h-2.5 w-2.5 animate-pulse rounded-full',
+                                'absolute top-[-6px] right-px h-2.5 w-2.5 animate-pulse rounded-full',
                                 STATUS_MARKS[c.status],
                               )}
                               title={statusLabel(c.status)}
@@ -961,7 +961,7 @@ export default function Campaigns() {
                                   ? 'Завершённая кампания — только история выплат'
                                   : 'Изменить суммы и внести поступление'
                             }
-                            className="group w-full rounded-lg px-1 py-0.5 text-left transition-colors enabled:hover:bg-ink/[0.04] disabled:cursor-default focus-ring"
+                            className="group w-full rounded-lg px-1 py-0.5 text-left transition-colors enabled:hover:bg-ink/4 disabled:cursor-default focus-ring"
                           >
                             <span className="flex items-center gap-1.5 text-[12px]">
                               <span className="text-ink-muted tnum">

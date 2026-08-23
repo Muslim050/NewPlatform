@@ -151,12 +151,12 @@ export function StatusPopover({
     cn(
       'flex-1 rounded-lg px-2 py-1 text-[12px] font-medium transition-colors focus-ring',
       tab === name
-        ? 'bg-ink/[0.06] text-ink'
+        ? 'bg-ink/6 text-ink'
         : 'text-ink-muted hover:text-ink-soft',
     )
 
   const arrowClass =
-    'flex h-6 w-6 items-center justify-center rounded-lg text-ink-muted transition-colors focus-ring enabled:hover:bg-ink/[0.06] enabled:hover:text-ink-soft disabled:opacity-35'
+    'flex h-6 w-6 items-center justify-center rounded-lg text-ink-muted transition-colors focus-ring enabled:hover:bg-ink/6 enabled:hover:text-ink-soft disabled:opacity-35'
 
   return createPortal(
     <div
@@ -178,7 +178,7 @@ export function StatusPopover({
           type="button"
           onClick={onClose}
           aria-label="Закрыть"
-          className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring"
+          className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/6 hover:text-ink focus-ring"
         >
           <X size={15} />
         </button>

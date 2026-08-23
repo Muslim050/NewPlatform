@@ -558,7 +558,7 @@ export function CampaignTabs({
             type="button"
             onClick={close}
             aria-label="Закрыть"
-            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring"
+            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/6 hover:text-ink focus-ring"
           >
             <X size={15} />
           </button>
@@ -870,7 +870,7 @@ export function EditableSpotTable({ tableKey, title, subtitle }) {
           </p>
         </div>
       )}
-      <div className="flex flex-col gap-4 border-b border-line bg-gradient-to-br from-surface via-indigo-50 to-indigo-100 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-line bg-linear-to-br from-surface via-indigo-50 to-indigo-100 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-800">
             Media plan
@@ -1028,7 +1028,7 @@ export function EditableSpotTable({ tableKey, title, subtitle }) {
                     key={column.key}
                     className={cn(
                       'border-l border-line px-1.5 py-1',
-                      column.live && 'bg-danger/[0.045]',
+                      column.live && 'bg-danger/4.5',
                     )}
                   >
                     <input
@@ -1039,7 +1039,7 @@ export function EditableSpotTable({ tableKey, title, subtitle }) {
                       }
                       aria-label={`${column.label}, строка ${rowIndex + 1}`}
                       className={cn(
-                        'h-8 w-full rounded-md border border-transparent bg-transparent px-2 text-[12px] text-ink outline-none transition-colors',
+                        'h-8 w-full rounded-md border border-transparent bg-transparent px-2 text-[12px] text-ink outline-hidden transition-colors',
                         isEditing
                           ? 'hover:border-line hover:bg-surface focus:border-indigo-400 focus:bg-surface focus:ring-2 focus:ring-indigo-200'
                           : 'cursor-default',
