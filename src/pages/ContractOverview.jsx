@@ -509,8 +509,8 @@ function StatusMenu({ contract, value, onPick }) {
               }}
               className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
                 key === value
-                  ? 'bg-ink/[0.05] text-ink'
-                  : 'text-ink-soft hover:bg-ink/[0.05] hover:text-ink'
+                  ? 'bg-ink/5 text-ink'
+                  : 'text-ink-soft hover:bg-ink/5 hover:text-ink'
               }`}
             >
               <span

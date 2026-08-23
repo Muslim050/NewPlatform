@@ -48,8 +48,8 @@ export function BrandTabs({ items, value, onChange, className }) {
             className={cn(
               'flex shrink-0 relative items-center gap-2.5 rounded-xl border py-1.5 pl-1.5 pr-3 transition-colors focus-ring',
               active
-                ? 'border-ink/15 bg-ink/[0.06]'
-                : 'border-line bg-surface hover:bg-ink/[0.03]',
+                ? 'border-ink/15 bg-ink/6'
+                : 'border-line bg-surface hover:bg-ink/3',
             )}
           >
             {/* На месте инициалов — счётчик кампаний бренда. */}
@@ -59,7 +59,7 @@ export function BrandTabs({ items, value, onChange, className }) {
               </Avatar>
             ) : (
               // Вкладка «Все» — без бренда, поэтому подложка нейтральная.
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/[0.06] text-[11px] font-semibold text-ink-soft tnum">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/6 text-[11px] font-semibold text-ink-soft tnum">
                 {b.count}
               </span>
             )}

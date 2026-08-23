@@ -78,7 +78,7 @@ function AudienceStatsOrbit({ stats }: { stats: AudienceStat[] }) {
             >
               {stat.value}
             </div>
-            <div className="mt-1.5 pr-4 text-[9px] font-semibold uppercase leading-[1.3] tracking-[0.1em] text-white">
+            <div className="mt-1.5 pr-4 text-[9px] font-semibold uppercase leading-[1.3] tracking-widest text-white">
               {stat.label}
             </div>
           </motion.div>
@@ -98,7 +98,7 @@ function TvShowcase() {
   return (
     <aside className="relative hidden min-h-screen overflow-hidden bg-[#090b13] lg:block">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_64%,rgba(255,209,6,0.28),transparent_28%),radial-gradient(circle_at_93%_12%,rgba(255,209,6,0.12),transparent_24%),radial-gradient(circle_at_5%_88%,rgba(255,209,6,0.14),transparent_30%)]" />
-      <div className="absolute inset-0 bg-grid-fade [background-size:24px_24px] opacity-[0.22] [mask-image:linear-gradient(to_bottom,black,transparent_70%)]" />
+      <div className="absolute inset-0 bg-grid-fade bg-size-[24px_24px] opacity-[0.22] mask-[linear-gradient(to_bottom,black,transparent_70%)]" />
       <div className="absolute left-1/2 top-[48%] h-[46vw] max-h-[720px] w-[46vw] max-w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-indigo-400/10" />
       <div className="absolute left-1/2 top-[48%] h-[34vw] max-h-[530px] w-[34vw] max-w-[530px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-indigo-300/[0.07]" />
       <div className="absolute inset-x-0 top-0 h-px bg-white/10" />
@@ -119,7 +119,7 @@ function TvShowcase() {
 
       <AudienceStatsOrbit stats={AUDIENCE_STATS} />
 
-      <div className="absolute bottom-0 left-1/2 z-20 aspect-[1671/941] w-[132%] -translate-x-1/2">
+      <div className="absolute bottom-0 left-1/2 z-20 aspect-1671/941 w-[132%] -translate-x-1/2">
         <motion.div
           initial={{ opacity: 0, scale: 1.025, y: 18 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -158,7 +158,7 @@ function TvShowcase() {
               onEnded={playNextSpot}
             />
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(118deg,rgba(255,255,255,0.12),transparent_25%,transparent_72%,rgba(0,0,0,0.16))]" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/45 to-transparent px-[3.5%] pb-[3%] pt-[9%] text-white">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-linear-to-t from-black/45 to-transparent px-[3.5%] pb-[3%] pt-[9%] text-white">
               <span className="flex items-center gap-1.5 text-[clamp(5px,0.62vw,10px)] font-semibold uppercase tracking-[0.16em]">
                 <i className="h-1.5 w-1.5 animate-pulse rounded-full bg-lime-300" />
                 В эфире
@@ -175,7 +175,7 @@ function TvShowcase() {
         </motion.div>
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 z-30 h-16 bg-gradient-to-t from-black/30 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 z-30 h-16 bg-linear-to-t from-black/30 to-transparent" />
     </aside>
   )
 }
@@ -205,8 +205,8 @@ export default function Login() {
   return (
     <main className="grid min-h-screen bg-paper lg:grid-cols-[minmax(420px,0.84fr)_minmax(0,1.16fr)]">
       <section className="relative z-50 flex items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_15%_18%,rgba(255,209,6,0.11),transparent_31%),linear-gradient(145deg,#faf9f6,#f3f1ec)] px-6 py-12 shadow-[18px_0_55px_rgba(0,0,0,0.18)] sm:px-10">
-        <div className="pointer-events-none absolute -left-28 top-[18%] h-64 w-64 rounded-full border border-indigo-500/[0.06]" />
-        <div className="pointer-events-none absolute -left-16 top-[23%] h-40 w-40 rounded-full border border-indigo-500/[0.08]" />
+        <div className="pointer-events-none absolute -left-28 top-[18%] h-64 w-64 rounded-full border border-indigo-500/6" />
+        <div className="pointer-events-none absolute -left-16 top-[23%] h-40 w-40 rounded-full border border-indigo-500/8" />
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -216,7 +216,7 @@ export default function Login() {
           <Logo size={40} />
 
           <div className="mt-10">
-            <h1 className="font-display-cond text-display-md text-ink text-base">
+            <h1 className="font-display-cond text-display-md text-ink">
               С возвращением
             </h1>
           </div>

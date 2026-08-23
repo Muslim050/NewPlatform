@@ -102,7 +102,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
             </p>
             {/* Наблюдателю сразу видно, что правки недоступны. */}
             {isViewer ? (
-              <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-ink/[0.06] px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
+              <span className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-ink/6 px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">
                 <Eye size={11} />
                 Только просмотр
               </span>

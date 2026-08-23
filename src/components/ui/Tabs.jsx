@@ -59,7 +59,7 @@ export function SegmentTabs({
                   className={cn(
                     'rounded-full px-1.5 text-[11px] tnum',
                     active
-                      ? 'bg-black/[0.08] text-ink'
+                      ? 'bg-black/8 text-ink'
                       : 'bg-ink/[0.07] text-ink-soft',
                   )}
                 >

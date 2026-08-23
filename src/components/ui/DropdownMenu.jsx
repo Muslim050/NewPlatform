@@ -22,8 +22,8 @@ export function DropdownMenu({ items, trigger, align = 'right' }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          'flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring',
-          open && 'bg-ink/[0.06] text-ink',
+          'flex h-9 w-9 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-ink/6 hover:text-ink focus-ring',
+          open && 'bg-ink/6 text-ink',
         )}
       >
         {trigger || <MoreHorizontal size={18} />}
@@ -47,8 +47,8 @@ export function DropdownMenu({ items, trigger, align = 'right' }) {
               className={cn(
                 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
                 it.tone === 'danger'
-                  ? 'text-danger hover:bg-danger/[0.08]'
-                  : 'text-ink-soft hover:bg-ink/[0.05] hover:text-ink',
+                  ? 'text-danger hover:bg-danger/8'
+                  : 'text-ink-soft hover:bg-ink/5 hover:text-ink',
               )}
             >
               {it.icon && <it.icon size={15} />}

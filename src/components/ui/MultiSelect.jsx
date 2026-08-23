@@ -58,7 +58,7 @@ export function MultiSelect({
             : placeholder}
         </span>
         {selected.length > 1 && (
-          <span className="shrink-0 rounded-full bg-ink/[0.06] px-1.5 text-[11px] text-ink-muted tnum">
+          <span className="shrink-0 rounded-full bg-ink/6 px-1.5 text-[11px] text-ink-muted tnum">
             {selected.length}
           </span>
         )}
@@ -85,12 +85,12 @@ export function MultiSelect({
                   'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
                   on
                     ? 'bg-indigo-50 text-indigo-900'
-                    : 'text-ink-soft hover:bg-ink/[0.05] hover:text-ink',
+                    : 'text-ink-soft hover:bg-ink/5 hover:text-ink',
                 )}
               >
                 <span
                   className={cn(
-                    'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                    'flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border',
                     on
                       ? 'border-indigo-400 bg-indigo-100 text-indigo-900'
                       : 'border-line',

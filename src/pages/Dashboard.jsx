@@ -44,7 +44,7 @@ const ICONS = {
 }
 
 const inputClass =
-  'w-full rounded-lg border border-indigo-300 bg-surface px-2 py-1 text-sm text-ink outline-none transition-colors focus:border-indigo-500 focus-ring'
+  'w-full rounded-lg border border-indigo-300 bg-surface px-2 py-1 text-sm text-ink outline-hidden transition-colors focus:border-indigo-500 focus-ring'
 
 /** Текстовое поле правки: вне режима редактирования — обычный текст. */
 function EditText({ editing, value, onChange, className, children }) {
@@ -239,7 +239,7 @@ function SocialChannelCard({ channel, editing, onChange, onRemove }) {
             <span className="text-[12px] text-ink-muted">
               Публикация {String(index + 1).padStart(2, '0')}
             </span>
-            <span className="h-1.5 overflow-hidden rounded-full bg-ink/[0.06]">
+            <span className="h-1.5 overflow-hidden rounded-full bg-ink/6">
               <span
                 className="block h-full rounded-full"
                 style={{
@@ -292,7 +292,7 @@ function MediaSummary({ data, editing, patch }) {
 
   return (
     <>
-      <section className="relative overflow-hidden rounded-[28px] border border-indigo-200 bg-gradient-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-7">
+      <section className="relative overflow-hidden rounded-[28px] border border-indigo-200 bg-linear-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-7">
         <div className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full border border-indigo-300/60" />
         <div className="pointer-events-none absolute -right-8 -top-12 h-44 w-44 rounded-full bg-indigo-200/45 blur-3xl" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -318,7 +318,7 @@ function MediaSummary({ data, editing, patch }) {
               />
             </div>
           </div>
-          <div className="flex gap-6 rounded-2xl border border-line bg-surface/90 px-5 py-3.5 shadow-soft backdrop-blur">
+          <div className="flex gap-6 rounded-2xl border border-line bg-surface/90 px-5 py-3.5 shadow-soft backdrop-blur-sm">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-ink-muted">
                 Публикации
@@ -819,7 +819,7 @@ function AudienceBreakdown({ data, editing, patch }) {
         </div>
         <div className="max-h-[330px] overflow-y-auto">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-paper/95 backdrop-blur">
+            <thead className="sticky top-0 z-10 bg-paper/95 backdrop-blur-sm">
               <tr className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
                 <th className="px-5 py-2.5 text-left">Город</th>
                 <th className="px-5 py-2.5 text-right">Зрители</th>
@@ -828,7 +828,7 @@ function AudienceBreakdown({ data, editing, patch }) {
             </thead>
             <tbody className="divide-y divide-line">
               {cityShare.map((city) => (
-                <tr key={city.id} className="hover:bg-ink/[0.015]">
+                <tr key={city.id} className="hover:bg-ink/1.5">
                   <td className="px-5 py-2.5 font-medium text-ink-soft">
                     <EditText
                       editing={editing}

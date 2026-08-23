@@ -100,7 +100,7 @@ export function FilePicker({
             download={name}
             aria-label="Скачать файл"
             title="Скачать файл"
-            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-indigo-800 focus-ring"
+            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/6 hover:text-indigo-800 focus-ring"
           >
             <Download size={14} />
           </a>
@@ -111,7 +111,7 @@ export function FilePicker({
             aria-label="Убрать файл"
             title="Убрать файл"
             onClick={() => onPick(null)}
-            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring"
+            className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/6 hover:text-ink focus-ring"
           >
             <X size={14} />
           </button>

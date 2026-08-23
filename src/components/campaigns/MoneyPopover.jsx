@@ -137,7 +137,7 @@ export function MoneyPopover({
     cn(
       'flex-1 rounded-lg px-2 py-1 text-[12px] font-medium transition-colors focus-ring',
       tab === value
-        ? 'bg-ink/[0.06] text-ink'
+        ? 'bg-ink/6 text-ink'
         : 'text-ink-muted hover:text-ink-soft',
     )
 
@@ -153,7 +153,7 @@ export function MoneyPopover({
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
             Выплаты
             {/* Тот же процент освоения, что в строке кампании. */}
-            <span className="rounded-full bg-ink/[0.06] px-1.5 text-[10px] text-ink-soft tnum">
+            <span className="rounded-full bg-ink/6 px-1.5 text-[10px] text-ink-soft tnum">
               {formatPct(paidPct, 0)}
             </span>
           </p>
@@ -165,7 +165,7 @@ export function MoneyPopover({
           type="button"
           onClick={onClose}
           aria-label="Закрыть"
-          className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/[0.06] hover:text-ink focus-ring"
+          className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/6 hover:text-ink focus-ring"
         >
           <X size={15} />
         </button>

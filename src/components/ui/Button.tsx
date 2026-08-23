@@ -7,7 +7,7 @@ const variants = {
   lime: 'bg-lime-300 text-ink shadow-soft hover:bg-lime-400 hover:shadow-[0_16px_40px_rgba(255,209,6,0.42)] active:scale-[0.98]',
   secondary:
     'bg-surface text-ink border border-line hover:border-ink/25 hover:bg-white active:scale-[0.98]',
-  ghost: 'text-ink-soft hover:text-ink hover:bg-ink/[0.05]',
+  ghost: 'text-ink-soft hover:text-ink hover:bg-ink/5',
   danger:
     'bg-danger/10 text-danger hover:bg-danger hover:text-white active:scale-[0.98]',
   dark: 'bg-ink text-white hover:bg-ink/90 shadow-soft active:scale-[0.98]',

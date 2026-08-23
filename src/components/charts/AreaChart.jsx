@@ -70,7 +70,7 @@ export function AreaChart({
               y1={pad + (chartH - pad * 2) * t}
               y2={pad + (chartH - pad * 2) * t}
               stroke="currentColor"
-              className="text-ink/[0.06]"
+              className="text-ink/6"
               strokeWidth="1"
             />
           ))}

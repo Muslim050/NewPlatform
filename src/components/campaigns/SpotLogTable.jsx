@@ -197,7 +197,7 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
         </div>
       )}
 
-      <div className="flex flex-col gap-4 border-b border-line bg-gradient-to-br from-surface via-indigo-50 to-indigo-100 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-line bg-linear-to-br from-surface via-indigo-50 to-indigo-100 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-800">
             Broadcast log
@@ -301,10 +301,10 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
                 <td className="border-l border-line px-3 py-2 text-ink-soft">
                   {row.item}
                 </td>
-                <td className="border-l border-line bg-danger/[0.045] px-3 py-2 text-center font-semibold text-ink tnum">
+                <td className="border-l border-line bg-danger/4.5 px-3 py-2 text-center font-semibold text-ink tnum">
                   {row.date}
                 </td>
-                <td className="border-l border-line bg-danger/[0.045] px-3 py-2 text-center font-semibold text-ink tnum">
+                <td className="border-l border-line bg-danger/4.5 px-3 py-2 text-center font-semibold text-ink tnum">
                   {row.time}
                 </td>
               </tr>
