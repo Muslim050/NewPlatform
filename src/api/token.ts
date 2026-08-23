@@ -1,14 +1,20 @@
 /**
- * Держатель токена. Отдельный модуль, чтобы им могли пользоваться и
- * транспорт, и мок, не импортируя друг друга. Значение сюда кладёт
- * authStore при каждом изменении сессии.
+ * Держатель пары JWT. Отдельный модуль, чтобы транспорт мог читать токены,
+ * не завися от React и от стора. Значения сюда кладёт authStore при каждом
+ * изменении сессии.
  */
-let authToken: string | null = null
+import type { TokenPair } from './types'
 
-export function setAuthToken(token: string | null): void {
-  authToken = token
+let tokens: TokenPair | null = null
+
+export function setTokens(next: TokenPair | null): void {
+  tokens = next
 }
 
-export function getAuthToken(): string | null {
-  return authToken
+export function getAccessToken(): string | null {
+  return tokens?.access ?? null
+}
+
+export function getRefreshToken(): string | null {
+  return tokens?.refresh ?? null
 }

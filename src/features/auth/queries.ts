@@ -18,20 +18,26 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: (credentials: LoginRequest) => authApi.login(credentials),
-    onSuccess: ({ token, user }) => {
-      setSession({ token, user })
+    onSuccess: ({ access, refresh, user }) => {
+      setSession({ access, refresh, user })
       client.setQueryData(authKeys.me(), { user })
     },
   })
 }
 
-/** Выход. Локальную сессию чистим в любом случае — даже если запрос упал. */
+/**
+ * Выход. Просим сервер погасить refresh, но локальную сессию чистим в любом
+ * случае: даже если запрос не дошёл, на этом устройстве пользователь вышел.
+ */
 export function useLogout() {
   const clearSession = useAuthStore((s) => s.clearSession)
   const client = useQueryClient()
 
   return useMutation({
-    mutationFn: () => authApi.logout(),
+    mutationFn: async () => {
+      const refresh = useAuthStore.getState().tokens?.refresh
+      if (refresh) await authApi.logout(refresh)
+    },
     onSettled: () => {
       clearSession()
       client.clear()
@@ -39,13 +45,13 @@ export function useLogout() {
   })
 }
 
-/** Проверка живости сессии: `GET /auth/me`. Запускается только с токеном. */
+/** Проверка живости сессии: GET /auth/me. Запускается только с токеном. */
 export function useMe() {
-  const token = useAuthStore((s) => s.token)
+  const hasSession = useAuthStore((s) => !!s.tokens)
 
   return useQuery({
     queryKey: authKeys.me(),
     queryFn: authApi.me,
-    enabled: !!token,
+    enabled: hasSession,
   })
 }
