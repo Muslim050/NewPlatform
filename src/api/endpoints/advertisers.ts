@@ -66,3 +66,8 @@ export const contracts = {
     })
   },
 }
+
+/** GET /advertisers/:id — свежая карточка вместе с договорами. */
+export function get(id: number): Promise<Advertiser> {
+  return request<Advertiser>(`/advertisers/${id}`)
+}

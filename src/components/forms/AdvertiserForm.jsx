@@ -141,6 +141,24 @@ const toContractInput = (contract) => ({
   paymentDate: dateOrNull(contract.paymentDate),
 })
 
+/** Карточка с сервера → состояние формы. */
+const formFrom = (advertiser) => ({
+  name: advertiser.name,
+  contact: advertiser.contact,
+  email: advertiser.email,
+  category: advertiser.category,
+  status: advertiser.status,
+  balance: String(advertiser.balance),
+  legalName: advertiser.legalName || '',
+  requisites: requisitesToText(advertiser.requisites),
+  color: advertiser.color,
+  logo: logoToFile(advertiser.logo),
+  contracts: (advertiser.contracts ?? []).map((contract) => ({
+    ...contract,
+    leagues: [...(contract.leagues ?? [])],
+  })),
+})
+
 export function AdvertiserForm({ open, onClose, initial }) {
   const { mutate: saveAdvertiser, isPending } = useSaveAdvertiser()
   const toast = useToast()
@@ -150,6 +168,10 @@ export function AdvertiserForm({ open, onClose, initial }) {
   const [tab, setTab] = useState('main')
   // Подтверждение на кнопке: карточка после сохранения остаётся открытой.
   const [saved, setSaved] = useState(false)
+  // Карточка в том виде, в каком она сейчас на сервере. После сохранения
+  // заменяется свежим ответом: там уже есть id созданных договоров, и с ним
+  // же сравниваются следующие правки.
+  const [source, setSource] = useState(initial)
 
   useEffect(() => {
     if (!saved) return
@@ -160,26 +182,8 @@ export function AdvertiserForm({ open, onClose, initial }) {
   useEffect(() => {
     if (!open) return
     setTab('main')
-    setForm(
-      initial
-        ? {
-            name: initial.name,
-            contact: initial.contact,
-            email: initial.email,
-            category: initial.category,
-            status: initial.status,
-            balance: String(initial.balance),
-            legalName: initial.legalName || '',
-            requisites: requisitesToText(initial.requisites),
-            color: initial.color,
-            logo: logoToFile(initial.logo),
-            contracts: (initial.contracts ?? []).map((contract) => ({
-              ...contract,
-              leagues: [...(contract.leagues ?? [])],
-            })),
-          }
-        : emptyForm,
-    )
+    setSource(initial)
+    setForm(initial ? formFrom(initial) : emptyForm)
     setErrors({})
     setSaved(false)
     // Зависимости — по id: после сохранения бренд в сторе обновится, и форма
@@ -247,17 +251,22 @@ export function AdvertiserForm({ open, onClose, initial }) {
 
     const contractsChanged =
       contractsFingerprint(contracts) !==
-      contractsFingerprint(initial?.contracts)
+      contractsFingerprint(source?.contracts)
 
     saveAdvertiser(
       {
-        id: initial?.id,
+        id: source?.id,
         advertiser,
         contracts,
-        previousContracts: initial?.contracts ?? [],
+        previousAdvertiser: source,
+        previousContracts: source?.contracts ?? [],
       },
       {
-        onSuccess: () => {
+        onSuccess: (fresh) => {
+          // Форма остаётся открытой — переносим её на свежее состояние,
+          // иначе следующее сохранение повторит уже выполненные правки.
+          setSource(fresh)
+          setForm(formFrom(fresh))
           if (inlineLogo) {
             toast.info(
               'Файл логотипа не сохранён: сервер принимает только ссылку',
