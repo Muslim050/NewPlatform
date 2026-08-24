@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   CalendarCheck,
@@ -11,7 +11,9 @@ import {
   Search,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
-import { useData } from '@/context/DataContext.jsx'
+// Договоры переехали на сервер. Мок остаётся для разделов, которые ещё
+// не подключены: import { useData } from '@/context/DataContext.jsx'
+import { useContracts, useUpdateContract } from '@/features/contracts/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { CONTRACT_STATUS } from '@/lib/metrics.js'
 import {
@@ -26,6 +28,7 @@ import { Badge } from '@/components/ui/Badge.jsx'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { ContractPreviewModal } from '@/components/campaigns/ContractPreviewModal.jsx'
 import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
@@ -69,46 +72,43 @@ function yearsOf(rows, currentYear) {
   return [...years].sort((a, b) => a - b)
 }
 
-/** Статус оплаты договора за месяц: за период — из истории, иначе общий. */
+/**
+ * Статус оплаты договора за месяц: за период — из истории, иначе общий.
+ * Сервер отдаёт пустую строку, если статус ещё не ставили.
+ */
 function statusAt(contract, period) {
-  if (!period) return contract.paymentStatus ?? null
-  return contract.paymentStatusByPeriod?.[period]?.status ?? null
+  if (!period) return contract.paymentStatus || null
+  return contract.paymentStatusByPeriod?.[period]?.status || null
 }
+
+/** Суммы приходят decimal-строками — в расчётах они нужны числами. */
+const toNumber = (value) => Number(value) || 0
 
 export default function ContractOverview() {
   const { user, canEdit, isAdvertiser } = useAuth()
-  const { advertisers, update } = useData()
+  // const { advertisers, update } = useData()
+  const { rows: allRows, isPending, isError, error, refetch } = useContracts()
+  const { mutate: updateContract } = useUpdateContract()
   const toast = useToast()
   const [q, setQ] = useState('')
   const [year, setYear] = useState(() => new Date().getFullYear())
   // Открываемся на текущем месяце; «все месяцы» — крестик у вкладок.
   const [month, setMonth] = useState(() => new Date().getMonth())
-  // Папочка открывает карточку договора, карандаш — форму правок.
-  const [preview, setPreview] = useState(null)
+  // Папочка открывает карточку договора, карандаш — форму правок. Держим
+  // только номер строки: сам договор берём из свежей выдачи, иначе карточка
+  // показывала бы состояние на момент открытия.
+  const [previewId, setPreviewId] = useState(null)
   const [showPayments, setShowPayments] = useState(false)
 
   // Рекламодатель видит только свои договоры, площадка — все.
-  const scope = useMemo(
-    () =>
-      isAdvertiser
-        ? advertisers.filter((a) => a.id === user.advertiserId)
-        : advertisers,
-    [advertisers, isAdvertiser, user.advertiserId],
-  )
+  const rows = isAdvertiser
+    ? allRows.filter(({ advertiser }) => advertiser.id === user.advertiserId)
+    : allRows
 
-  const rows = useMemo(
-    () =>
-      scope.flatMap((advertiser) =>
-        (advertiser.contracts ?? []).map((contract) => ({
-          contract,
-          advertiser,
-        })),
-      ),
-    [scope],
-  )
+  const preview = rows.find(({ contract }) => contract.id === previewId)
 
   const currentYear = new Date().getFullYear()
-  const years = useMemo(() => yearsOf(rows, currentYear), [rows, currentYear])
+  const years = yearsOf(rows, currentYear)
   const activeYear = years.includes(year) ? year : years[years.length - 1]
   const activeMonth =
     month != null && isPassedMonth(activeYear, month) ? month : null
@@ -163,34 +163,37 @@ export default function ContractOverview() {
         brand: advertiser.name,
       })),
     )
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .sort((a, b) => (a.paidAt < b.paidAt ? 1 : -1))
 
   // Суммы ведутся по договорам — здесь складываем их по всем видимым.
   // Месяц закрыт по договору — значит он оплачен полностью: показываем 100%
   // и нулевой остаток, даже если в самой записи освоено меньше.
   const spentOf = (contract) =>
     activePeriod && statusAt(contract, activePeriod) === 'paid'
-      ? (contract.budget ?? 0)
-      : (contract.spent ?? 0)
+      ? toNumber(contract.budget)
+      : toNumber(contract.spent)
 
   const money = scoped.reduce(
     (acc, { contract }) => ({
-      budget: acc.budget + (contract.budget ?? 0),
+      budget: acc.budget + toNumber(contract.budget),
       spent: acc.spent + spentOf(contract),
     }),
     { budget: 0, spent: 0 },
   )
 
   /** Правка из таблицы — только статус договора. */
-  const setStatus = (advertiser, contract, next) => {
+  const setStatus = (contract, next) => {
     if (next === (contract.status ?? 'active')) return
-    update('advertisers', advertiser.id, {
-      contracts: (advertiser.contracts ?? []).map((c) =>
-        c.id === contract.id ? { ...c, status: next } : c,
-      ),
-    })
-    toast.success(
-      `Договор ${contract.number} — ${CONTRACT_STATUS[next].label.toLowerCase()}`,
+    updateContract(
+      { id: contract.id, input: { status: next } },
+      {
+        onSuccess: () =>
+          toast.success(
+            `Договор ${contract.number} — ${CONTRACT_STATUS[next].label.toLowerCase()}`,
+          ),
+        onError: (err) =>
+          toast.error(err.message || 'Не удалось изменить статус договора'),
+      },
     )
   }
 
@@ -248,7 +251,7 @@ export default function ContractOverview() {
                     {i + 1}
                   </span>
                   <span className="shrink-0 text-[12px] text-ink-muted tnum">
-                    {formatDateTime(payment.createdAt)}
+                    {formatDateTime(payment.paidAt)}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[12px] text-ink-soft">
                     {payment.brand} · {payment.contractNumber}
@@ -292,7 +295,22 @@ export default function ContractOverview() {
         />
       </div>
 
-      {filtered.length === 0 ? (
+      {isPending ? (
+        <ContractTableSkeleton />
+      ) : isError ? (
+        <Card>
+          <EmptyState
+            icon={FileText}
+            title="Не удалось загрузить договоры"
+            description={error?.message ?? 'Попробуйте ещё раз.'}
+            action={
+              <Button variant="secondary" onClick={() => refetch()}>
+                Повторить
+              </Button>
+            }
+          />
+        </Card>
+      ) : filtered.length === 0 ? (
         <Card>
           <EmptyState
             icon={FileText}
@@ -325,7 +343,7 @@ export default function ContractOverview() {
             </thead>
             <tbody>
               {filtered.map(({ contract, advertiser }, i) => {
-                const budget = contract.budget ?? 0
+                const budget = toNumber(contract.budget)
                 const spent = spentOf(contract)
                 const pacing = budget ? (spent / budget) * 100 : 0
                 // Остаток — сколько по договору ещё не закрыто деньгами.
@@ -429,7 +447,7 @@ export default function ContractOverview() {
                           variant="secondary"
                           size="sm"
                           className="h-9 w-9 shrink-0 px-0 hover:border-indigo-400 hover:bg-indigo-100 hover:text-ink"
-                          onClick={() => setPreview({ contract, advertiser })}
+                          onClick={() => setPreviewId(contract.id)}
                           aria-label={`Открыть договор ${contract.number}`}
                           title="Открыть"
                         >
@@ -439,9 +457,7 @@ export default function ContractOverview() {
                           <StatusMenu
                             contract={contract}
                             value={contract.status ?? 'active'}
-                            onPick={(next) =>
-                              setStatus(advertiser, contract, next)
-                            }
+                            onPick={(next) => setStatus(contract, next)}
                           />
                         )}
                       </span>
@@ -457,7 +473,7 @@ export default function ContractOverview() {
       <ContractPreviewModal
         contract={preview?.contract ?? null}
         advertiser={preview?.advertiser ?? null}
-        onClose={() => setPreview(null)}
+        onClose={() => setPreviewId(null)}
       />
     </div>
   )
@@ -525,6 +541,25 @@ function StatusMenu({ contract, value, onPick }) {
         </span>
       )}
     </span>
+  )
+}
+
+/** Повторяет геометрию таблицы, чтобы страница не прыгала при загрузке. */
+function ContractTableSkeleton() {
+  return (
+    <Card className="overflow-hidden p-4">
+      <div className="space-y-3">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="flex items-center gap-4">
+            <Skeleton circle className="h-8 w-8 shrink-0" />
+            <Skeleton className="h-4 w-1/5" />
+            <Skeleton className="h-4 w-1/6" />
+            <Skeleton className="ml-auto h-4 w-1/6" />
+            <Skeleton className="h-6 w-24 shrink-0 rounded-full" />
+          </div>
+        ))}
+      </div>
+    </Card>
   )
 }
 

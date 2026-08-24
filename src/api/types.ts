@@ -48,12 +48,44 @@ export interface Paginated<T> {
 
 export type AdvertiserStatus = 'active' | 'paused'
 export type ContractPackage = 'partner' | 'general' | 'presenter'
-export type ContractStatus = 'draft' | 'active' | 'closed'
-export type PaymentStatus = 'awaiting' | 'paid'
+export type ContractStatus = 'active' | 'completed' | 'terminated'
+/** Пустая строка — статус за период ещё не ставили. */
+export type PaymentStatus = 'awaiting' | 'paid' | ''
+
+/** Файл внутри сущности: скан договора, ролик. Только на чтение. */
+export interface AttachedFile {
+  name: string
+  url: string
+  addedAt: string
+}
+
+/** Поступление по договору. Суммы и порядок ведёт сервер. */
+export interface Payment {
+  id: number
+  amount: string
+  paidAt: string
+  seq: number
+  comment?: string
+  createdBy: string
+}
+
+/** Запись в истории смен статуса оплаты. */
+export interface ContractStatusEntry {
+  id: number
+  /** Месяц договора в формате `YYYY-MM`. */
+  period: string
+  status: PaymentStatus
+  changedAt: string
+  by: string
+}
 
 /**
  * Договор бренда. Суммы приходят строками-decimal — так сервер избегает
  * потерь точности; в рублёвых расчётах приводим их через Number().
+ *
+ * Деньги (`budget`, `spent`, `payments`) и статус оплаты сервер отдаёт
+ * только на чтение: они правятся отдельными эндпоинтами — `/contracts/:id/
+ * amounts`, `/payments`, `/payment-status`. Здесь ведутся условия договора.
  */
 export interface Contract {
   id: number
@@ -70,6 +102,17 @@ export interface Contract {
   spent: string
   paymentStatus: PaymentStatus
   paymentStatusAt: string | null
+  /** Статус оплаты по месяцам договора: ключ вида `2026-08`. */
+  paymentStatusByPeriod: Record<
+    string,
+    { status: PaymentStatus; changedAt: string }
+  >
+  payments: Payment[]
+  paymentLog: ContractStatusEntry[]
+  /** Скан договора. Загрузка файлов идёт через `POST /files`. */
+  file: AttachedFile | null
+  /** Рекламный ролик договора — его заполняет рекламодатель. */
+  creative: AttachedFile | null
   version: number
 }
 

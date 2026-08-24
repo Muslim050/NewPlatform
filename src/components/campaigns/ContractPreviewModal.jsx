@@ -12,7 +12,9 @@ import {
   Trophy,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
-import { useData } from '@/context/DataContext.jsx'
+// Договоры переехали на сервер. Мок остаётся для разделов, которые ещё
+// не подключены: import { useData } from '@/context/DataContext.jsx'
+import { useUpdateContract } from '@/features/contracts/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { CONTRACT_STATUS, PACKAGES, leagueLabel } from '@/lib/metrics.js'
 import {
@@ -50,7 +52,8 @@ const PILLS = {
  */
 export function ContractPreviewModal({ contract, advertiser, onClose }) {
   const { canEdit, isAdvertiser } = useAuth()
-  const { update } = useData()
+  // const { update } = useData()
+  const { mutate: updateContract } = useUpdateContract()
   const toast = useToast()
   const [showPayments, setShowPayments] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)
@@ -72,14 +75,17 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
 
   const setStatus = (next) => {
     setStatusOpen(false)
-    if (!advertiser || next === status) return
-    update('advertisers', advertiser.id, {
-      contracts: (advertiser.contracts ?? []).map((c) =>
-        c.id === contract.id ? { ...c, status: next } : c,
-      ),
-    })
-    toast.success(
-      `Договор ${contract.number} — ${CONTRACT_STATUS[next].label.toLowerCase()}`,
+    if (next === status) return
+    updateContract(
+      { id: contract.id, input: { status: next } },
+      {
+        onSuccess: () =>
+          toast.success(
+            `Договор ${contract.number} — ${CONTRACT_STATUS[next].label.toLowerCase()}`,
+          ),
+        onError: (err) =>
+          toast.error(err.message || 'Не удалось изменить статус договора'),
+      },
     )
   }
 
@@ -89,8 +95,9 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
     setStatusOpen(false)
   }, [contract?.id])
 
-  const budget = contract?.budget ?? 0
-  const spent = contract?.spent ?? 0
+  // Суммы приходят decimal-строками — в расчётах они нужны числами.
+  const budget = Number(contract?.budget) || 0
+  const spent = Number(contract?.spent) || 0
   const pacing = budget ? (spent / budget) * 100 : 0
   const payments = contract?.payments ?? []
   const pill = PILLS[status] ?? PILLS.active
@@ -280,7 +287,7 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
                         {i + 1}
                       </span>
                       <span className="flex-1 text-[12px] text-ink-muted tnum">
-                        {formatDateTime(payment.createdAt)}
+                        {formatDateTime(payment.paidAt)}
                       </span>
                       <span className="shrink-0 text-[13px] font-semibold text-emerald-700 tnum">
                         + {formatMoney(payment.amount)}
