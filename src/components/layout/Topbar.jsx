@@ -17,7 +17,7 @@ import { userSubtitle, userTitle } from '@/features/auth/user'
 
 export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
   const { user, logout } = useAuth()
-  const { data: adv } = useAdvertiser(user.advertiserId)
+  const { data: adv } = useAdvertiser(user?.advertiserId)
   const loc = useLocation()
   const [menu, setMenu] = useState(false)
   const ref = useRef(null)

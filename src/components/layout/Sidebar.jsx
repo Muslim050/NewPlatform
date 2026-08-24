@@ -11,8 +11,8 @@ import { cn } from '@/lib/cn.js'
 
 export function Sidebar({ onNavigate, collapsed = false }) {
   const { user, isViewer } = useAuth()
-  const { data: adv } = useAdvertiser(user.advertiserId)
-  const items = NAV.filter((n) => !n.hidden && n.roles.includes(user.role))
+  const { data: adv } = useAdvertiser(user?.advertiserId)
+  const items = NAV.filter((n) => !n.hidden && n.roles.includes(user?.role))
 
   // Рекламодателя подписываем его брендом, остальных — данными учётной записи.
   const title = adv ? adv.name : userTitle(user)

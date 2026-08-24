@@ -1123,8 +1123,8 @@ export default function Campaigns() {
         <MoneyPopover
           anchorEl={money.el}
           title={`Договор ${moneyContract.number}`}
-          budget={moneyContract.budget ?? 0}
-          spent={moneyContract.spent ?? 0}
+          budget={toNumber(moneyContract.budget)}
+          spent={toNumber(moneyContract.spent)}
           payments={moneyContract.payments ?? []}
           onRemovePayment={removePayment}
           onSave={saveMoney}

@@ -63,8 +63,14 @@ const login = async (userLogin, userPassword) => {
   return auth.user
 }
 
-/** Дата в ISO без времени: `2026-08-01`. */
-const iso = (date) => date.toISOString().slice(0, 10)
+/**
+ * Дата в ISO без времени: `2026-08-01`. Считаем по местному календарю:
+ * toISOString() перевёл бы полночь в UTC и увёл дату на день назад.
+ */
+const iso = (date) => {
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
 
 /** Первое и последнее число месяца, отстоящего от текущего на `shift`. */
 function monthRange(shift) {

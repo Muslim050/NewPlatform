@@ -288,7 +288,7 @@ export function CampaignPreviewModal({
 }) {
   const { isAdvertiser } = useAuth()
   const [showPayments, setShowPayments] = useState(false)
-  const pacing = campaign?.budget ? (campaign.spent / campaign.budget) * 100 : 0
+
   const payments = campaign?.payments ?? []
 
   // Дату загрузки ролика кампания хранит у себя, но у старых записей её нет —
@@ -296,6 +296,11 @@ export function CampaignPreviewModal({
   const contract = (advertiser?.contracts ?? []).find(
     (c) => c.number === campaign?.contractNumber,
   )
+  // Деньги ведутся по договору, а не по кампании. Суммы приходят
+  // decimal-строками — в расчётах они нужны числами.
+  const budget = Number(contract?.budget) || 0
+  const spent = Number(contract?.spent) || 0
+  const pacing = budget ? (spent / budget) * 100 : 0
   const creativeAddedAt =
     campaign?.creativeAddedAt ||
     (contract?.creative?.url && contract.creative.url === campaign?.creativeUrl
@@ -379,9 +384,9 @@ export function CampaignPreviewModal({
                 </span>
               </div>
               <p className="mt-3 flex items-baseline gap-1.5 text-[15px] font-semibold text-ink tnum">
-                {formatMoneyCompact(campaign.spent)}
+                {formatMoneyCompact(spent)}
                 <span className="text-[12px] font-medium text-ink-muted">
-                  из {formatMoneyCompact(campaign.budget)}
+                  из {formatMoneyCompact(budget)}
                 </span>
               </p>
               <Progress

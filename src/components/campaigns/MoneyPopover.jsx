@@ -15,8 +15,15 @@ const groupDigits = (value) => {
   const digits = onlyDigits(value)
   return digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : ''
 }
-// Ноль в поле не показываем — его пришлось бы стирать перед вводом суммы.
-const amountField = (value) => (Number(value) ? groupDigits(value) : '')
+/**
+ * Ноль в поле не показываем — его пришлось бы стирать перед вводом суммы.
+ * Сумма приходит и числом, и decimal-строкой («890000.00»): точку убираем
+ * округлением, иначе разрядка превратила бы её в 89 000 000.
+ */
+const amountField = (value) => {
+  const rounded = Math.round(Number(value) || 0)
+  return rounded ? groupDigits(String(rounded)) : ''
+}
 
 /**
  * Когда деньги пришли. На сервере поле называется `paidAt`, в демо-данных —
