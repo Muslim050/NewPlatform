@@ -16,7 +16,12 @@ import {
 import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { useScopedCampaigns } from '@/lib/useScope.js'
-import { statusLabel, timeProgress } from '@/lib/metrics.js'
+import {
+  CONTRACT_PAYMENT,
+  PAYMENT_OPTIONS,
+  statusLabel,
+  timeProgress,
+} from '@/lib/metrics.js'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import {
@@ -81,37 +86,6 @@ const STATUS_MARKS = {
 const ALL_BRANDS = 'all'
 // Статус оплаты договора: денег ждём или они уже пришли. Неоплаченный
 // договор красный и пульсирует — его видно в потоке карточек.
-const CONTRACT_PAYMENT = {
-  awaiting: {
-    label: 'Ожидает оплату',
-    card: 'border-danger/60 bg-danger/10 hover:border-danger/70 hover:bg-danger/10 animate-pulse-ring',
-    badge: 'bg-danger/20 text-danger',
-    caption: 'text-danger',
-    pencil: 'text-danger',
-    pulse: true,
-  },
-  paid: {
-    label: 'Оплачено',
-    card: 'border-success/35 bg-success/[0.07] hover:border-success/60 hover:bg-success/10',
-    badge: 'bg-success/10 text-success',
-    caption: 'text-success',
-    pencil: 'text-success',
-    pulse: false,
-  },
-}
-const PAYMENT_OPTIONS = [
-  {
-    value: 'awaiting',
-    label: CONTRACT_PAYMENT.awaiting.label,
-    badge: CONTRACT_PAYMENT.awaiting.badge,
-  },
-  {
-    value: 'paid',
-    label: CONTRACT_PAYMENT.paid.label,
-    badge: CONTRACT_PAYMENT.paid.badge,
-  },
-]
-
 const ALL_CONTRACTS = 'all'
 const MONTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 

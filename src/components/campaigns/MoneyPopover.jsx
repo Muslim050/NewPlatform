@@ -18,6 +18,12 @@ const groupDigits = (value) => {
 // Ноль в поле не показываем — его пришлось бы стирать перед вводом суммы.
 const amountField = (value) => (Number(value) ? groupDigits(value) : '')
 
+/**
+ * Когда деньги пришли. На сервере поле называется `paidAt`, в демо-данных —
+ * `createdAt`; второе уйдёт вместе с моком.
+ */
+const paidAtOf = (payment) => payment.paidAt ?? payment.createdAt
+
 /** Дата со временем для input[type=datetime-local] — в местной зоне. */
 const toDateTimeInput = (date) => {
   const pad = (n) => String(n).padStart(2, '0')
@@ -287,7 +293,7 @@ export function MoneyPopover({
                   {editable ? (
                     <input
                       type="datetime-local"
-                      value={toDateTimeInput(new Date(payment.createdAt))}
+                      value={toDateTimeInput(new Date(paidAtOf(payment)))}
                       onChange={(e) =>
                         onEditPayment(payment.id, e.target.value)
                       }
@@ -296,7 +302,7 @@ export function MoneyPopover({
                     />
                   ) : (
                     <span className="text-[12px] text-ink-muted tnum">
-                      {formatDateTime(payment.createdAt)}
+                      {formatDateTime(paidAtOf(payment))}
                     </span>
                   )}
                   <span className="shrink-0 text-[13px] font-semibold text-emerald-700 tnum">

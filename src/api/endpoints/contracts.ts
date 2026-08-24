@@ -1,5 +1,5 @@
 import { request } from '../client'
-import type { Contract, ContractInput } from '../types'
+import type { Contract, ContractInput, PaymentStatus } from '../types'
 
 /**
  * Договор — самостоятельный ресурс: у него свой адрес, не зависящий от
@@ -19,4 +19,67 @@ export function update(id: number, input: ContractInput): Promise<Contract> {
     method: 'PATCH',
     body: input,
   })
+}
+
+/** Правка сумм договора. Пустые поля сервер не трогает. */
+export interface AmountsInput {
+  budget?: string
+  spent?: string
+  /**
+   * Дата поступления. В договоре не хранится: сервер оформляет им прирост
+   * «Оплачено» — то есть новое поступление создаётся не отдельным запросом,
+   * а увеличением `spent`.
+   */
+  paidAt?: string
+}
+
+/** PATCH /contracts/:id/amounts — сумма договора и оплаченное. */
+export function updateAmounts(
+  id: number,
+  input: AmountsInput,
+): Promise<Contract> {
+  return request<Contract>(`/contracts/${id}/amounts`, {
+    method: 'PATCH',
+    body: input,
+  })
+}
+
+/** Смена статуса оплаты за конкретный месяц договора. */
+export interface PaymentStatusInput {
+  status: Exclude<PaymentStatus, ''>
+  /** Месяц договора: `2026-08`. */
+  period: string
+  changedAt: string
+}
+
+/** PUT /contracts/:id/payment-status */
+export function setPaymentStatus(
+  id: number,
+  input: PaymentStatusInput,
+): Promise<Contract> {
+  return request<Contract>(`/contracts/${id}/payment-status`, {
+    method: 'PUT',
+    body: input,
+  })
+}
+
+/** Поступление правится и удаляется внутри своего договора. */
+export const payments = {
+  /** PATCH /contracts/:id/payments/:paymentId — отдаёт весь договор. */
+  update(
+    contractId: number,
+    paymentId: number,
+    input: { amount?: string; paidAt?: string; comment?: string },
+  ): Promise<Contract> {
+    return request<Contract>(`/contracts/${contractId}/payments/${paymentId}`, {
+      method: 'PATCH',
+      body: input,
+    })
+  },
+  /** DELETE /contracts/:id/payments/:paymentId — отдаёт весь договор. */
+  remove(contractId: number, paymentId: number): Promise<Contract> {
+    return request<Contract>(`/contracts/${contractId}/payments/${paymentId}`, {
+      method: 'DELETE',
+    })
+  },
 }

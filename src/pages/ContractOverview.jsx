@@ -13,9 +13,21 @@ import {
 import { useAuth } from '@/features/auth/useAuth'
 // Договоры переехали на сервер. Мок остаётся для разделов, которые ещё
 // не подключены: import { useData } from '@/context/DataContext.jsx'
-import { useContracts, useUpdateContract } from '@/features/contracts/queries'
+import {
+  useContracts,
+  useDeletePayment,
+  useSaveContractAmounts,
+  useSetPaymentStatus,
+  useUpdateContract,
+  useUpdatePayment,
+} from '@/features/contracts/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
-import { CONTRACT_STATUS } from '@/lib/metrics.js'
+import { useConfirm } from '@/components/ui/Confirm.jsx'
+import {
+  CONTRACT_PAYMENT,
+  CONTRACT_STATUS,
+  PAYMENT_OPTIONS,
+} from '@/lib/metrics.js'
 import {
   formatDateNumeric,
   formatDateTime,
@@ -31,8 +43,13 @@ import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { ContractPreviewModal } from '@/components/campaigns/ContractPreviewModal.jsx'
+import { MoneyPopover } from '@/components/campaigns/MoneyPopover.jsx'
 import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
-import { periodKey } from '@/components/campaigns/StatusPopover.jsx'
+import {
+  StatusPopover,
+  periodKey,
+} from '@/components/campaigns/StatusPopover.jsx'
+import { cn } from '@/lib/cn.js'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i)
 
@@ -89,7 +106,12 @@ export default function ContractOverview() {
   // const { advertisers, update } = useData()
   const { rows: allRows, isPending, isError, error, refetch } = useContracts()
   const { mutate: updateContract } = useUpdateContract()
+  const { mutate: saveAmounts } = useSaveContractAmounts()
+  const { mutate: savePaymentStatusFor } = useSetPaymentStatus()
+  const { mutate: updatePayment } = useUpdatePayment()
+  const { mutate: deletePayment } = useDeletePayment()
   const toast = useToast()
+  const confirm = useConfirm()
   const [q, setQ] = useState('')
   const [year, setYear] = useState(() => new Date().getFullYear())
   // Открываемся на текущем месяце; «все месяцы» — крестик у вкладок.
@@ -99,6 +121,11 @@ export default function ContractOverview() {
   // показывала бы состояние на момент открытия.
   const [previewId, setPreviewId] = useState(null)
   const [showPayments, setShowPayments] = useState(false)
+  // Поповеры сумм и статуса оплаты: держим договор и ячейку, к которой они
+  // прижаты. Сам договор берём из свежей выдачи — суммы в поповере должны
+  // обновляться сразу после сохранения.
+  const [moneyAnchor, setMoneyAnchor] = useState(null)
+  const [paymentAnchor, setPaymentAnchor] = useState(null)
 
   // Рекламодатель видит только свои договоры, площадка — все.
   const rows = isAdvertiser
@@ -106,6 +133,12 @@ export default function ContractOverview() {
     : allRows
 
   const preview = rows.find(({ contract }) => contract.id === previewId)
+  const moneyRow = rows.find(({ contract }) => contract.id === moneyAnchor?.id)
+  const paymentRow = rows.find(
+    ({ contract }) => contract.id === paymentAnchor?.id,
+  )
+  // Деньги и статус оплаты ведёт площадка: рекламодателю они только видны.
+  const canEditMoney = canEdit && !isAdvertiser
 
   const currentYear = new Date().getFullYear()
   const years = yearsOf(rows, currentYear)
@@ -180,6 +213,113 @@ export default function ContractOverview() {
     }),
     { budget: 0, spent: 0 },
   )
+
+  /**
+   * Суммы договора. Прирост «Оплачено» сервер сам оформляет поступлением
+   * на выбранную дату — отдельного запроса на платёж не нужно.
+   */
+  const saveMoney = ({ budget, spent, paidAt }) => {
+    const contract = moneyRow?.contract
+    if (!contract) return
+    const gained = spent - toNumber(contract.spent)
+
+    saveAmounts(
+      {
+        id: contract.id,
+        // Суммы на сервере — decimal, то есть строки.
+        input: { budget: String(budget), spent: String(spent), paidAt },
+      },
+      {
+        // Поповер намеренно не закрываем — можно внести следующее поступление.
+        onSuccess: () =>
+          toast.success(
+            gained > 0
+              ? `Поступление по договору ${contract.number} внесено`
+              : `Суммы договора ${contract.number} обновлены`,
+          ),
+        onError: (err) =>
+          toast.error(err.message || 'Не удалось сохранить суммы договора'),
+      },
+    )
+  }
+
+  /** Правка даты и времени уже внесённого поступления. */
+  const editPayment = (paymentId, localValue) => {
+    const contract = moneyRow?.contract
+    if (!contract || !localValue) return
+    const paidAt = new Date(localValue)
+    if (Number.isNaN(paidAt.getTime())) return
+
+    updatePayment(
+      {
+        contractId: contract.id,
+        paymentId,
+        input: { paidAt: paidAt.toISOString() },
+      },
+      {
+        onError: (err) =>
+          toast.error(err.message || 'Не удалось изменить поступление'),
+      },
+    )
+  }
+
+  /** Удаление поступления: сумма вычитается из оплаченного по договору. */
+  const removePayment = async (paymentId) => {
+    const contract = moneyRow?.contract
+    const entry = (contract?.payments ?? []).find(
+      (item) => item.id === paymentId,
+    )
+    if (!entry) return
+
+    const ok = await confirm({
+      title: 'Удалить поступление?',
+      description: `${formatMoneyCompact(entry.amount)} · ${formatDateTime(
+        entry.paidAt,
+      )}`,
+      body: 'Сумма вычтется из оплаченного по договору.',
+    })
+    if (!ok) return
+
+    deletePayment(
+      { contractId: contract.id, paymentId },
+      {
+        onSuccess: () => toast.info('Поступление удалено'),
+        onError: (err) =>
+          toast.error(err.message || 'Не удалось удалить поступление'),
+      },
+    )
+  }
+
+  /** Статус оплаты ставится на месяц договора: ключ вида 2026-08. */
+  const savePaymentStatus = (next, changedAt, period) => {
+    const contract = paymentRow?.contract
+    if (!contract) return
+    setPaymentAnchor(null)
+
+    savePaymentStatusFor(
+      {
+        id: contract.id,
+        input: {
+          status: next,
+          period,
+          // Дату выбирают в поповере — смену можно оформить задним числом.
+          changedAt: changedAt ?? new Date().toISOString(),
+        },
+      },
+      {
+        onSuccess: () => {
+          const [statusYear, statusMonth] = period.split('-')
+          toast.success(
+            `Договор ${contract.number}, ${MONTHS_FULL[
+              Number(statusMonth) - 1
+            ].toLowerCase()} ${statusYear}: ${CONTRACT_PAYMENT[next].label}`,
+          )
+        },
+        onError: (err) =>
+          toast.error(err.message || 'Не удалось изменить статус оплаты'),
+      },
+    )
+  }
 
   /** Правка из таблицы — только статус договора. */
   const setStatus = (contract, next) => {
@@ -326,7 +466,7 @@ export default function ContractOverview() {
         </Card>
       ) : (
         <Card className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse text-sm">
+          <table className="w-full min-w-[1000px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-line text-left text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
                 <Th className="w-10">№</Th>
@@ -336,6 +476,7 @@ export default function ContractOverview() {
                   {isAdvertiser ? 'Бюджет / Оплачено' : 'Бюджет / Прибыль'}
                 </Th>
                 <Th className="text-right">Остаток</Th>
+                <Th>Оплата</Th>
                 <Th>Срок договора</Th>
                 <Th>Статус</Th>
                 <Th className="text-center">Действия</Th>
@@ -388,22 +529,26 @@ export default function ContractOverview() {
                     </Td>
                     {/* Суммы договора — как в кампаниях: бюджет, освоено, полоса. */}
                     <Td className="w-[200px]">
-                      <span className="flex items-center gap-1.5 text-[12px]">
-                        <span className="text-ink-muted tnum">
-                          {formatMoneyCompact(budget)}
-                        </span>
-                        <span className="ml-auto font-medium text-ink tnum">
-                          {formatMoneyCompact(spent)}
-                        </span>
-                      </span>
-                      <Progress
-                        value={pacing}
-                        label={formatPct(pacing, 0)}
-                        className="mt-1.5"
+                      <MoneyCell
+                        budget={budget}
+                        spent={spent}
+                        pacing={pacing}
+                        editable={canEditMoney}
+                        onOpen={(el) => setMoneyAnchor({ id: contract.id, el })}
                       />
                     </Td>
                     <Td className="whitespace-nowrap text-right font-medium text-ink tnum">
                       {formatMoneyCompact(rest)}
+                    </Td>
+                    {/* Статус оплаты — за выбранный месяц договора. */}
+                    <Td>
+                      <PaymentPill
+                        status={statusAt(contract, activePeriod)}
+                        editable={canEditMoney}
+                        onOpen={(el) =>
+                          setPaymentAnchor({ id: contract.id, el })
+                        }
+                      />
                     </Td>
                     {/* Срок договора — дата под датой с иконками, как в кампаниях. */}
                     <Td>
@@ -475,6 +620,36 @@ export default function ContractOverview() {
         advertiser={preview?.advertiser ?? null}
         onClose={() => setPreviewId(null)}
       />
+
+      {moneyRow && (
+        <MoneyPopover
+          anchorEl={moneyAnchor.el}
+          title={`Договор ${moneyRow.contract.number}`}
+          budget={toNumber(moneyRow.contract.budget)}
+          spent={toNumber(moneyRow.contract.spent)}
+          payments={moneyRow.contract.payments ?? []}
+          onSave={saveMoney}
+          onEditPayment={editPayment}
+          onRemovePayment={removePayment}
+          onClose={() => setMoneyAnchor(null)}
+        />
+      )}
+
+      {paymentRow && (
+        <StatusPopover
+          anchorEl={paymentAnchor.el}
+          title={`Договор ${paymentRow.contract.number}`}
+          value={statusAt(paymentRow.contract, activePeriod) ?? 'awaiting'}
+          options={PAYMENT_OPTIONS}
+          history={paymentRow.contract.paymentLog ?? []}
+          statusByPeriod={paymentRow.contract.paymentStatusByPeriod ?? {}}
+          period={activePeriod ?? periodKey(activeYear, new Date().getMonth())}
+          years={years}
+          readOnly={!canEditMoney}
+          onSave={savePaymentStatus}
+          onClose={() => setPaymentAnchor(null)}
+        />
+      )}
     </div>
   )
 }
@@ -541,6 +716,69 @@ function StatusMenu({ contract, value, onPick }) {
         </span>
       )}
     </span>
+  )
+}
+
+/**
+ * Ячейка «Бюджет / Прибыль». Площадке она открывает поповер с суммами
+ * и поступлениями, остальным просто показывает цифры.
+ */
+function MoneyCell({ budget, spent, pacing, editable, onOpen }) {
+  const body = (
+    <>
+      <span className="flex items-center gap-1.5 text-[12px]">
+        <span className="text-ink-muted tnum">
+          {formatMoneyCompact(budget)}
+        </span>
+        <span className="ml-auto font-medium text-ink tnum">
+          {formatMoneyCompact(spent)}
+        </span>
+      </span>
+      <Progress
+        value={pacing}
+        label={formatPct(pacing, 0)}
+        className="mt-1.5"
+      />
+    </>
+  )
+
+  if (!editable) return <span className="block">{body}</span>
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => onOpen(e.currentTarget)}
+      title="Суммы и поступления"
+      className="block w-full rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-indigo-50 focus-ring"
+    >
+      {body}
+    </button>
+  )
+}
+
+/**
+ * Статус оплаты за выбранный месяц. Пусто — отметки за этот месяц ещё нет;
+ * площадка ставит её тем же поповером, что и в кампаниях.
+ */
+function PaymentPill({ status, editable, onOpen }) {
+  const meta = status ? CONTRACT_PAYMENT[status] : null
+  const label = meta?.label ?? 'Нет отметки'
+  const shell = cn(
+    'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-semibold',
+    meta ? meta.badge : 'bg-ink/6 text-ink-muted',
+  )
+
+  if (!editable) return <span className={shell}>{label}</span>
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => onOpen(e.currentTarget)}
+      title="Изменить статус оплаты"
+      className={cn(shell, 'transition-opacity hover:opacity-80 focus-ring')}
+    >
+      {label}
+    </button>
   )
 }
 

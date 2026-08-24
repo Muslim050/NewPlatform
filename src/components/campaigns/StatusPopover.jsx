@@ -48,7 +48,7 @@ const parsePeriod = (period) => {
  * Рисуется порталом с position: fixed — иначе карточка его обрежет.
  *
  * options: [{ value, label, badge? }]
- * history: [{ id, status, period, createdAt, by }]
+ * history: [{ id, status, period, changedAt, by }]
  * statusByPeriod: { '2026-08': { status, changedAt } } — раскраска месяцев
  */
 export function StatusPopover({
@@ -366,7 +366,7 @@ export function StatusPopover({
                   </div>
                   <div className="mt-0.5 flex items-center justify-between gap-2">
                     <span className="text-[10px] text-ink-muted tnum">
-                      {formatDateTime(entry.createdAt)}
+                      {formatDateTime(entry.changedAt ?? entry.createdAt)}
                     </span>
                     {entry.by && (
                       <span className="truncate text-[10px] text-ink-muted">

@@ -44,3 +44,80 @@ export function useUpdateContract() {
     },
   })
 }
+
+/**
+ * Суммы договора: сумма договора и оплаченное. Прирост «Оплачено» сервер сам
+ * оформляет поступлением — отдельный запрос на это не нужен.
+ */
+export function useSaveContractAmounts() {
+  const client = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: number
+      input: contractsApi.AmountsInput
+    }) => contractsApi.updateAmounts(id, input),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: advertiserKeys.all })
+    },
+  })
+}
+
+/** Статус оплаты за месяц договора: «ожидает оплату» / «оплачено». */
+export function useSetPaymentStatus() {
+  const client = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: number
+      input: contractsApi.PaymentStatusInput
+    }) => contractsApi.setPaymentStatus(id, input),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: advertiserKeys.all })
+    },
+  })
+}
+
+/** Правка поступления — в интерфейсе меняется только его дата. */
+export function useUpdatePayment() {
+  const client = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      contractId,
+      paymentId,
+      input,
+    }: {
+      contractId: number
+      paymentId: number
+      input: { amount?: string; paidAt?: string; comment?: string }
+    }) => contractsApi.payments.update(contractId, paymentId, input),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: advertiserKeys.all })
+    },
+  })
+}
+
+/** Удаление поступления. Освоенное сервер пересчитывает сам. */
+export function useDeletePayment() {
+  const client = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      contractId,
+      paymentId,
+    }: {
+      contractId: number
+      paymentId: number
+    }) => contractsApi.payments.remove(contractId, paymentId),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: advertiserKeys.all })
+    },
+  })
+}

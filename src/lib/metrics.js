@@ -65,6 +65,43 @@ export const CONTRACT_STATUS = {
   terminated: { label: 'Расторгнут', tone: 'danger' },
 }
 
+/**
+ * Статус оплаты за месяц договора. Оформление одно и в кампаниях,
+ * и в разделе договоров, поэтому живёт здесь, а не в странице.
+ */
+export const CONTRACT_PAYMENT = {
+  awaiting: {
+    label: 'Ожидает оплату',
+    card: 'border-danger/60 bg-danger/10 hover:border-danger/70 hover:bg-danger/10 animate-pulse-ring',
+    badge: 'bg-danger/20 text-danger',
+    caption: 'text-danger',
+    pencil: 'text-danger',
+    pulse: true,
+  },
+  paid: {
+    label: 'Оплачено',
+    card: 'border-success/35 bg-success/[0.07] hover:border-success/60 hover:bg-success/10',
+    badge: 'bg-success/10 text-success',
+    caption: 'text-success',
+    pencil: 'text-success',
+    pulse: false,
+  },
+}
+
+/** Варианты для поповера смены статуса оплаты. */
+export const PAYMENT_OPTIONS = [
+  {
+    value: 'awaiting',
+    label: CONTRACT_PAYMENT.awaiting.label,
+    badge: CONTRACT_PAYMENT.awaiting.badge,
+  },
+  {
+    value: 'paid',
+    label: CONTRACT_PAYMENT.paid.label,
+    badge: CONTRACT_PAYMENT.paid.badge,
+  },
+]
+
 /** Рекламный пакет кампании. */
 export const PACKAGES = {
   partner: { label: 'Партнёр' },
