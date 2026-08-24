@@ -162,8 +162,12 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
     >
       {contract && (
         <div>
-          <div className="relative overflow-hidden rounded-2xl border border-indigo-200 bg-linear-to-br from-surface via-indigo-50 to-indigo-100 p-5">
-            <div className="pointer-events-none absolute -right-12 -top-16 h-36 w-36 rounded-full border border-indigo-300/60" />
+          <div className="relative rounded-2xl border border-indigo-200 bg-linear-to-br from-surface via-indigo-50 to-indigo-100 p-5">
+            {/* Окружность обрезается своим слоем, а не шапкой: overflow-hidden
+                на самой шапке срезал бы выпадающий список статусов. */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+              <div className="absolute -right-12 -top-16 h-36 w-36 rounded-full border border-indigo-300/60" />
+            </div>
             <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-indigo-900">
