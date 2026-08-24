@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Check, Download, FileText, Film, Trash2 } from 'lucide-react'
-import { useData } from '@/context/DataContext.jsx'
+// Договоры переехали на сервер. Мок остаётся для разделов, которые ещё
+// не подключены: import { useData } from '@/context/DataContext.jsx'
+import { useVisibleAdvertisers } from '@/features/advertisers/queries'
+import {
+  useCreateContract,
+  useDeleteContract,
+  useSaveCampaignInfo,
+  useUpdateContract,
+} from '@/features/contracts/queries'
 import { useAuth } from '@/features/auth/useAuth'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
@@ -16,7 +24,6 @@ import {
   leagueLabel,
 } from '@/lib/metrics.js'
 import { formatDate, formatDateTime } from '@/lib/format.js'
-import { uid } from '@/lib/id.js'
 
 const emptyContract = () => ({
   number: '',
@@ -51,7 +58,12 @@ function Row({ label, value }) {
  * название рекламной кампании и ролик. Наблюдателю — только просмотр.
  */
 export function ContractModal({ open, contract, advertiser, onClose }) {
-  const { advertisers, update } = useData()
+  // const { advertisers, update } = useData()
+  const { data: advertisers = [] } = useVisibleAdvertisers()
+  const { mutate: createContract } = useCreateContract()
+  const { mutate: updateContract } = useUpdateContract()
+  const { mutate: deleteContract } = useDeleteContract()
+  const { mutate: saveCampaignInfo } = useSaveCampaignInfo()
   const { isAdvertiser, canEdit } = useAuth()
   const toast = useToast()
   const confirm = useConfirm()
@@ -88,23 +100,38 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }))
 
+  /** Поля договора, которые принимает сервер: файлы правятся не здесь. */
+  const termsInput = (number) => ({
+    number,
+    campaignName: (form.campaignName ?? '').trim(),
+    legalName: (form.legalName ?? '').trim(),
+    package: form.package ?? '',
+    leagues: [...(form.leagues ?? [])],
+    start: form.start || null,
+    end: form.end || null,
+    paymentDate: form.paymentDate || null,
+    status: form.status ?? 'active',
+  })
+
+  const onSaved = (message) => {
+    toast.success(message)
+    setSaved(true)
+  }
+
+  const onFailed = (err) =>
+    toast.error(err.message || 'Не удалось сохранить договор')
+
   const save = () => {
-    const contractsNow = advertiser.contracts ?? []
     // Рекламодатель ведёт только название кампании и ролик — остальные
     // условия договора трогать не даём.
     if (canEditCampaign) {
-      const next = contractsNow.map((c) =>
-        c.id === contract.id
-          ? {
-              ...c,
-              campaignName: (form.campaignName ?? '').trim(),
-              creative: form.creative,
-            }
-          : c,
+      saveCampaignInfo(
+        { id: contract.id, campaignName: (form.campaignName ?? '').trim() },
+        {
+          onSuccess: () => onSaved(`Договор ${contract.number} сохранён`),
+          onError: onFailed,
+        },
       )
-      update('advertisers', advertiser.id, { contracts: next })
-      toast.success(`Договор ${contract.number} сохранён`)
-      setSaved(true)
       return
     }
 
@@ -113,7 +140,6 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
       setError('Укажите номер договора')
       return
     }
-    const contracts = advertiser.contracts ?? []
     // Номер уникален по всей базе: иначе один договор всплывает у двух брендов.
     const owner = advertisers.find((brand) =>
       (brand.contracts ?? []).some(
@@ -129,22 +155,25 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
       return
     }
 
-    const payload = {
-      ...form,
-      number,
-      campaignName: (form.campaignName ?? '').trim(),
+    if (creating) {
+      createContract(
+        { advertiserId: advertiser.id, input: termsInput(number) },
+        {
+          onSuccess: () =>
+            onSaved(`Договор ${number} добавлен бренду ${advertiser.name}`),
+          onError: onFailed,
+        },
+      )
+      return
     }
-    const next = creating
-      ? [...contracts, { ...payload, id: uid('ctr') }]
-      : contracts.map((c) => (c.id === contract.id ? payload : c))
 
-    update('advertisers', advertiser.id, { contracts: next })
-    toast.success(
-      creating
-        ? `Договор ${number} добавлен бренду ${advertiser.name}`
-        : `Договор ${number} сохранён`,
+    updateContract(
+      { id: contract.id, input: termsInput(number) },
+      {
+        onSuccess: () => onSaved(`Договор ${number} сохранён`),
+        onError: onFailed,
+      },
     )
-    setSaved(true)
   }
 
   const remove = async () => {
@@ -154,13 +183,18 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
       body: 'Кампании, оформленные по нему, останутся — у них сохранится номер договора.',
     })
     if (!ok) return
-    update('advertisers', advertiser.id, {
-      contracts: (advertiser.contracts ?? []).filter(
-        (c) => c.id !== contract.id,
-      ),
-    })
-    toast.info('Договор удалён')
-    onClose()
+
+    deleteContract(
+      { advertiserId: advertiser.id, id: contract.id },
+      {
+        onSuccess: () => {
+          toast.info('Договор удалён')
+          onClose()
+        },
+        onError: (err) =>
+          toast.error(err.message || 'Не удалось удалить договор'),
+      },
+    )
   }
 
   const term =

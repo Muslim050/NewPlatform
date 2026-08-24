@@ -194,3 +194,73 @@ export type ManagedUserInput = Partial<
   /** Пустой пароль не отправляем — прежний останется как есть. */
   password?: string
 }
+
+/** Воронка заявки: порядок статусов — как в этом списке. */
+export type CampaignStatus =
+  | 'sent'
+  | 'received'
+  | 'reviewing'
+  | 'active'
+  | 'completed'
+  | 'awaiting_payment'
+  | 'paid'
+  | 'archived'
+
+export type CampaignObjective =
+  'awareness' | 'traffic' | 'conversions' | 'reach'
+
+/**
+ * Кампания. Условия договора (пакет, лиги, юр. лицо, срок, дата оплаты)
+ * сервер проставляет сам по `contractNumber` — отправлять их не нужно,
+ * на запись они закрыты. Денег у кампании больше нет: они на договоре.
+ */
+export interface Campaign {
+  id: number
+  /** Берётся из сессии автора заявки, на запись закрыт. */
+  advertiserId: number | null
+  name: string
+  status: CampaignStatus
+  objective: CampaignObjective | ''
+  startDate: string
+  endDate: string
+  channelIds: number[]
+  impressions: number
+  clicks: number
+  conversions: number
+  creativeUrl: string
+  creativeName: string
+  creativeAddedAt: string | null
+  contractNumber: string
+  /** Снимок условий договора на момент создания. Только чтение. */
+  package: string
+  leagues: string[]
+  legalName: string
+  contractStart: string | null
+  contractEnd: string | null
+  paymentDate: string | null
+  createdAt: string
+  version: number
+}
+
+/**
+ * Поля кампании, которые можно отправить на сервер. При создании статус
+ * не отправляем: заявка всегда заводится как `sent`.
+ */
+export type CampaignInput = Partial<
+  Pick<
+    Campaign,
+    | 'name'
+    | 'status'
+    | 'objective'
+    | 'startDate'
+    | 'endDate'
+    | 'channelIds'
+    | 'impressions'
+    | 'clicks'
+    | 'conversions'
+    | 'creativeUrl'
+    | 'creativeName'
+    | 'creativeAddedAt'
+    | 'contractNumber'
+  >
+>

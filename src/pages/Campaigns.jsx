@@ -14,7 +14,15 @@ import {
   X,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
-import { useData } from '@/context/DataContext.jsx'
+// Кампании и договоры переехали на сервер. Мок остаётся для разделов,
+// которые ещё не подключены: import { useData } from '@/context/DataContext.jsx'
+import { useVisibleAdvertisers } from '@/features/advertisers/queries'
+import {
+  useDeletePayment,
+  useSaveContractAmounts,
+  useSetPaymentStatus,
+  useUpdatePayment,
+} from '@/features/contracts/queries'
 import { useScopedCampaigns } from '@/lib/useScope.js'
 import {
   CONTRACT_PAYMENT,
@@ -36,6 +44,7 @@ import { Progress } from '@/components/ui/Progress.jsx'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { Tooltip } from '@/components/ui/Tooltip.jsx'
 import { CampaignForm } from '@/components/forms/CampaignForm.jsx'
 import { BrandTabs } from '@/components/campaigns/BrandTabs.jsx'
@@ -48,7 +57,6 @@ import {
   periodKey,
 } from '@/components/campaigns/StatusPopover.jsx'
 import { cn } from '@/lib/cn.js'
-import { uid } from '@/lib/id.js'
 import {
   CampaignPreviewModal,
   CampaignStatusPill,
@@ -86,6 +94,9 @@ const STATUS_MARKS = {
 const ALL_BRANDS = 'all'
 // Статус оплаты договора: денег ждём или они уже пришли. Неоплаченный
 // договор красный и пульсирует — его видно в потоке карточек.
+/** Суммы приходят decimal-строками — в расчётах они нужны числами. */
+const toNumber = (value) => Number(value) || 0
+
 const ALL_CONTRACTS = 'all'
 const MONTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
@@ -188,11 +199,40 @@ function brandsOf(campaigns, advertiserById) {
   ]
 }
 
+/** Повторяет геометрию строк, чтобы список не прыгал при загрузке. */
+function CampaignListSkeleton() {
+  return (
+    <div className="divide-y divide-line">
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} className="flex items-center gap-3 px-5 py-4">
+          <Skeleton circle className="h-8 w-8 shrink-0" />
+          <Skeleton className="h-4 w-1/4" />
+          <Skeleton className="ml-auto h-6 w-28 shrink-0 rounded-full" />
+          <Skeleton className="h-4 w-20 shrink-0" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function Campaigns() {
   const { user, isAdmin, isAdvertiser, canEdit } = useAuth()
   const navigate = useNavigate()
-  const { advertiserById, update } = useData()
-  const campaigns = useScopedCampaigns()
+  // const { advertiserById, update } = useData()
+  const {
+    data: campaigns = [],
+    isPending,
+    isError,
+    error,
+    refetch,
+  } = useScopedCampaigns()
+  // Бренды нужны ради их договоров: условия, суммы и статус оплаты живут там.
+  const { data: advertisers = [] } = useVisibleAdvertisers()
+  const advertiserById = (id) => advertisers.find((a) => a.id === id)
+  const { mutate: saveAmounts } = useSaveContractAmounts()
+  const { mutate: savePaymentStatusFor } = useSetPaymentStatus()
+  const { mutate: updatePayment } = useUpdatePayment()
+  const { mutate: deletePayment } = useDeletePayment()
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -295,8 +335,9 @@ export default function Campaigns() {
       : ((contractBrand?.contracts ?? []).find(
           (c) => c.number === activeContract,
         ) ?? null)
-  const contractPacing = selectedContract?.budget
-    ? ((selectedContract.spent ?? 0) / selectedContract.budget) * 100
+  const contractBudget = toNumber(selectedContract?.budget)
+  const contractPacing = contractBudget
+    ? (toNumber(selectedContract?.spent) / contractBudget) * 100
     : 0
 
   const scoped =
@@ -377,43 +418,31 @@ export default function Campaigns() {
     setMonth(new Date().getMonth())
   }
 
-  /** Сохраняем суммы договора внутри карточки бренда. */
-  const patchContract = (contractId, patch) => {
-    const next = (contractBrand.contracts ?? []).map((c) =>
-      c.id === contractId ? { ...c, ...patch } : c,
-    )
-    update('advertisers', contractBrand.id, { contracts: next })
-  }
-
-  // История выплат идёт от первой к последней. Внутри одной минуты порядок
-  // держит seq — номер внесения: без него платежи, вбитые подряд, встают
-  // в случайном порядке.
-  const byPaymentDate = (a, b) => {
-    if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? -1 : 1
-    return (a.seq ?? 0) - (b.seq ?? 0)
-  }
-
+  /**
+   * Суммы договора. Прирост «Оплачено» сервер сам оформляет поступлением
+   * на выбранную дату — отдельного запроса на платёж не нужно.
+   */
   const saveMoney = ({ budget, spent, paidAt }) => {
-    const history = moneyContract.payments ?? []
-    // В историю пишем весь прирост оплаченного, а не только поле
-    // «Поступление»: первую оплату часто вбивают прямо в «Оплачено»,
-    // и это тоже платёж.
-    const gained = spent - (moneyContract.spent ?? 0)
-    const nextSeq =
-      history.reduce((max, payment) => Math.max(max, payment.seq ?? 0), 0) + 1
-    const payments =
-      gained > 0
-        ? [
-            ...history,
-            { id: uid('pay'), amount: gained, createdAt: paidAt, seq: nextSeq },
-          ].sort(byPaymentDate)
-        : history
-    patchContract(moneyContract.id, { budget, spent, payments })
-    // Поповер намеренно не закрываем — можно внести следующее поступление.
-    toast.success(
-      gained > 0
-        ? `Поступление по договору ${moneyContract.number} внесено`
-        : `Суммы договора ${moneyContract.number} обновлены`,
+    if (!moneyContract) return
+    const gained = spent - toNumber(moneyContract.spent)
+    const number = moneyContract.number
+
+    saveAmounts(
+      {
+        id: moneyContract.id,
+        input: { budget: String(budget), spent: String(spent), paidAt },
+      },
+      {
+        // Поповер намеренно не закрываем — можно внести следующее поступление.
+        onSuccess: () =>
+          toast.success(
+            gained > 0
+              ? `Поступление по договору ${number} внесено`
+              : `Суммы договора ${number} обновлены`,
+          ),
+        onError: (err) =>
+          toast.error(err.message || 'Не удалось сохранить суммы договора'),
+      },
     )
   }
 
@@ -436,7 +465,7 @@ export default function Campaigns() {
       ? null
       : (selectedContract?.paymentStatusAt ??
         selectedContract?.paymentLog?.find((e) => e.status === paymentStatus)
-          ?.createdAt ??
+          ?.changedAt ??
         null))
 
   // Раскраска вкладок месяцев за показанный год.
@@ -447,74 +476,78 @@ export default function Campaigns() {
   }, {})
 
   const savePaymentStatus = (next, changedAt, period) => {
-    // Каждую смену статуса записываем: кто, когда, за какой месяц и на что.
-    // Дату выбирают в поповере — смену можно оформить и задним числом.
-    const createdAt = changedAt ?? new Date().toISOString()
-    const entry = {
-      id: uid('st'),
-      status: next,
-      period,
-      createdAt,
-      by: user?.name ?? null,
-    }
-    const log = [entry, ...(selectedContract.paymentLog ?? [])].sort((a, b) =>
-      a.createdAt < b.createdAt ? 1 : -1,
-    )
-    patchContract(selectedContract.id, {
-      // Последний по времени статус держим и на самом договоре — им
-      // подписана карточка, когда месяц не выбран.
-      paymentStatus: next,
-      paymentStatusAt: createdAt,
-      paymentStatusByPeriod: {
-        ...statusByPeriod,
-        [period]: { status: next, changedAt: createdAt },
-      },
-      paymentLog: log,
-    })
+    if (!selectedContract) return
+    const number = selectedContract.number
     setStatusAnchor(null)
-    const [year, month] = period.split('-')
-    toast.success(
-      `Договор ${selectedContract.number}, ${MONTHS_FULL[
-        Number(month) - 1
-      ].toLowerCase()} ${year}: ${CONTRACT_PAYMENT[next].label}`,
+
+    savePaymentStatusFor(
+      {
+        id: selectedContract.id,
+        input: {
+          status: next,
+          period,
+          // Дату выбирают в поповере — смену можно оформить задним числом.
+          changedAt: changedAt ?? new Date().toISOString(),
+        },
+      },
+      {
+        onSuccess: () => {
+          const [statusYear, statusMonth] = period.split('-')
+          toast.success(
+            `Договор ${number}, ${MONTHS_FULL[
+              Number(statusMonth) - 1
+            ].toLowerCase()} ${statusYear}: ${CONTRACT_PAYMENT[next].label}`,
+          )
+        },
+        onError: (err) =>
+          toast.error(err.message || 'Не удалось изменить статус оплаты'),
+      },
     )
   }
 
-  /** Правка даты и времени уже внесённой выплаты. */
+  /** Правка даты и времени уже внесённого поступления. */
   const editPayment = (paymentId, localValue) => {
-    if (!localValue) return
-    const createdAt = new Date(localValue)
-    if (Number.isNaN(createdAt.getTime())) return
-    const payments = (moneyContract.payments ?? [])
-      .map((payment) =>
-        payment.id === paymentId
-          ? { ...payment, createdAt: createdAt.toISOString() }
-          : payment,
-      )
-      .sort(byPaymentDate)
-    patchContract(moneyContract.id, { payments })
+    if (!moneyContract || !localValue) return
+    const paidAt = new Date(localValue)
+    if (Number.isNaN(paidAt.getTime())) return
+
+    updatePayment(
+      {
+        contractId: moneyContract.id,
+        paymentId,
+        input: { paidAt: paidAt.toISOString() },
+      },
+      {
+        onError: (err) =>
+          toast.error(err.message || 'Не удалось изменить поступление'),
+      },
+    )
   }
 
-  /** Удаление выплаты: сумма вычитается из оплаченного по договору. */
+  /** Удаление поступления: сумма вычитается из оплаченного по договору. */
   const removePayment = async (paymentId) => {
-    const payment = (moneyContract.payments ?? []).find(
+    const entry = (moneyContract?.payments ?? []).find(
       (item) => item.id === paymentId,
     )
-    if (!payment) return
+    if (!entry) return
+
     const ok = await confirm({
       title: 'Удалить поступление?',
-      description: `${formatMoneyCompact(payment.amount)} · ${formatDateTime(payment.createdAt)}`,
+      description: `${formatMoneyCompact(entry.amount)} · ${formatDateTime(
+        entry.paidAt,
+      )}`,
       body: 'Сумма вычтется из оплаченного по договору.',
     })
     if (!ok) return
-    const payments = (moneyContract.payments ?? []).filter(
-      (item) => item.id !== paymentId,
+
+    deletePayment(
+      { contractId: moneyContract.id, paymentId },
+      {
+        onSuccess: () => toast.info('Поступление удалено'),
+        onError: (err) =>
+          toast.error(err.message || 'Не удалось удалить поступление'),
+      },
     )
-    patchContract(moneyContract.id, {
-      payments,
-      spent: Math.max(0, (moneyContract.spent ?? 0) - payment.amount),
-    })
-    toast.info('Поступление удалено')
   }
 
   return (
@@ -784,7 +817,20 @@ export default function Campaigns() {
 
       {!showMonthReport && (
         <Card>
-          {filtered.length === 0 ? (
+          {isPending ? (
+            <CampaignListSkeleton />
+          ) : isError ? (
+            <EmptyState
+              icon={Megaphone}
+              title="Не удалось загрузить кампании"
+              description={error?.message ?? 'Попробуйте ещё раз.'}
+              action={
+                <Button variant="secondary" onClick={() => refetch()}>
+                  Повторить
+                </Button>
+              }
+            />
+          ) : filtered.length === 0 ? (
             <EmptyState
               icon={Megaphone}
               title="Кампаний нет"
@@ -831,7 +877,9 @@ export default function Campaigns() {
               <div className="divide-y divide-line">
                 {filtered.map((c, index) => {
                   const adv = advertiserById(c.advertiserId)
-                  const pacing = c.budget ? (c.spent / c.budget) * 100 : 0
+                  // Денег у кампании больше нет — они ведутся по договору;
+                  // колонка бюджета в таблице скрыта (showBudget).
+                  const pacing = 0
                   return (
                     <div
                       key={c.id}

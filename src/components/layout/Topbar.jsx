@@ -9,14 +9,15 @@ import {
   PanelLeftOpen,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
-import { useData } from '@/context/DataContext.jsx'
+// Бренд рекламодателя берём с сервера:
+import { useAdvertiser } from '@/features/advertisers/queries'
 import { NAV } from '@/lib/nav.js'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { userSubtitle, userTitle } from '@/features/auth/user'
 
 export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
   const { user, logout } = useAuth()
-  const { advertiserById } = useData()
+  const { data: adv } = useAdvertiser(user.advertiserId)
   const loc = useLocation()
   const [menu, setMenu] = useState(false)
   const ref = useRef(null)
@@ -36,8 +37,6 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
           : loc.pathname.startsWith(n.to),
       )
       .sort((a, b) => b.to.length - a.to.length)[0] || NAV[0]
-
-  const adv = user.advertiserId ? advertiserById(user.advertiserId) : null
 
   // Рекламодателя подписываем его брендом, остальных — данными учётной записи.
   const title = adv ? adv.name : userTitle(user)

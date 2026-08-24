@@ -21,6 +21,21 @@ export function update(id: number, input: ContractInput): Promise<Contract> {
   })
 }
 
+/**
+ * PATCH /contracts/:id/campaign-info — два поля рекламодателя: название
+ * рекламной кампании и ролик (`creativeId` из загрузчика файлов).
+ * Присланное сверх этого списка сервер игнорирует.
+ */
+export function saveCampaignInfo(
+  id: number,
+  input: { campaignName?: string; creativeId?: number | null },
+): Promise<Contract> {
+  return request<Contract>(`/contracts/${id}/campaign-info`, {
+    method: 'PATCH',
+    body: input,
+  })
+}
+
 /** Правка сумм договора. Пустые поля сервер не трогает. */
 export interface AmountsInput {
   budget?: string

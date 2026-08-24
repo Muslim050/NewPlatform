@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import * as advertisersApi from '@/api/endpoints/advertisers'
 import * as contractsApi from '@/api/endpoints/contracts'
 import { advertiserKeys, useAdvertisers } from '@/features/advertisers/queries'
 import type { Advertiser, Contract, ContractInput } from '@/api/types'
@@ -39,6 +40,57 @@ export function useUpdateContract() {
   return useMutation({
     mutationFn: ({ id, input }: { id: number; input: ContractInput }) =>
       contractsApi.update(id, input),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: advertiserKeys.all })
+    },
+  })
+}
+
+/**
+ * Новый договор заводится внутри бренда — своего адреса для создания
+ * у договора нет.
+ */
+export function useCreateContract() {
+  const client = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      advertiserId,
+      input,
+    }: {
+      advertiserId: number
+      input: ContractInput
+    }) => advertisersApi.contracts.create(advertiserId, input),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: advertiserKeys.all })
+    },
+  })
+}
+
+/** Удаление договора — тоже через бренд. */
+export function useDeleteContract() {
+  const client = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ advertiserId, id }: { advertiserId: number; id: number }) =>
+      advertisersApi.contracts.remove(advertiserId, id),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: advertiserKeys.all })
+    },
+  })
+}
+
+/**
+ * То немногое в договоре, что ведёт рекламодатель: название рекламной
+ * кампании и ролик. Ролик пока не отправляем — для него нужен загрузчик
+ * файлов, сервер ждёт `creativeId`.
+ */
+export function useSaveCampaignInfo() {
+  const client = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, campaignName }: { id: number; campaignName: string }) =>
+      contractsApi.saveCampaignInfo(id, { campaignName }),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: advertiserKeys.all })
     },

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as advertisersApi from '@/api/endpoints/advertisers'
+import { useAuth } from '@/features/auth/useAuth'
 import { PAGE_SIZE, fetchAllPages } from '@/lib/paginate'
 import type {
   Advertiser,
@@ -11,6 +12,7 @@ import type {
 export const advertiserKeys = {
   all: ['advertisers'] as const,
   list: () => [...advertiserKeys.all, 'list'] as const,
+  card: (id: number) => [...advertiserKeys.all, 'card', id] as const,
 }
 
 /**
@@ -18,14 +20,38 @@ export const advertiserKeys = {
  * локально, поэтому страницы дочитываются сразу. Когда брендов станет
  * заметно больше сотни, это место превратится в useInfiniteQuery.
  */
-export function useAdvertisers() {
+export function useAdvertisers({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: advertiserKeys.list(),
     queryFn: (): Promise<Advertiser[]> =>
       fetchAllPages((cursor) =>
         advertisersApi.list({ cursor, limit: PAGE_SIZE }),
       ),
+    enabled,
   })
+}
+
+/** Одна карточка бренда вместе с договорами. */
+export function useAdvertiser(id: number | null | undefined) {
+  return useQuery({
+    queryKey: advertiserKeys.card(id ?? 0),
+    queryFn: (): Promise<Advertiser> => advertisersApi.get(id as number),
+    enabled: !!id,
+  })
+}
+
+/**
+ * Бренды, которые видит текущий пользователь. Площадке доступен весь список,
+ * рекламодателю — только его собственный бренд: список брендов ему закрыт,
+ * и запрос к нему вернул бы 403, то есть выкинул бы из сессии.
+ */
+export function useVisibleAdvertisers() {
+  const { user, isAdvertiser } = useAuth()
+  const list = useAdvertisers({ enabled: !isAdvertiser })
+  const own = useAdvertiser(isAdvertiser ? user?.advertiserId : null)
+
+  if (!isAdvertiser) return list
+  return { ...own, data: own.data ? [own.data] : undefined }
 }
 
 /**

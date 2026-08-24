@@ -2,7 +2,8 @@ import { Link } from '@tanstack/react-router'
 import { Eye } from 'lucide-react'
 import { NAV } from '@/lib/nav.js'
 import { useAuth } from '@/features/auth/useAuth'
-import { useData } from '@/context/DataContext.jsx'
+// Бренд рекламодателя берём с сервера:
+import { useAdvertiser } from '@/features/advertisers/queries'
 import { Logo } from '@/components/Logo'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { userSubtitle, userTitle } from '@/features/auth/user'
@@ -10,9 +11,8 @@ import { cn } from '@/lib/cn.js'
 
 export function Sidebar({ onNavigate, collapsed = false }) {
   const { user, isViewer } = useAuth()
-  const { advertiserById } = useData()
+  const { data: adv } = useAdvertiser(user.advertiserId)
   const items = NAV.filter((n) => !n.hidden && n.roles.includes(user.role))
-  const adv = user.advertiserId ? advertiserById(user.advertiserId) : null
 
   // Рекламодателя подписываем его брендом, остальных — данными учётной записи.
   const title = adv ? adv.name : userTitle(user)

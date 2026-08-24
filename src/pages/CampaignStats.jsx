@@ -12,17 +12,11 @@ import {
   TrendingUp,
   WalletCards,
 } from 'lucide-react'
+// Площадки ещё на моке — из него берём только их:
 import { useData } from '@/context/DataContext.jsx'
+import { useVisibleAdvertisers } from '@/features/advertisers/queries'
 import { useScopedCampaigns } from '@/lib/useScope.js'
-import {
-  STATUS,
-  cpa,
-  cpm,
-  ctr,
-  cvr,
-  pacing,
-  statusLabel,
-} from '@/lib/metrics.js'
+import { STATUS, cpa, cpm, ctr, cvr, statusLabel } from '@/lib/metrics.js'
 import { seededSeries } from '@/lib/id.js'
 import {
   formatCompact,
@@ -69,20 +63,30 @@ function MetricCard({ icon: Icon, label, value, hint }) {
 export default function CampaignStats() {
   const { campaignId } = campaignStatsRoute.useParams()
   const navigate = useNavigate()
-  const campaigns = useScopedCampaigns()
-  const { advertiserById, channelById } = useData()
+  const { data: campaigns = [], isPending } = useScopedCampaigns()
+  const { data: advertisers = [] } = useVisibleAdvertisers()
+  const { channelById } = useData()
   const [metric, setMetric] = useState('spent')
 
-  const campaign = campaigns.find((item) => item.id === campaignId)
+  // Идентификаторы на сервере числовые, а из адреса приходит строка.
+  const campaign = campaigns.find((item) => item.id === Number(campaignId))
 
-  // Кампании с таким id нет (например, её удалили) — возвращаемся к списку.
+  // Кампании с таким id нет — возвращаемся к списку. Пока список грузится,
+  // никуда не уходим: иначе экран отскакивал бы назад на каждом открытии.
   useEffect(() => {
-    if (!campaign) navigate({ to: '/app/campaigns', replace: true })
-  }, [campaign, navigate])
+    if (!isPending && !campaign)
+      navigate({ to: '/app/campaigns', replace: true })
+  }, [campaign, isPending, navigate])
 
   if (!campaign) return null
 
-  const advertiser = advertiserById(campaign.advertiserId)
+  const advertiser = advertisers.find((a) => a.id === campaign.advertiserId)
+  // Деньги переехали на договор — берём их оттуда, а не из кампании.
+  const contract = (advertiser?.contracts ?? []).find(
+    (c) => c.number === campaign.contractNumber,
+  )
+  const budget = Number(contract?.budget) || 0
+  const spent = Number(contract?.spent) || 0
   // Медиаплан и отчётные вкладки доступны у всех запущенных кампаний.
   const hasMediaTables = campaign.status === 'active'
   const channels = campaign.channelIds.flatMap((id) => {
@@ -90,14 +94,17 @@ export default function CampaignStats() {
     return channel ? [channel] : []
   })
   const status = STATUS[campaign.status]
-  const budgetPacing = pacing(campaign)
-  const remaining = Math.max(0, campaign.budget - campaign.spent)
+  const budgetPacing = budget ? (spent / budget) * 100 : 0
+  const remaining = Math.max(0, budget - spent)
   const metricConfig = METRICS[metric]
   const period = 14
   const series = seededSeries(
     `campaign-${campaign.id}-${metric}`,
     period,
-    Math.max(campaign[metric] / period, metric === 'clicks' ? 10 : 100),
+    Math.max(
+      (metric === 'spent' ? spent : campaign[metric]) / period,
+      metric === 'clicks' ? 10 : 100,
+    ),
     0.28,
   )
 
@@ -168,12 +175,12 @@ export default function CampaignStats() {
               <MetricCard
                 icon={WalletCards}
                 label="Бюджет"
-                value={formatMoneyCompact(campaign.budget)}
+                value={formatMoneyCompact(budget)}
                 hint={`Освоено ${formatPct(budgetPacing, 0)}`}
               />
               <MetricCard
                 icon={CircleDollarSign}
-                value={formatMoneyCompact(campaign.spent)}
+                value={formatMoneyCompact(spent)}
                 hint={`Осталось ${formatMoneyCompact(remaining)}`}
               />
               <MetricCard
@@ -242,8 +249,8 @@ export default function CampaignStats() {
               </div>
               <Progress value={budgetPacing} className="mt-5 h-2" />
               <div className="mt-3 flex justify-between text-[12px] text-ink-muted">
-                <span>Потрачено {formatMoneyCompact(campaign.spent)}</span>
-                <span>Бюджет {formatMoneyCompact(campaign.budget)}</span>
+                <span>Потрачено {formatMoneyCompact(spent)}</span>
+                <span>Бюджет {formatMoneyCompact(budget)}</span>
               </div>
               <div className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-4">
                 <div>
@@ -258,7 +265,7 @@ export default function CampaignStats() {
                   </p>
                   <p className="mt-1 font-semibold text-ink tnum">
                     {campaign.clicks
-                      ? formatMoney(campaign.spent / campaign.clicks)
+                      ? formatMoney(spent / campaign.clicks)
                       : '—'}
                   </p>
                 </div>
