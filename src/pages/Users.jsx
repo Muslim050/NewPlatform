@@ -1,0 +1,287 @@
+import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { Pencil, Plus, Search, Trash2, Users as UsersIcon } from 'lucide-react'
+import { useAuth } from '@/features/auth/useAuth'
+import { useUsers, useDeleteUser } from '@/features/users/queries'
+import { useAdvertisers } from '@/features/advertisers/queries'
+import { ROLE_LABELS } from '@/features/auth/user'
+import { useToast } from '@/components/ui/Toast.jsx'
+import { useConfirm } from '@/components/ui/Confirm.jsx'
+import { formatDateNumeric } from '@/lib/format.js'
+import { Card } from '@/components/ui/Card.jsx'
+import { Badge } from '@/components/ui/Badge.jsx'
+import { Button } from '@/components/ui/Button'
+import { Avatar } from '@/components/ui/Avatar.jsx'
+import { EmptyState } from '@/components/ui/EmptyState.jsx'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { SegmentTabs } from '@/components/ui/Tabs.jsx'
+import { UserForm } from '@/components/forms/UserForm.jsx'
+
+/** Тон бейджа роли: у площадки права шире, чем у наблюдателя. */
+const ROLE_TONE = {
+  admin: 'indigo',
+  viewer: 'muted',
+  advertiser: 'success',
+}
+
+export default function Users() {
+  const { user: me } = useAuth()
+  const { data, isPending, isError, error, refetch } = useUsers()
+  // Бренды нужны только затем, чтобы показать, чей бренд видит рекламодатель.
+  const { data: advertisers } = useAdvertisers()
+  const { mutate: deleteUser } = useDeleteUser()
+  const toast = useToast()
+  const confirm = useConfirm()
+  const [q, setQ] = useState('')
+  const [role, setRole] = useState('all')
+  const [modal, setModal] = useState({ open: false, initial: null })
+
+  const users = data ?? []
+  const brandName = (id) =>
+    (advertisers ?? []).find((advertiser) => advertiser.id === id)?.name ?? ''
+
+  const counts = {
+    all: users.length,
+    admin: users.filter((u) => u.role === 'admin').length,
+    viewer: users.filter((u) => u.role === 'viewer').length,
+    advertiser: users.filter((u) => u.role === 'advertiser').length,
+  }
+
+  const query = q.trim().toLowerCase()
+  const filtered = users
+    .filter((u) => role === 'all' || u.role === role)
+    .filter((u) =>
+      `${u.login} ${u.name} ${u.email} ${brandName(u.advertiserId)}`
+        .toLowerCase()
+        .includes(query),
+    )
+
+  const del = async (u) => {
+    const ok = await confirm({
+      title: 'Удалить пользователя?',
+      description: u.name ? `${u.name} · ${u.login}` : u.login,
+      body: 'Человек потеряет доступ к платформе. Действие нельзя отменить.',
+    })
+    if (!ok) return
+
+    deleteUser(u.id, {
+      onSuccess: () => toast.info('Пользователь удалён'),
+      onError: (err2) =>
+        toast.error(err2.message || 'Не удалось удалить пользователя'),
+    })
+  }
+
+  return (
+    <div>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-xs">
+          <Search
+            size={17}
+            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted"
+          />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Поиск пользователя"
+            placeholder="Поиск по логину или имени…"
+            className="h-11 w-full rounded-xl border border-line bg-surface pl-10 pr-3.5 text-sm text-ink placeholder:text-ink-muted focus-ring focus-visible:border-indigo-300"
+          />
+        </div>
+        <Button
+          variant="primary"
+          className="shrink-0"
+          onClick={() => setModal({ open: true, initial: null })}
+        >
+          <Plus size={18} />
+          Новый пользователь
+        </Button>
+      </div>
+
+      <SegmentTabs
+        className="mb-5"
+        value={role}
+        onChange={setRole}
+        items={[
+          { value: 'all', label: 'Все', count: counts.all },
+          { value: 'admin', label: ROLE_LABELS.admin, count: counts.admin },
+          { value: 'viewer', label: ROLE_LABELS.viewer, count: counts.viewer },
+          {
+            value: 'advertiser',
+            label: ROLE_LABELS.advertiser,
+            count: counts.advertiser,
+          },
+        ]}
+      />
+
+      {isPending ? (
+        <UserTableSkeleton />
+      ) : isError ? (
+        <Card>
+          <EmptyState
+            icon={UsersIcon}
+            title="Не удалось загрузить пользователей"
+            description={error?.message ?? 'Попробуйте ещё раз.'}
+            action={
+              <Button variant="secondary" onClick={() => refetch()}>
+                Повторить
+              </Button>
+            }
+          />
+        </Card>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={UsersIcon}
+            title={users.length ? 'Ничего не нашлось' : 'Пользователей нет'}
+            description={
+              users.length
+                ? 'Попробуйте изменить запрос или снять фильтр роли.'
+                : 'Заведите первого — он получит доступ к платформе.'
+            }
+            action={
+              <Button
+                variant="secondary"
+                onClick={() => setModal({ open: true, initial: null })}
+              >
+                <Plus size={16} />
+                Добавить
+              </Button>
+            }
+          />
+        </Card>
+      ) : (
+        <Card className="overflow-x-auto">
+          <table className="w-full min-w-[820px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                <Th className="w-10">№</Th>
+                <Th>Пользователь</Th>
+                <Th>Email</Th>
+                <Th>Роль</Th>
+                <Th>Бренд</Th>
+                <Th>Доступ</Th>
+                <Th>Создан</Th>
+                <Th className="text-center">Действия</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((u, i) => (
+                <motion.tr
+                  key={u.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(i, 12) * 0.03, duration: 0.3 }}
+                  className="border-b border-line/20 transition-colors last:border-0 hover:bg-paper"
+                >
+                  <Td className="w-10 text-[12px] text-ink-muted tnum">
+                    {i + 1}
+                  </Td>
+                  <Td>
+                    <span className="flex items-center gap-2">
+                      <Avatar name={u.name || u.login} size="sm" />
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium text-ink">
+                          {u.name || u.login}
+                        </span>
+                        <span className="block truncate text-[11px] text-ink-muted">
+                          {u.login}
+                          {/* Себя видно сразу: свою учётку легко испортить. */}
+                          {u.id === me?.id && ' · это вы'}
+                        </span>
+                      </span>
+                    </span>
+                  </Td>
+                  <Td className="text-ink-soft">
+                    {u.email || <span className="text-ink-muted">—</span>}
+                  </Td>
+                  <Td>
+                    <Badge tone={ROLE_TONE[u.role]} dot>
+                      {ROLE_LABELS[u.role]}
+                    </Badge>
+                  </Td>
+                  <Td className="text-ink-soft">
+                    {brandName(u.advertiserId) || (
+                      <span className="text-ink-muted">—</span>
+                    )}
+                  </Td>
+                  <Td>
+                    <Badge tone={u.isActive ? 'success' : 'muted'} dot>
+                      {u.isActive ? 'Активен' : 'Отключён'}
+                    </Badge>
+                  </Td>
+                  <Td className="whitespace-nowrap text-[12px] text-ink-muted tnum">
+                    {formatDateNumeric(u.createdAt)}
+                  </Td>
+                  <Td>
+                    <span className="flex justify-center gap-1.5">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="h-9 w-9 shrink-0 px-0"
+                        onClick={() => setModal({ open: true, initial: u })}
+                        aria-label={`Редактировать ${u.login}`}
+                        title="Редактировать"
+                      >
+                        <Pencil size={16} />
+                      </Button>
+                      {/* Себя не удаляем: остаться без админа некому помочь. */}
+                      {u.id !== me?.id && (
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          className="h-9 w-9 shrink-0 px-0"
+                          onClick={() => del(u)}
+                          aria-label={`Удалить ${u.login}`}
+                          title="Удалить"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      )}
+                    </span>
+                  </Td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      <UserForm
+        open={modal.open}
+        initial={modal.initial}
+        onClose={() => setModal({ open: false, initial: null })}
+      />
+    </div>
+  )
+}
+
+/** Повторяет геометрию таблицы, чтобы страница не прыгала при загрузке. */
+function UserTableSkeleton() {
+  return (
+    <Card className="overflow-hidden p-4">
+      <div className="space-y-3">
+        {Array.from({ length: 5 }, (_, i) => (
+          <div key={i} className="flex items-center gap-4">
+            <Skeleton circle className="h-8 w-8 shrink-0" />
+            <Skeleton className="h-4 w-1/5" />
+            <Skeleton className="h-4 w-1/6" />
+            <Skeleton className="ml-auto h-6 w-24 shrink-0 rounded-full" />
+            <Skeleton className="h-6 w-24 shrink-0 rounded-full" />
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
+function Th({ children, className }) {
+  return (
+    <th className={`px-4 py-3 font-semibold ${className ?? ''}`}>{children}</th>
+  )
+}
+
+function Td({ children, className }) {
+  return (
+    <td className={`px-4 py-3 align-middle ${className ?? ''}`}>{children}</td>
+  )
+}

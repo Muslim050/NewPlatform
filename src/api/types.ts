@@ -166,3 +166,31 @@ export type AdvertiserInput = Partial<
     | 'requisites'
   >
 >
+
+/**
+ * Пользователь платформы глазами админа. Пароль только на запись: наружу
+ * сервер его не отдаёт ни в каком виде.
+ */
+export interface ManagedUser {
+  id: number
+  login: string
+  name: string
+  email: string
+  role: Role
+  /** Заполнен у роли advertiser: чей бренд видит пользователь. */
+  advertiserId: number | null
+  isActive: boolean
+  createdAt: string
+  version: number
+}
+
+/** Поля пользователя, которые можно отправить на сервер. */
+export type ManagedUserInput = Partial<
+  Pick<
+    ManagedUser,
+    'login' | 'name' | 'email' | 'role' | 'advertiserId' | 'isActive'
+  >
+> & {
+  /** Пустой пароль не отправляем — прежний останется как есть. */
+  password?: string
+}
