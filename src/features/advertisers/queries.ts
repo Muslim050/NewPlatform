@@ -85,6 +85,12 @@ function isSameValue(before: unknown, after: unknown): boolean {
 }
 
 /**
+ * Команды загрузчика файлов: в самом договоре таких полей нет, сравнивать
+ * их не с чем — раз ключ пришёл, файл заменили или убрали.
+ */
+const FILE_KEYS = ['fileId', 'creativeId']
+
+/**
  * Правда ли, что отправлять нечего. Сравниваем только те поля, которые форма
  * собирается отправить: остальное она не трогает.
  */
@@ -93,6 +99,7 @@ function isUnchanged(
   fields: Record<string, unknown>,
 ): boolean {
   if (!before) return false
+  if (FILE_KEYS.some((key) => key in fields)) return false
   return Object.entries(fields).every(([key, value]) =>
     isSameValue(before[key], value),
   )

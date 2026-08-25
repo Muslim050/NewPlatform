@@ -9,6 +9,8 @@ import {
   useSaveCampaignInfo,
   useUpdateContract,
 } from '@/features/contracts/queries'
+import { contractFileInput } from '@/features/contracts/files'
+import { useFileDownload } from '@/features/files/queries'
 import { useAuth } from '@/features/auth/useAuth'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
@@ -64,6 +66,8 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
   const { mutate: updateContract } = useUpdateContract()
   const { mutate: deleteContract } = useDeleteContract()
   const { mutate: saveCampaignInfo } = useSaveCampaignInfo()
+  // Скачивание на сервере закрыто токеном — тянем файл транспортом.
+  const { save: saveFile } = useFileDownload()
   const { isAdvertiser, canEdit } = useAuth()
   const toast = useToast()
   const confirm = useConfirm()
@@ -111,6 +115,7 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
     end: form.end || null,
     paymentDate: form.paymentDate || null,
     status: form.status ?? 'active',
+    ...contractFileInput(form, contract),
   })
 
   const onSaved = (message) => {
@@ -126,7 +131,13 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
     // условия договора трогать не даём.
     if (canEditCampaign) {
       saveCampaignInfo(
-        { id: contract.id, campaignName: (form.campaignName ?? '').trim() },
+        {
+          id: contract.id,
+          input: {
+            campaignName: (form.campaignName ?? '').trim(),
+            ...contractFileInput(form, contract),
+          },
+        },
         {
           onSuccess: () => onSaved(`Договор ${contract.number} сохранён`),
           onError: onFailed,
@@ -258,17 +269,17 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
           />
           {form.file && (
             <div className="pt-2">
-              <a
-                href={form.file.url}
-                download={form.file.name}
-                className="flex items-center gap-2 rounded-xl border border-line bg-paper/55 px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+              <button
+                type="button"
+                onClick={() => saveFile(form.file)}
+                className="flex w-full items-center gap-2 rounded-xl border border-line bg-paper/55 px-3 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
               >
                 <FileText size={16} className="shrink-0 text-indigo-800" />
                 <span className="min-w-0 flex-1 truncate">
                   {form.file.name}
                 </span>
                 <Download size={15} className="shrink-0 text-ink-muted" />
-              </a>
+              </button>
               {form.file.addedAt && (
                 <p className="mt-1 text-[11px] text-ink-muted tnum">
                   Добавлен {formatDateTime(form.file.addedAt)}
@@ -280,17 +291,17 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
           {/* Ролик — тем, кто его не правит, показываем ссылкой с датой. */}
           {!canEditCampaign && form.creative && (
             <div className="pt-2">
-              <a
-                href={form.creative.url}
-                download={form.creative.name}
-                className="flex items-center gap-2 rounded-xl border border-line bg-paper/55 px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+              <button
+                type="button"
+                onClick={() => saveFile(form.creative)}
+                className="flex w-full items-center gap-2 rounded-xl border border-line bg-paper/55 px-3 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
               >
                 <Film size={16} className="shrink-0 text-indigo-800" />
                 <span className="min-w-0 flex-1 truncate">
                   {form.creative.name}
                 </span>
                 <Download size={15} className="shrink-0 text-ink-muted" />
-              </a>
+              </button>
               {form.creative.addedAt && (
                 <p className="mt-1 text-[11px] text-ink-muted tnum">
                   Добавлен {formatDateTime(form.creative.addedAt)}
@@ -316,6 +327,7 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
                 <FilePicker
                   accept="video/*"
                   icon={Film}
+                  kind="creative"
                   emptyLabel="Загрузить ролик"
                   downloadLabel="Скачать ролик"
                   name={form.creative?.name}
@@ -360,6 +372,7 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
             <Field label="Файл договора">
               <FilePicker
                 accept=".pdf,.doc,.docx,image/*"
+                kind="contract"
                 emptyLabel="Загрузить договор"
                 downloadLabel="Скачать договор"
                 name={form.file?.name}
@@ -381,17 +394,17 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
                 <Row label="Рекламная кампания" value={form.campaignName} />
               </dl>
               {form.creative && (
-                <a
-                  href={form.creative.url}
-                  download={form.creative.name}
-                  className="mt-2 flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+                <button
+                  type="button"
+                  onClick={() => saveFile(form.creative)}
+                  className="mt-2 flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
                 >
                   <Film size={16} className="shrink-0 text-indigo-800" />
                   <span className="min-w-0 flex-1 truncate">
                     {form.creative.name}
                   </span>
                   <Download size={15} className="shrink-0 text-ink-muted" />
-                </a>
+                </button>
               )}
               {form.creative?.addedAt && (
                 <p className="mt-1 text-[11px] text-ink-muted tnum">

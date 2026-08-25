@@ -82,15 +82,19 @@ export function useDeleteContract() {
 
 /**
  * То немногое в договоре, что ведёт рекламодатель: название рекламной
- * кампании и ролик. Ролик пока не отправляем — для него нужен загрузчик
- * файлов, сервер ждёт `creativeId`.
+ * кампании и ролик. Ролик уходит идентификатором из загрузчика файлов.
  */
 export function useSaveCampaignInfo() {
   const client = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, campaignName }: { id: number; campaignName: string }) =>
-      contractsApi.saveCampaignInfo(id, { campaignName }),
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: number
+      input: { campaignName?: string; creativeId?: number | null }
+    }) => contractsApi.saveCampaignInfo(id, input),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: advertiserKeys.all })
     },

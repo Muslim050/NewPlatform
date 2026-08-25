@@ -17,6 +17,7 @@ import { useAuth } from '@/features/auth/useAuth'
 // Кампании и договоры переехали на сервер. Мок остаётся для разделов,
 // которые ещё не подключены: import { useData } from '@/context/DataContext.jsx'
 import { useVisibleAdvertisers } from '@/features/advertisers/queries'
+import { useFileDownload } from '@/features/files/queries'
 import {
   useDeletePayment,
   useSaveContractAmounts,
@@ -233,6 +234,7 @@ export default function Campaigns() {
   const { mutate: savePaymentStatusFor } = useSetPaymentStatus()
   const { mutate: updatePayment } = useUpdatePayment()
   const { mutate: deletePayment } = useDeletePayment()
+  const { save: saveFile } = useFileDownload()
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -653,14 +655,15 @@ export default function Campaigns() {
           {/* Файл договора качаем прямо из строки — без захода в карточку. */}
           {selectedContract?.file?.url && (
             <Tooltip label={`Скачать договор — ${selectedContract.file.name}`}>
-              <a
-                href={selectedContract.file.url}
-                download={selectedContract.file.name}
+              {/* Скачивание закрыто токеном — тянем файл транспортом. */}
+              <Button
+                size="sm"
+                variant="secondary"
                 aria-label="Скачать договор"
-                className="inline-flex h-9 items-center justify-center rounded-lg border border-line bg-surface px-3.5 text-ink transition-all duration-200 hover:border-indigo-300 hover:bg-indigo-50 active:scale-[0.98] focus-ring"
+                onClick={() => saveFile(selectedContract.file)}
               >
                 <Download size={15} />
-              </a>
+              </Button>
             </Tooltip>
           )}
           {!isAdvertiser && canEdit && (

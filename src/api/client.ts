@@ -39,6 +39,7 @@ export function setTokensRefreshedHandler(
 
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
+  /** FormData уходит как есть — её Content-Type с границей ставит браузер. */
   body?: unknown
   signal?: AbortSignal
 }
@@ -63,15 +64,21 @@ async function send(
   withAuth: boolean,
 ): Promise<Response> {
   const access = withAuth ? getAccessToken() : null
+  const isForm = body instanceof FormData
   try {
     return await fetch(`${BASE_URL}${API_PREFIX}${path}`, {
       method,
       signal,
       headers: {
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        // У multipart свой Content-Type с границей — его ставит браузер.
+        ...(body && !isForm ? { 'Content-Type': 'application/json' } : {}),
         ...(access ? { Authorization: `Bearer ${access}` } : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: body
+        ? isForm
+          ? (body as FormData)
+          : JSON.stringify(body)
+        : undefined,
     })
   } catch (cause) {
     throw new NetworkError(cause)
@@ -121,12 +128,13 @@ async function toResult<T>(response: Response): Promise<T> {
 
 /**
  * Единственная точка выхода в сеть. Здесь живут префикс, токен, разбор
- * ошибок и прозрачное обновление истёкшего access.
+ * ошибок и прозрачное обновление истёкшего access. Ответ отдаётся сырым:
+ * разбирают его `request` и `requestBlob`.
  */
-export async function request<T>(
+async function perform(
   path: string,
   options: RequestOptions = {},
-): Promise<T> {
+): Promise<Response> {
   const withAuth = !ANONYMOUS_PATHS.includes(path)
   const canRefresh = !NO_REFRESH_PATHS.includes(path)
   // Запоминаем, с каким access ушёл запрос: если к моменту ответа токен уже
@@ -135,7 +143,7 @@ export async function request<T>(
   const sentWith = canRefresh ? getAccessToken() : null
   let response = await send(path, options, withAuth)
 
-  if (response.ok) return toResult<T>(response)
+  if (response.ok) return response
 
   // Access живёт 15 минут. Истёк — меняем его по refresh и повторяем запрос
   // ровно один раз; на самих auth-эндпоинтах этого не делаем.
@@ -149,10 +157,26 @@ export async function request<T>(
       }
     }
     response = await send(path, options, true)
-    if (response.ok) return toResult<T>(response)
+    if (response.ok) return response
   }
 
   const error = await parseError(response)
   if (error.isAuthError && canRefresh) onUnauthorized?.()
   throw error
+}
+
+/** Запрос с разбором JSON — обычный случай. */
+export async function request<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  return toResult<T>(await perform(path, options))
+}
+
+/**
+ * Файл с сервера. Скачивание закрыто токеном, поэтому тянем его тем же
+ * транспортом: у <img src> и <a download> заголовка нет, они получили бы 401.
+ */
+export async function requestBlob(path: string): Promise<Blob> {
+  return (await perform(path)).blob()
 }

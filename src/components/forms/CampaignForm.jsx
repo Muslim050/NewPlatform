@@ -4,6 +4,7 @@ import { Download, FileText, Film } from 'lucide-react'
 // не подключены: import { useData } from '@/context/DataContext.jsx'
 import { useVisibleAdvertisers } from '@/features/advertisers/queries'
 import { useSaveCampaign } from '@/features/campaigns/queries'
+import { useFileDownload } from '@/features/files/queries'
 import { useAuth } from '@/features/auth/useAuth'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
@@ -58,6 +59,7 @@ const fileNameFromUrl = (url) => (url ? url.split('/').pop() || '' : '')
 export function CampaignForm({ open, onClose, initial }) {
   const { mutate: saveCampaign, isPending } = useSaveCampaign()
   const { data: advertisers = [] } = useVisibleAdvertisers()
+  const { save: saveFile } = useFileDownload()
   const { user, isAdmin, isAdvertiser } = useAuth()
   const toast = useToast()
   const editing = !!initial
@@ -396,17 +398,18 @@ export function CampaignForm({ open, onClose, initial }) {
               />
               {selectedContract.file?.url && (
                 <div className="pt-1">
-                  <a
-                    href={selectedContract.file.url}
-                    download={selectedContract.file.name}
-                    className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+                  {/* Скачивание закрыто токеном — тянем файл транспортом. */}
+                  <button
+                    type="button"
+                    onClick={() => saveFile(selectedContract.file)}
+                    className="flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
                   >
                     <FileText size={16} className="shrink-0 text-indigo-800" />
                     <span className="min-w-0 flex-1 truncate">
                       {selectedContract.file.name}
                     </span>
                     <Download size={15} className="shrink-0 text-ink-muted" />
-                  </a>
+                  </button>
                 </div>
               )}
             </dl>

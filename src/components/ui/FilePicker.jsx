@@ -1,18 +1,18 @@
 import { useRef } from 'react'
-import { Download, FileText, Paperclip, X } from 'lucide-react'
+import { Download, FileText, Loader2, Paperclip, X } from 'lucide-react'
 import { cn } from '@/lib/cn.js'
 import { formatDateTime } from '@/lib/format.js'
 import { useToast } from '@/components/ui/Toast.jsx'
-
-// Файлы храним прямо в базе (localStorage), поэтому ограничиваем размер.
-const MAX_INLINE_SIZE = 2 * 1024 * 1024
+import { useFileDownload, useUploadFile } from '@/features/files/queries'
 
 /**
- * Поле выбора файла: клик по нему открывает системный диалог.
- * Небольшие файлы кладём в базу как data-URL, крупные держим ссылкой на сессию —
- * иначе они не помещаются в localStorage.
- * onPick получает { name, url, addedAt } либо null, если файл убрали.
- * addedAt — момент загрузки: показываем его подписью под полем.
+ * Поле выбора файла: клик по нему открывает системный диалог, выбранный файл
+ * сразу уходит на сервер (`POST /files`). Тип и размер проверяет сервер —
+ * по назначению из `kind`.
+ *
+ * onPick получает `{ id, name, url, addedAt }` либо null, если файл убрали.
+ * `id` — то, что уходит в сущность (`fileId`, `creativeId`), `addedAt`
+ * проставляет сервер.
  */
 export function FilePicker({
   name,
@@ -20,6 +20,14 @@ export function FilePicker({
   addedAt,
   onPick,
   accept,
+  /** Назначение файла: contract, creative или logo. */
+  kind = 'contract',
+  /**
+   * Не отправлять файл на сервер, а показать его локально. Нужно логотипу
+   * бренда: сервер хранит его ссылкой и не принимает адрес собственного
+   * загрузчика — до тех пор поле работает как предпросмотр.
+   */
+  local = false,
   emptyLabel = 'Выбрать файл',
   // Подпись отдельной кнопки скачивания под полем — если файл уже загружен.
   downloadLabel,
@@ -28,38 +36,51 @@ export function FilePicker({
 }) {
   const inputRef = useRef(null)
   const toast = useToast()
+  const { mutate: uploadFile, isPending: uploading } = useUploadFile()
+  const { save, pendingUrl } = useFileDownload()
+  const downloading = !!url && pendingUrl === url
 
   const pick = (e) => {
     const picked = e.target.files?.[0]
     // Сбрасываем input, иначе повторный выбор того же файла не сработает.
     e.target.value = ''
     if (!picked) return
-    // Дату загрузки фиксируем сразу — она едет вместе с файлом.
-    const addedNow = new Date().toISOString()
-    if (picked.size <= MAX_INLINE_SIZE) {
-      const reader = new FileReader()
-      reader.onload = () =>
-        onPick({
-          name: picked.name,
-          url: String(reader.result),
-          addedAt: addedNow,
-        })
-      reader.onerror = () => toast.error('Не удалось прочитать файл')
-      reader.readAsDataURL(picked)
+
+    if (local) {
+      onPick({
+        name: picked.name,
+        url: URL.createObjectURL(picked),
+        addedAt: new Date().toISOString(),
+      })
       return
     }
-    onPick({
-      name: picked.name,
-      url: URL.createObjectURL(picked),
-      addedAt: addedNow,
-    })
-    toast.info(
-      'Файл больше 2 МБ — ссылка на него живёт до перезагрузки страницы',
+
+    uploadFile(
+      { file: picked, kind },
+      {
+        onSuccess: (stored) =>
+          onPick({
+            id: stored.id,
+            name: stored.name,
+            url: stored.url,
+            addedAt: stored.addedAt,
+          }),
+        onError: (error) =>
+          toast.error(error.message || 'Не удалось загрузить файл'),
+      },
     )
   }
 
+  const download = () =>
+    save({ name, url }).catch((error) =>
+      toast.error(error.message || 'Не удалось скачать файл'),
+    )
+
+  // Файл, выбранный локально, уже лежит в blob: — его скачивать неоткуда.
+  const downloadable = !!url && !url.startsWith('blob:')
+
   // Кнопки «скачать» и «убрать» держим соседями поля выбора, а не внутри него:
-  // ссылка внутри button — невалидная вложенность.
+  // вложенные интерактивные элементы — невалидная разметка.
   return (
     // min-w-0 — чтобы длинное имя файла обрезалось, а не растягивало поле.
     <div className={cn('min-w-0 space-y-2', className)}>
@@ -80,30 +101,43 @@ export function FilePicker({
         />
         <button
           type="button"
+          disabled={uploading}
           onClick={() => inputRef.current?.click()}
           title={name || emptyLabel}
           className={cn(
-            'flex h-full min-w-0 flex-1 items-center gap-2 rounded-xl pl-3.5 text-left text-sm focus-ring',
+            'flex h-full min-w-0 flex-1 items-center gap-2 rounded-xl pl-3.5 text-left text-sm focus-ring disabled:opacity-60',
             name ? 'text-ink' : 'text-ink-soft',
           )}
         >
-          {name ? (
+          {uploading ? (
+            <Loader2
+              size={16}
+              className="shrink-0 animate-spin text-ink-muted"
+            />
+          ) : name ? (
             <Icon size={16} className="shrink-0 text-indigo-800" />
           ) : (
             <Paperclip size={16} className="shrink-0 text-ink-muted" />
           )}
-          <span className="min-w-0 flex-1 truncate">{name || emptyLabel}</span>
+          <span className="min-w-0 flex-1 truncate">
+            {uploading ? 'Загружаем…' : name || emptyLabel}
+          </span>
         </button>
-        {name && url && !downloadLabel && (
-          <a
-            href={url}
-            download={name}
+        {name && downloadable && !downloadLabel && (
+          <button
+            type="button"
+            onClick={download}
+            disabled={downloading}
             aria-label="Скачать файл"
             title="Скачать файл"
             className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/6 hover:text-indigo-800 focus-ring"
           >
-            <Download size={14} />
-          </a>
+            {downloading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Download size={14} />
+            )}
+          </button>
         )}
         {name && (
           <button
@@ -125,15 +159,20 @@ export function FilePicker({
         </p>
       )}
 
-      {downloadLabel && name && url && (
-        <a
-          href={url}
-          download={name}
+      {downloadLabel && name && downloadable && (
+        <button
+          type="button"
+          onClick={download}
+          disabled={downloading}
           className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-line bg-paper/55 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
         >
-          <Download size={15} className="text-indigo-800" />
-          {downloadLabel}
-        </a>
+          {downloading ? (
+            <Loader2 size={15} className="animate-spin text-indigo-800" />
+          ) : (
+            <Download size={15} className="text-indigo-800" />
+          )}
+          {downloading ? 'Скачиваем…' : downloadLabel}
+        </button>
       )}
     </div>
   )

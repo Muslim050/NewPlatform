@@ -33,6 +33,7 @@ import { Modal } from '@/components/ui/Modal.jsx'
 import { Tooltip } from '@/components/ui/Tooltip.jsx'
 import { Button } from '@/components/ui/Button'
 import { Progress } from '@/components/ui/Progress.jsx'
+import { useFileDownload } from '@/features/files/queries'
 import { cn } from '@/lib/cn.js'
 
 const STATUS_UI = {
@@ -171,9 +172,26 @@ export function CreativeTile({ url, addedAt }) {
   )
 }
 
+/** Плитка-кнопка: по клику скачивает файл договора. */
+function ContractTileDownload({ file, children }) {
+  const { save, pendingUrl } = useFileDownload()
+
+  return (
+    <button
+      type="button"
+      onClick={() => save(file)}
+      disabled={pendingUrl === file.url}
+      title={file.name}
+      className="group rounded-2xl border border-line bg-paper/55 p-4 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+    >
+      {children}
+    </button>
+  )
+}
+
 /**
  * Плитка договора — тот же формат, что у метрик, но текст поменьше.
- * file — скан договора: тогда плитка становится ссылкой на скачивание.
+ * file — скан договора: тогда плитка становится кнопкой скачивания.
  */
 export function ContractTile({ icon: Icon, label, value, file }) {
   const body = (
@@ -204,16 +222,9 @@ export function ContractTile({ icon: Icon, label, value, file }) {
   )
 
   if (file) {
-    return (
-      <a
-        href={file.url}
-        download={file.name}
-        title={file.name}
-        className="group rounded-2xl border border-line bg-paper/55 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
-      >
-        {body}
-      </a>
-    )
+    // Скачивание на сервере закрыто токеном, поэтому не ссылка, а кнопка:
+    // файл тянем транспортом и отдаём браузеру блобом.
+    return <ContractTileDownload file={file}>{body}</ContractTileDownload>
   }
 
   return (

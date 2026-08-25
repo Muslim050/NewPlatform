@@ -130,7 +130,12 @@ export type ContractInput = Partial<
     | 'paymentDate'
     | 'status'
   >
->
+> & {
+  /** Скан договора: id из загрузчика файлов. `null` — убрать файл. */
+  fileId?: number | null
+  /** Рекламный ролик договора: id из загрузчика файлов. */
+  creativeId?: number | null
+}
 
 export interface Advertiser {
   id: number
@@ -264,3 +269,14 @@ export type CampaignInput = Partial<
     | 'contractNumber'
   >
 >
+
+/** Ответ загрузчика файлов: `POST /files`. */
+export interface StoredFile {
+  id: number
+  name: string
+  /** Путь скачивания вида `/api/v1/files/<slug>/download`. Требует токен. */
+  url: string
+  size: number
+  mime: string
+  addedAt: string
+}

@@ -10,6 +10,8 @@ import {
 } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { useSaveAdvertiser } from '@/features/advertisers/queries'
+import { contractFileInput } from '@/features/contracts/files'
+import { useFileDownload } from '@/features/files/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button'
@@ -126,10 +128,10 @@ const isInlineFile = (url) =>
 const dateOrNull = (value) => (value?.trim() ? value : null)
 
 /**
- * Оставляет у договора только то, что принимает API: файлы и суммы он
- * здесь не редактирует.
+ * Оставляет у договора только то, что принимает API: суммы он здесь
+ * не редактирует. Файлы едут отдельными полями — id из загрузчика.
  */
-const toContractInput = (contract) => ({
+const toContractInput = (contract, before) => ({
   id: contract.id,
   number: contract.number.trim(),
   campaignName: (contract.campaignName ?? '').trim(),
@@ -139,6 +141,7 @@ const toContractInput = (contract) => ({
   start: dateOrNull(contract.start),
   end: dateOrNull(contract.end),
   paymentDate: dateOrNull(contract.paymentDate),
+  ...contractFileInput(contract, before),
 })
 
 /** Карточка с сервера → состояние формы. */
@@ -161,6 +164,8 @@ const formFrom = (advertiser) => ({
 
 export function AdvertiserForm({ open, onClose, initial }) {
   const { mutate: saveAdvertiser, isPending } = useSaveAdvertiser()
+  // Скачивание на сервере закрыто токеном — тянем файл транспортом.
+  const { save: saveFile } = useFileDownload()
   const toast = useToast()
   const editing = !!initial
   const [form, setForm] = useState(emptyForm)
@@ -245,9 +250,14 @@ export function AdvertiserForm({ open, onClose, initial }) {
     if (!inlineLogo) advertiser.logo = logo ?? ''
 
     // Договоры без номера не сохраняем — из них нечего выбирать в кампании.
+    const previousById = new Map(
+      (source?.contracts ?? []).map((contract) => [contract.id, contract]),
+    )
     const contracts = form.contracts
       .filter((contract) => contract.number.trim())
-      .map(toContractInput)
+      .map((contract) =>
+        toContractInput(contract, previousById.get(contract.id)),
+      )
 
     const contractsChanged =
       contractsFingerprint(contracts) !==
@@ -447,6 +457,8 @@ export function AdvertiserForm({ open, onClose, initial }) {
               <FilePicker
                 accept="image/*"
                 icon={ImageIcon}
+                kind="logo"
+                local
                 emptyLabel="Загрузить логотип"
                 name={form.logo?.name}
                 url={form.logo?.url}
@@ -530,6 +542,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
               <Field label="Файл договора">
                 <FilePicker
                   accept=".pdf,.doc,.docx,image/*"
+                  kind="contract"
                   emptyLabel="Загрузить договор"
                   downloadLabel="Скачать договор"
                   name={contract.file?.name}
@@ -554,17 +567,17 @@ export function AdvertiserForm({ open, onClose, initial }) {
               </p>
               {contract.creative ? (
                 <>
-                  <a
-                    href={contract.creative.url}
-                    download={contract.creative.name}
-                    className="mt-2 flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+                  <button
+                    type="button"
+                    onClick={() => saveFile(contract.creative)}
+                    className="mt-2 flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
                   >
                     <Film size={16} className="shrink-0 text-indigo-800" />
                     <span className="min-w-0 flex-1 truncate">
                       {contract.creative.name}
                     </span>
                     <Download size={15} className="shrink-0 text-ink-muted" />
-                  </a>
+                  </button>
                   {contract.creative.addedAt && (
                     <p className="mt-1 text-[11px] text-ink-muted tnum">
                       Ролик добавлен {formatDateTime(contract.creative.addedAt)}
