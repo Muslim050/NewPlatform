@@ -5,7 +5,6 @@ import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { Logo } from '@/components/Logo'
 import { Avatar } from '@/components/ui/Avatar.jsx'
-import { userSubtitle, userTitle } from '@/features/auth/user'
 import { cn } from '@/lib/cn.js'
 
 export function Sidebar({ onNavigate, collapsed = false }) {
@@ -13,10 +12,6 @@ export function Sidebar({ onNavigate, collapsed = false }) {
   const { advertiserById } = useData()
   const items = NAV.filter((n) => !n.hidden && n.roles.includes(user.role))
   const adv = user.advertiserId ? advertiserById(user.advertiserId) : null
-
-  // Рекламодателя подписываем его брендом, остальных — данными учётной записи.
-  const title = adv ? adv.name : userTitle(user)
-  const subtitle = adv ? adv.email : userSubtitle(user)
 
   return (
     <aside
@@ -94,10 +89,10 @@ export function Sidebar({ onNavigate, collapsed = false }) {
           'mt-4 flex items-center gap-3 rounded-2xl border border-line bg-paper p-3',
           collapsed && 'justify-center px-0',
         )}
-        title={collapsed ? title : undefined}
+        title={collapsed ? (adv ? adv.name : user.name) : undefined}
       >
         <Avatar
-          name={title}
+          name={adv ? adv.name : user.name}
           color={adv ? adv.color : '#FFD106'}
           src={adv?.logo}
           size="md"
@@ -105,7 +100,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
         {!collapsed && (
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-semibold text-ink">
-              {title}
+              {adv ? adv.name : user.name}
             </p>
             {/* Наблюдателю сразу видно, что правки недоступны. */}
             {isViewer ? (
@@ -114,11 +109,9 @@ export function Sidebar({ onNavigate, collapsed = false }) {
                 Только просмотр
               </span>
             ) : (
-              subtitle && (
-                <p className="truncate text-[11px] text-ink-muted">
-                  {subtitle}
-                </p>
-              )
+              <p className="truncate text-[11px] text-ink-muted">
+                {adv ? adv.email : user.email}
+              </p>
             )}
           </div>
         )}

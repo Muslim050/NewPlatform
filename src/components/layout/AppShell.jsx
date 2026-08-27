@@ -1,16 +1,12 @@
 import { useState } from 'react'
 import { Outlet, useLocation } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useMe } from '@/features/auth/queries'
 import { Sidebar } from './Sidebar.jsx'
 import { Topbar } from './Topbar.jsx'
 
 const SIDEBAR_KEY = 'bloom.sidebar.collapsed'
 
 export function AppShell() {
-  // Обновляем профиль в шапке и сайдбаре актуальными данными с сервера.
-  useMe()
-
   const [mobileNav, setMobileNav] = useState(false)
   // Состояние сайдбара переживает перезагрузку страницы.
   const [collapsed, setCollapsed] = useState(

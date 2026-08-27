@@ -1,40 +1,22 @@
 import { ApiError, NetworkError, type ApiErrorBody } from './errors'
-import { getAccessToken, getRefreshToken, setTokens } from './token'
-import type { RefreshResponse, TokenPair } from './types'
+import { mockRequest, hasMockRoute } from './mock'
+import { getAuthToken } from './token'
 
 /**
- * Адрес бэкенда. По умолчанию пуст — запросы идут на собственный origin,
- * откуда их переправляет прокси: в разработке это server.proxy из
- * vite.config.js, в продакшене — rewrite из vercel.json. Так сделано
- * потому, что бэкенд не отдаёт CORS-заголовки.
- *
- * VITE_API_URL позволяет обратиться к серверу напрямую — это заработает,
- * когда на нём настроят CORS.
+ * Базовый префикс из §5 спеки. Пока бэкенда нет, `VITE_API_URL` не задан —
+ * тогда запросы уходят в мок-транспорт (src/api/mock). Как только появится
+ * сервер, достаточно задать переменную окружения: код эндпоинтов не меняется.
  */
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 const API_PREFIX = '/api/v1'
 
-/** Уходят без заголовка Authorization: токена ещё (или уже) нет. */
-const ANONYMOUS_PATHS = ['/auth/login', '/auth/refresh']
-/**
- * Не пытаются обновить токен по 401. Logout сюда входит, хотя и требует
- * Authorization: гасить сессию, попутно продлевая её, бессмысленно.
- */
-const NO_REFRESH_PATHS = [...ANONYMOUS_PATHS, '/auth/logout']
+export const isMockMode = !BASE_URL
 
-/** Сессия окончательно недействительна — приложение должно разлогиниться. */
+/** Вызывается на 401/403: сессия протухла — приложение должно разлогиниться. */
 let onUnauthorized: (() => void) | null = null
-/** Токены обновились — надо сохранить новую пару в сторе. */
-let onTokensRefreshed: ((tokens: TokenPair) => void) | null = null
 
 export function setUnauthorizedHandler(handler: () => void): void {
   onUnauthorized = handler
-}
-
-export function setTokensRefreshedHandler(
-  handler: (tokens: TokenPair) => void,
-): void {
-  onTokensRefreshed = handler
 }
 
 export interface RequestOptions {
@@ -57,102 +39,47 @@ async function parseError(response: Response): Promise<ApiError> {
   return new ApiError(response.status, body)
 }
 
-async function send(
+/**
+ * Единственная точка выхода в сеть. Все эндпоинты идут через неё:
+ * здесь живут префикс, токен, разбор ошибок и реакция на 401.
+ */
+export async function request<T>(
   path: string,
-  { method = 'GET', body, signal }: RequestOptions,
-  withAuth: boolean,
-): Promise<Response> {
-  const access = withAuth ? getAccessToken() : null
+  { method = 'GET', body, signal }: RequestOptions = {},
+): Promise<T> {
+  if (isMockMode) {
+    if (!hasMockRoute(method, path)) {
+      throw new ApiError(404, {
+        code: 'mock_route_missing',
+        message: `Мок для ${method} ${path} не реализован`,
+      })
+    }
+    return mockRequest<T>(method, path, body)
+  }
+
+  const token = getAuthToken()
+  let response: Response
   try {
-    return await fetch(`${BASE_URL}${API_PREFIX}${path}`, {
+    response = await fetch(`${BASE_URL}${API_PREFIX}${path}`, {
       method,
       signal,
       headers: {
         ...(body ? { 'Content-Type': 'application/json' } : {}),
-        ...(access ? { Authorization: `Bearer ${access}` } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
     })
   } catch (cause) {
     throw new NetworkError(cause)
   }
-}
 
-/**
- * Обновление пары токенов. Refresh на сервере одноразовый: как только им
- * воспользовались, он гаснет. Поэтому параллельные обновления недопустимы —
- * все запросы, столкнувшиеся с 401, ждут один и тот же промис.
- */
-let refreshing: Promise<string> | null = null
-
-function refreshTokens(): Promise<string> {
-  refreshing ??= (async () => {
-    const refresh = getRefreshToken()
-    if (!refresh) {
-      throw new ApiError(401, {
-        code: 'unauthorized',
-        message: 'Сессия истекла, войдите заново',
-      })
-    }
-
-    const response = await send(
-      '/auth/refresh',
-      { method: 'POST', body: { refresh } },
-      false,
-    )
-    if (!response.ok) throw await parseError(response)
-
-    const pair = (await response.json()) as RefreshResponse
-    setTokens(pair)
-    onTokensRefreshed?.(pair)
-    return pair.access
-  })().finally(() => {
-    refreshing = null
-  })
-
-  return refreshing
-}
-
-async function toResult<T>(response: Response): Promise<T> {
-  // 204 — валидный ответ без тела (например, выход).
-  if (response.status === 204) return undefined as T
-  return (await response.json()) as T
-}
-
-/**
- * Единственная точка выхода в сеть. Здесь живут префикс, токен, разбор
- * ошибок и прозрачное обновление истёкшего access.
- */
-export async function request<T>(
-  path: string,
-  options: RequestOptions = {},
-): Promise<T> {
-  const withAuth = !ANONYMOUS_PATHS.includes(path)
-  const canRefresh = !NO_REFRESH_PATHS.includes(path)
-  // Запоминаем, с каким access ушёл запрос: если к моменту ответа токен уже
-  // сменился, значит его обновил кто-то другой и обновлять повторно нельзя —
-  // сервер гасит refresh при каждом использовании.
-  const sentWith = canRefresh ? getAccessToken() : null
-  let response = await send(path, options, withAuth)
-
-  if (response.ok) return toResult<T>(response)
-
-  // Access живёт 15 минут. Истёк — меняем его по refresh и повторяем запрос
-  // ровно один раз; на самих auth-эндпоинтах этого не делаем.
-  if (response.status === 401 && canRefresh) {
-    if (getAccessToken() === sentWith) {
-      try {
-        await refreshTokens()
-      } catch {
-        onUnauthorized?.()
-        throw await parseError(response)
-      }
-    }
-    response = await send(path, options, true)
-    if (response.ok) return toResult<T>(response)
+  if (!response.ok) {
+    const error = await parseError(response)
+    if (error.isAuthError) onUnauthorized?.()
+    throw error
   }
 
-  const error = await parseError(response)
-  if (error.isAuthError && canRefresh) onUnauthorized?.()
-  throw error
+  // 204 и пустое тело — валидный ответ без данных.
+  if (response.status === 204) return undefined as T
+  return (await response.json()) as T
 }

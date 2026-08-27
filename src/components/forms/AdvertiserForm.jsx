@@ -9,7 +9,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Logo } from '@/components/Logo'
-import { useSaveAdvertiser } from '@/features/advertisers/queries'
+import { useData } from '@/context/DataContext.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button'
@@ -115,52 +115,8 @@ const newContract = (legalName = '') => ({
   creative: null,
 })
 
-/**
- * Файл, выбранный в форме, живёт как data:/blob:-URL. Сервер принимает
- * в `logo` только абсолютную ссылку, поэтому такие значения он отвергает.
- */
-const isInlineFile = (url) =>
-  !!url && (url.startsWith('data:') || url.startsWith('blob:'))
-
-/** Пустая строка в поле-дате означает «не задано» — сервер ждёт null. */
-const dateOrNull = (value) => (value?.trim() ? value : null)
-
-/**
- * Оставляет у договора только то, что принимает API: файлы и суммы он
- * здесь не редактирует.
- */
-const toContractInput = (contract) => ({
-  id: contract.id,
-  number: contract.number.trim(),
-  campaignName: (contract.campaignName ?? '').trim(),
-  legalName: (contract.legalName ?? '').trim(),
-  package: contract.package ?? '',
-  leagues: [...(contract.leagues ?? [])],
-  start: dateOrNull(contract.start),
-  end: dateOrNull(contract.end),
-  paymentDate: dateOrNull(contract.paymentDate),
-})
-
-/** Карточка с сервера → состояние формы. */
-const formFrom = (advertiser) => ({
-  name: advertiser.name,
-  contact: advertiser.contact,
-  email: advertiser.email,
-  category: advertiser.category,
-  status: advertiser.status,
-  balance: String(advertiser.balance),
-  legalName: advertiser.legalName || '',
-  requisites: requisitesToText(advertiser.requisites),
-  color: advertiser.color,
-  logo: logoToFile(advertiser.logo),
-  contracts: (advertiser.contracts ?? []).map((contract) => ({
-    ...contract,
-    leagues: [...(contract.leagues ?? [])],
-  })),
-})
-
 export function AdvertiserForm({ open, onClose, initial }) {
-  const { mutate: saveAdvertiser, isPending } = useSaveAdvertiser()
+  const { create, update } = useData()
   const toast = useToast()
   const editing = !!initial
   const [form, setForm] = useState(emptyForm)
@@ -168,10 +124,6 @@ export function AdvertiserForm({ open, onClose, initial }) {
   const [tab, setTab] = useState('main')
   // Подтверждение на кнопке: карточка после сохранения остаётся открытой.
   const [saved, setSaved] = useState(false)
-  // Карточка в том виде, в каком она сейчас на сервере. После сохранения
-  // заменяется свежим ответом: там уже есть id созданных договоров, и с ним
-  // же сравниваются следующие правки.
-  const [source, setSource] = useState(initial)
 
   useEffect(() => {
     if (!saved) return
@@ -182,8 +134,26 @@ export function AdvertiserForm({ open, onClose, initial }) {
   useEffect(() => {
     if (!open) return
     setTab('main')
-    setSource(initial)
-    setForm(initial ? formFrom(initial) : emptyForm)
+    setForm(
+      initial
+        ? {
+            name: initial.name,
+            contact: initial.contact,
+            email: initial.email,
+            category: initial.category,
+            status: initial.status,
+            balance: String(initial.balance),
+            legalName: initial.legalName || '',
+            requisites: requisitesToText(initial.requisites),
+            color: initial.color,
+            logo: logoToFile(initial.logo),
+            contracts: (initial.contracts ?? []).map((contract) => ({
+              ...contract,
+              leagues: [...(contract.leagues ?? [])],
+            })),
+          }
+        : emptyForm,
+    )
     setErrors({})
     setSaved(false)
     // Зависимости — по id: после сохранения бренд в сторе обновится, и форма
@@ -221,80 +191,47 @@ export function AdvertiserForm({ open, onClose, initial }) {
     setErrors(err)
     if (Object.keys(err).length) return
 
-    const advertiser = {
+    const payload = {
       name: form.name.trim(),
       contact: form.contact.trim(),
       email: form.email.trim(),
       category: form.category,
       status: form.status,
-      // Суммы на сервере — decimal, то есть строка.
-      balance: String(Number(form.balance) || 0),
+      balance: Number(form.balance) || 0,
       legalName: form.legalName.trim(),
       requisites: form.requisites.trim(),
       color: form.color,
+      logo: form.logo?.url ?? null,
+      // Договоры без номера не сохраняем — из них нечего выбирать в кампании.
+      contracts: form.contracts
+        .filter((contract) => contract.number.trim())
+        .map((contract) => ({
+          ...contract,
+          number: contract.number.trim(),
+          campaignName: (contract.campaignName ?? '').trim(),
+          legalName: contract.legalName.trim(),
+        })),
     }
 
-    // Логотип API хранит ссылкой не длиннее 500 символов, поэтому файл,
-    // выбранный в форме (data:-URL), отправить нельзя — нужен загрузчик
-    // файлов на бэкенде. Ссылку отправляем, файл молча не теряем: прежнее
-    // значение остаётся на сервере.
-    const logo = form.logo?.url ?? null
-    const inlineLogo = isInlineFile(logo)
-    // Ссылку отправляем, выбранный файл — нет: сервер его не примет,
-    // а прежнее значение при этом остаётся нетронутым.
-    if (!inlineLogo) advertiser.logo = logo ?? ''
+    if (editing) {
+      update('advertisers', initial.id, payload)
+      // Про договоры говорим отдельно — их правят чаще всего остального.
+      const contractsChanged =
+        contractsFingerprint(payload.contracts) !==
+        contractsFingerprint(initial.contracts)
+      toast.success(
+        contractsChanged
+          ? `Раздел «Договоры» у рекламодателя ${payload.name} успешно обновлён`
+          : `Карточка бренда ${payload.name} сохранена`,
+      )
+      // Карточку не закрываем: правки часто идут подряд — договоры, реквизиты.
+      setSaved(true)
+      return
+    }
 
-    // Договоры без номера не сохраняем — из них нечего выбирать в кампании.
-    const contracts = form.contracts
-      .filter((contract) => contract.number.trim())
-      .map(toContractInput)
-
-    const contractsChanged =
-      contractsFingerprint(contracts) !==
-      contractsFingerprint(source?.contracts)
-
-    saveAdvertiser(
-      {
-        id: source?.id,
-        advertiser,
-        contracts,
-        previousAdvertiser: source,
-        previousContracts: source?.contracts ?? [],
-      },
-      {
-        onSuccess: (fresh) => {
-          // Форма остаётся открытой — переносим её на свежее состояние,
-          // иначе следующее сохранение повторит уже выполненные правки.
-          setSource(fresh)
-          setForm(formFrom(fresh))
-          if (inlineLogo) {
-            toast.info(
-              'Файл логотипа не сохранён: сервер принимает только ссылку',
-            )
-          }
-          if (editing) {
-            // Про договоры говорим отдельно — их правят чаще остального.
-            toast.success(
-              contractsChanged
-                ? `Раздел «Договоры» у рекламодателя ${advertiser.name} успешно обновлён`
-                : `Карточка бренда ${advertiser.name} сохранена`,
-            )
-            // Карточку не закрываем: правки часто идут подряд.
-            setSaved(true)
-            return
-          }
-          toast.success(`Рекламодатель ${advertiser.name} добавлен`)
-          onClose()
-        },
-        onError: (err) => {
-          // Сервер вернул ошибки по полям — показываем их прямо в форме.
-          if (err.fields && Object.keys(err.fields).length) {
-            setErrors(err.fields)
-          }
-          toast.error(err.message || 'Не удалось сохранить рекламодателя')
-        },
-      },
-    )
+    create('advertisers', payload)
+    toast.success(`Рекламодатель ${payload.name} добавлен`)
+    onClose()
   }
 
   return (
@@ -310,18 +247,12 @@ export function AdvertiserForm({ open, onClose, initial }) {
           <Button variant="ghost" onClick={onClose}>
             {editing ? 'Закрыть' : 'Отмена'}
           </Button>
-          <Button
-            variant="primary"
-            onClick={submit}
-            disabled={saved || isPending}
-          >
+          <Button variant="primary" onClick={submit} disabled={saved}>
             {saved ? (
               <>
                 <Check size={16} />
                 Сохранено
               </>
-            ) : isPending ? (
-              'Сохраняем…'
             ) : editing ? (
               'Сохранить'
             ) : (
@@ -419,21 +350,8 @@ export function AdvertiserForm({ open, onClose, initial }) {
           {/* Логотип показывается вместо инициалов в карточках и таблицах. */}
           <Field
             label="Логотип рекламодателя"
-            hint="Сервер сохраняет только ссылку: вставьте адрес картинки. Файл можно выбрать для предпросмотра, но на сервер он не уйдёт — там пока нет хранилища файлов."
+            hint="PNG или JPG, лучше квадратный."
           >
-            <Input
-              value={isInlineFile(form.logo?.url) ? '' : (form.logo?.url ?? '')}
-              onChange={(e) => {
-                const url = e.target.value.trim()
-                set(
-                  'logo',
-                  url ? { name: url.split('/').pop() || 'Логотип', url } : null,
-                )
-              }}
-              placeholder="https://example.com/logo.png"
-              inputMode="url"
-              className="mb-2"
-            />
             <div className="flex items-center gap-3">
               {form.logo?.url && (
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-black/5">

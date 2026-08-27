@@ -5,19 +5,13 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import { router } from '@/router'
 import { queryClient } from '@/lib/queryClient'
-import { setTokensRefreshedHandler, setUnauthorizedHandler } from '@/api/client'
+import { setUnauthorizedHandler } from '@/api/client'
 import { useAuthStore } from '@/stores/authStore'
 import { DataProvider } from '@/context/DataContext.jsx'
 import { ToastProvider } from '@/components/ui/Toast.jsx'
 import { ConfirmProvider } from '@/components/ui/Confirm.jsx'
 
-// Транспорт сам меняет истёкший access по refresh — сохраняем новую пару,
-// иначе после перезагрузки страницы она потеряется.
-setTokensRefreshedHandler((tokens) => {
-  useAuthStore.getState().setTokens(tokens)
-})
-
-// Обновить не удалось: refresh погашен или подделан — сессии конец.
+// Сервер ответил 401/403 — сессия недействительна: чистим её и кэш.
 setUnauthorizedHandler(() => {
   useAuthStore.getState().clearSession()
   queryClient.clear()
