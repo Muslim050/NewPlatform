@@ -4,7 +4,7 @@
  *
  *   node scripts/seed-mock-campaigns.mjs --user-login cola --user-password …
  *     [--api https://…] [--login admin] [--password admin]
- *     [--brand «Coca Cola»] [--per-month 2] [--dry]
+ *     [--per-month 2] [--max 4] [--dry]
  *
  * Заявку создаёт только рекламодатель — бренд сервер берёт из сессии, —
  * поэтому кампании заводятся под его учёткой, а статусы им проставляет
@@ -28,6 +28,9 @@ const PASSWORD = arg('password', 'admin')
 const USER_LOGIN = arg('user-login', null)
 const USER_PASSWORD = arg('user-password', null)
 const PER_MONTH = Number(arg('per-month', 2)) || 2
+// Сколько кампаний создать за прогон: удаления у них в API нет, поэтому
+// иногда нужно добрать ровно столько, сколько не хватает.
+const MAX = Number(arg('max', 0)) || Infinity
 const DRY = args.includes('--dry')
 
 let token = null
@@ -164,8 +167,10 @@ async function main() {
   for (const [month, campaigns] of [...byMonth.entries()].sort()) {
     campaigns.forEach((campaign, index) => {
       const name = nameFor(campaign, month, counts.get(campaign.name) > 1)
-      // Такая кампания на стенде уже есть — второй раз не заводим.
+      // Такая кампания на стенде уже есть — второй раз не заводим. Имена,
+      // попавшие в план, тоже запоминаем: в одном месяце они могут совпасть.
       if (taken.has(name)) return
+      taken.add(name)
       plan.push({
         month,
         status: statusFor(month, seq++),
@@ -190,6 +195,8 @@ async function main() {
       })
     })
   }
+
+  if (plan.length > MAX) plan.length = MAX
 
   console.log(`\nК созданию: ${plan.length} кампаний`)
   for (const item of plan) {
