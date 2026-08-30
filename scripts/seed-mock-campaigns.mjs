@@ -61,6 +61,32 @@ const login = async (userLogin, userPassword) => {
 }
 
 const monthOf = (campaign) => campaign.startDate.slice(0, 7)
+
+const MONTHS_RU = [
+  'январь',
+  'февраль',
+  'март',
+  'апрель',
+  'май',
+  'июнь',
+  'июль',
+  'август',
+  'сентябрь',
+  'октябрь',
+  'ноябрь',
+  'декабрь',
+]
+
+/**
+ * Название кампании. У некоторых брендов в моке они повторяются из месяца
+ * в месяц — такие различаем месяцем, иначе в списке их не отличить, да и
+ * пропуск по имени принял бы вторую за уже созданную.
+ */
+function nameFor(campaign, month, repeats) {
+  if (!repeats) return campaign.name
+  const [year, monthNumber] = month.split('-')
+  return `${campaign.name} — ${MONTHS_RU[Number(monthNumber) - 1]} ${year}`
+}
 const currentMonth = () => {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -122,12 +148,24 @@ async function main() {
 
   const existing = await api('/campaigns?limit=100')
   const taken = new Set(existing.items.map((item) => item.name))
+
+  // Сколько раз каждое название встречается в отобранном: повторы различаем
+  // месяцем, одиночные оставляем как есть.
+  const counts = new Map()
+  for (const list of byMonth.values()) {
+    for (const campaign of list) {
+      counts.set(campaign.name, (counts.get(campaign.name) ?? 0) + 1)
+    }
+  }
+
   const plan = []
   let seq = 0
 
   for (const [month, campaigns] of [...byMonth.entries()].sort()) {
     campaigns.forEach((campaign, index) => {
-      if (taken.has(campaign.name)) return
+      const name = nameFor(campaign, month, counts.get(campaign.name) > 1)
+      // Такая кампания на стенде уже есть — второй раз не заводим.
+      if (taken.has(name)) return
       plan.push({
         month,
         status: statusFor(month, seq++),
@@ -136,7 +174,7 @@ async function main() {
           ? campaign.contractNumber
           : [...numbers][index % numbers.size],
         body: {
-          name: campaign.name,
+          name,
           objective: campaign.objective,
           startDate: campaign.startDate,
           endDate: campaign.endDate,
