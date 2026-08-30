@@ -4,8 +4,10 @@ import { motion } from 'framer-motion'
 import { ArrowRight, VolumeX } from 'lucide-react'
 import { isApiError } from '@/api/errors'
 import { useLogin } from '@/features/auth/queries'
+import { useToast } from '@/components/ui/Toast.jsx'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/Button'
+import { Loader } from '@/components/ui/Loader.jsx'
 import { Field, Input } from '@/components/ui/Field'
 
 interface AudienceStat {
@@ -182,6 +184,7 @@ function TvShowcase() {
 
 export default function Login() {
   const navigate = useNavigate()
+  const toast = useToast()
   const { mutate: signIn, isPending, error } = useLogin()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -198,9 +201,18 @@ export default function Login() {
     event.preventDefault()
     signIn(
       { login: username.trim(), password },
-      { onSuccess: () => navigate({ to: '/app/campaigns' }) },
+      {
+        onSuccess: () => {
+          toast.success('Вы успешно вошли в систему Setanta Platform')
+          navigate({ to: '/app/campaigns' })
+        },
+      },
     )
   }
+
+  // Пока проверяем логин и пароль, показываем фирменное ожидание: запрос
+  // к серверу занимает заметное время, и форма на это время не нужна.
+  if (isPending) return <Loader full label="Входим в платформу…" />
 
   return (
     <main className="grid min-h-screen bg-paper lg:grid-cols-[minmax(420px,0.84fr)_minmax(0,1.16fr)]">

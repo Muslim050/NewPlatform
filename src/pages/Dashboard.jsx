@@ -926,9 +926,15 @@ export default function Dashboard() {
   const data = draft ?? overview
 
   // Сменили период — черновик прошлого месяца за собой не тащим.
+  // Крестик у вкладок (и повторный клик по месяцу) снимают выбор — в обзоре
+  // «без месяца» смотреть нечего, поэтому возвращаемся к текущему.
   const pickMonth = (nextMonth) => {
-    if (nextMonth == null) return
     setDraft(null)
+    if (nextMonth == null) {
+      setYear(now.getFullYear())
+      setMonth(now.getMonth())
+      return
+    }
     setMonth(nextMonth)
   }
 

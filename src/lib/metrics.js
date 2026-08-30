@@ -129,9 +129,13 @@ export const leagueLabel = (id) => LEAGUES.find((l) => l.id === id)?.label || id
 
 export const statusLabel = (status) => STATUS[status]?.label || status
 
+/**
+ * Статус бренда. На сервере значения `active` и `paused`; «Расторгнут» —
+ * то, как площадка называет второе состояние в интерфейсе.
+ */
 export const ADV_STATUS = {
   active: { label: 'Активен', tone: 'success' },
-  paused: { label: 'На паузе', tone: 'warning' },
+  paused: { label: 'Расторгнут', tone: 'danger' },
 }
 
 export const CH_STATUS = {

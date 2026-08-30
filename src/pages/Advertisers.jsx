@@ -1,10 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Pencil, Plus, Trash2, Building2, Mail } from 'lucide-react'
+import {
+  Search,
+  Pencil,
+  Plus,
+  Trash2,
+  Building2,
+  Mail,
+  Check,
+  ChevronDown,
+} from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
 import {
   useAdvertisers,
   useDeleteAdvertiser,
+  useUpdateAdvertiserStatus,
 } from '@/features/advertisers/queries'
 import { useCampaignCountsByAdvertiser } from '@/features/campaigns/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
@@ -18,13 +28,20 @@ import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { DropdownMenu } from '@/components/ui/DropdownMenu.jsx'
 import { AdvertiserForm } from '@/components/forms/AdvertiserForm.jsx'
+import { SegmentTabs } from '@/components/ui/Tabs.jsx'
+import Users from '@/pages/Users.jsx'
+import { cn } from '@/lib/cn.js'
 
 export default function Advertisers() {
-  const { canEdit } = useAuth()
+  const { canEdit, isAdmin, isViewer } = useAuth()
+  // Пользователей ведёт только площадка — наблюдателю вкладка не нужна.
+  const canManageUsers = isAdmin && !isViewer
+  const [tab, setTab] = useState('advertisers')
   const { data, isPending, isError, error, refetch } = useAdvertisers()
   // Счётчики кампаний — одним запросом на весь список, а не на карточку.
   const { data: campaignCounts } = useCampaignCountsByAdvertiser()
   const { mutate: deleteAdvertiser } = useDeleteAdvertiser()
+  const { mutate: updateStatus } = useUpdateAdvertiserStatus()
   const toast = useToast()
   const confirm = useConfirm()
   const [q, setQ] = useState('')
@@ -36,6 +53,22 @@ export default function Advertisers() {
       .toLowerCase()
       .includes(q.trim().toLowerCase()),
   )
+
+  /** Статус бренда меняется прямо в карточке, без формы. */
+  const setStatus = (advertiser, status) => {
+    if (status === advertiser.status) return
+    updateStatus(
+      { id: advertiser.id, status },
+      {
+        onSuccess: () =>
+          toast.success(
+            `${advertiser.name} — ${ADV_STATUS[status].label.toLowerCase()}`,
+          ),
+        onError: (err) =>
+          toast.error(err.message || 'Не удалось изменить статус бренда'),
+      },
+    )
+  }
 
   const del = async (a) => {
     const ok = await confirm({
@@ -51,6 +84,21 @@ export default function Advertisers() {
         toast.error(err.message || 'Не удалось удалить рекламодателя'),
     })
   }
+
+  // Разделы соседние: бренды и те, кто от них ходит в платформу.
+  const tabs = canManageUsers ? (
+    <SegmentTabs
+      className="mb-5"
+      value={tab}
+      onChange={setTab}
+      items={[
+        { value: 'advertisers', label: 'Рекламодатели' },
+        { value: 'users', label: 'Пользователи' },
+      ]}
+    />
+  ) : null
+
+  if (tab === 'users' && canManageUsers) return <Users tabs={tabs} />
 
   return (
     <div>
@@ -80,6 +128,8 @@ export default function Advertisers() {
           </Button>
         )}
       </div>
+
+      {tabs}
 
       {isPending ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -168,9 +218,17 @@ export default function Advertisers() {
                   </div>
 
                   <div className="mt-3 flex items-center gap-2">
-                    <Badge tone={st.tone} dot>
-                      {st.label}
-                    </Badge>
+                    {canEdit ? (
+                      <StatusMenu
+                        value={a.status}
+                        brand={a.name}
+                        onPick={(next) => setStatus(a, next)}
+                      />
+                    ) : (
+                      <Badge tone={st.tone} dot>
+                        {st.label}
+                      </Badge>
+                    )}
                     <span className="flex min-w-0 items-center gap-1 text-[12px] text-ink-muted">
                       <Mail size={12} />
                       <span className="truncate">{a.email}</span>
@@ -200,6 +258,77 @@ export default function Advertisers() {
         onClose={() => setModal({ open: false, initial: null })}
       />
     </div>
+  )
+}
+
+// Точка статуса в меню — тон тот же, что у бейджа.
+const STATUS_DOTS = {
+  success: 'bg-success',
+  danger: 'bg-danger',
+  muted: 'bg-ink-muted',
+}
+
+/** Бейдж статуса, который по клику превращается в выбор из двух значений. */
+function StatusMenu({ value, brand, onPick }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const current = ADV_STATUS[value] ?? ADV_STATUS.active
+
+  useEffect(() => {
+    const close = (e) =>
+      ref.current && !ref.current.contains(e.target) && setOpen(false)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [])
+
+  return (
+    <span className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title={`Статус бренда ${brand}`}
+        aria-label={`Изменить статус бренда ${brand}`}
+        aria-expanded={open}
+        className="focus-ring rounded-full"
+      >
+        <Badge tone={current.tone} dot className="cursor-pointer pr-2">
+          {current.label}
+          <ChevronDown size={12} className="shrink-0 opacity-70" />
+        </Badge>
+      </button>
+
+      {open && (
+        <span className="absolute left-0 top-full z-20 mt-1 flex w-44 flex-col overflow-hidden rounded-xl border border-line bg-surface p-1.5 text-left shadow-lift">
+          {Object.entries(ADV_STATUS).map(([key, meta]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                onPick(key)
+              }}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
+                key === value
+                  ? 'bg-ink/5 text-ink'
+                  : 'text-ink-soft hover:bg-ink/5 hover:text-ink',
+              )}
+            >
+              <span
+                className={cn(
+                  'h-1.5 w-1.5 shrink-0 rounded-full',
+                  STATUS_DOTS[meta.tone],
+                )}
+              />
+              {meta.label}
+              {key === value && (
+                <Check size={14} className="ml-auto shrink-0" />
+              )}
+            </button>
+          ))}
+        </span>
+      )}
+    </span>
   )
 }
 

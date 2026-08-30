@@ -13,7 +13,6 @@ import Dashboard from '@/pages/Dashboard.jsx'
 import Campaigns from '@/pages/Campaigns.jsx'
 import CampaignStats from '@/pages/CampaignStats.jsx'
 import Advertisers from '@/pages/Advertisers.jsx'
-import Users from '@/pages/Users.jsx'
 import ContractOverview from '@/pages/ContractOverview.jsx'
 import Channels from '@/pages/Channels.jsx'
 import Reports from '@/pages/Reports.jsx'
@@ -88,11 +87,16 @@ const contractsRoute = createRoute({
   component: ContractOverview,
 })
 
+/**
+ * Пользователи переехали вкладкой в «Рекламодателей». Маршрут оставлен,
+ * чтобы старые ссылки и закладки не упирались в «страница не найдена».
+ */
 const usersRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'users',
-  beforeLoad: requireRoles(['admin']),
-  component: Users,
+  beforeLoad: () => {
+    throw redirect({ to: '/app/advertisers' })
+  },
 })
 
 const advertisersRoute = createRoute({

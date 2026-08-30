@@ -4,6 +4,17 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Info, AlertTriangle, X } from 'lucide-react'
 import { cn } from '@/lib/cn.js'
 
+/**
+ * Тосты — единственное, что компонент отдаёт наружу.
+ *
+ * @typedef {{
+ *   success: (message: string) => void,
+ *   error: (message: string) => void,
+ *   info: (message: string) => void,
+ * }} ToastApi
+ */
+
+/** @type {import('react').Context<ToastApi | null>} */
 const ToastCtx = createContext(null)
 
 const icons = {

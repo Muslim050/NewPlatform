@@ -15,6 +15,7 @@ import {
 import { LIVE_SPOT_SEED } from '@/lib/liveSpotSeed.js'
 import { uid } from '@/lib/id.js'
 import { cn } from '@/lib/cn.js'
+import { useHorizontalScroll } from '@/lib/useHorizontalScroll.js'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card.jsx'
 import { useAuth } from '@/features/auth/useAuth'
@@ -431,6 +432,9 @@ export function CampaignTabs({
   const { canEdit, isAdvertiser } = useAuth()
   const confirm = useConfirm()
   const toast = useToast()
+  // Лента вкладок: колесо мыши крутит её вбок, выбранная вкладка сама
+  // подматывается в видимую часть.
+  const stripRef = useHorizontalScroll(value)
   // Собирать отчёт может только площадка.
   const canAdd = Boolean(onAddCategory) && canEdit && !isAdvertiser
   // Крестики у категорий показываем только в режиме правки — по карандашу.
@@ -484,6 +488,7 @@ export function CampaignTabs({
     <button
       key={tab.value}
       type="button"
+      data-active={value === tab.value}
       onClick={() => onChange(tab.value)}
       className={cn(
         'rounded-xl px-4 h-[29px] text-[13px] font-medium transition-colors focus-ring',
@@ -595,7 +600,12 @@ export function CampaignTabs({
     )
 
   return (
-    <div className="mb-4 overflow-x-auto rounded-2xl border border-line bg-surface p-1.5 shadow-soft">
+    // Лента крутится колесом прямо над блоками: полосой снизу дотягиваться
+    // до дальних категорий неудобно.
+    <div
+      ref={stripRef}
+      className="no-scrollbar mb-4 overflow-x-auto overscroll-x-contain rounded-2xl border border-line bg-surface p-1.5 shadow-soft"
+    >
       <div className="flex min-w-max items-center gap-1.5">
         {groups.map((group, index) => {
           // Группа с открытой вкладкой подсвечивается целиком — сразу видно,

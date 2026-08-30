@@ -5,6 +5,7 @@ import { PAGE_SIZE, fetchAllPages } from '@/lib/paginate'
 import type {
   Advertiser,
   AdvertiserInput,
+  AdvertiserStatus,
   Contract,
   ContractInput,
 } from '@/api/types'
@@ -207,6 +208,19 @@ export function useSaveAdvertiser() {
       // сохранение создало бы их заново.
       return advertisersApi.get(advertiserId)
     },
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: advertiserKeys.all })
+    },
+  })
+}
+
+/** Статус бренда правится прямо из карточки — одним полем. */
+export function useUpdateAdvertiserStatus() {
+  const client = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: number; status: AdvertiserStatus }) =>
+      advertisersApi.update(id, { status }),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: advertiserKeys.all })
     },

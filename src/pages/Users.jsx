@@ -24,7 +24,11 @@ const ROLE_TONE = {
   advertiser: 'success',
 }
 
-export default function Users() {
+/**
+ * Список пользователей платформы. Живёт вкладкой внутри «Рекламодателей»:
+ * `tabs` — переключатель разделов, он рисуется под строкой поиска.
+ */
+export default function Users({ tabs = null }) {
   const { user: me } = useAuth()
   const { data, isPending, isError, error, refetch } = useUsers()
   // Бренды нужны только затем, чтобы показать, чей бренд видит рекламодатель.
@@ -96,6 +100,8 @@ export default function Users() {
           Новый пользователь
         </Button>
       </div>
+
+      {tabs}
 
       <SegmentTabs
         className="mb-5"

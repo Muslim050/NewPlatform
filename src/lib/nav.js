@@ -5,7 +5,6 @@ import {
   Radio,
   LineChart,
   FileText,
-  UserCog,
 } from 'lucide-react'
 
 export const NAV = [
@@ -32,12 +31,6 @@ export const NAV = [
     label: 'Рекламодатели',
     icon: Building2,
     roles: ['admin', 'viewer'],
-  },
-  {
-    to: '/app/users',
-    label: 'Пользователи',
-    icon: UserCog,
-    roles: ['admin'],
   },
   {
     to: '/app/channels',
