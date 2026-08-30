@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/cn.js'
+import { useHorizontalScroll } from '@/lib/useHorizontalScroll.js'
 
 // Подложка активной вкладки: обычная — фирменный жёлтый, «soft» — его
 // светлый оттенок для длинных рядов вроде номеров договоров.
@@ -23,11 +24,15 @@ export function SegmentTabs({
   // Свой layoutId на каждый переключатель: на странице их несколько, с общим
   // id подложка перелетала бы из одной группы вкладок в другую.
   const layoutId = useId()
+  // Длинный ряд (например, восемь статусов кампании) не помещается в строку.
+  // Тогда он прокручивается: колесом над вкладками, выбранная — в виду.
+  const ref = useHorizontalScroll(value)
 
   return (
     <div
+      ref={ref}
       className={cn(
-        'inline-flex items-center gap-1 rounded-xl border border-line bg-surface p-[4.5px] shadow-soft',
+        'no-scrollbar inline-flex max-w-full items-center gap-1 overflow-x-auto overscroll-x-contain rounded-xl border border-line bg-surface p-[4.5px] shadow-soft',
         className,
       )}
     >
@@ -37,9 +42,10 @@ export function SegmentTabs({
           <button
             key={it.value}
             type="button"
+            data-active={active}
             onClick={() => onChange(it.value)}
             className={cn(
-              'relative rounded-lg px-3.5 py-1.5 text-[13px] font-medium transition-colors focus-ring',
+              'relative shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-[13px] font-medium transition-colors focus-ring',
               active
                 ? 'text-ink'
                 : 'text-ink-soft  hover:bg-indigo-50 hover:text-ink',

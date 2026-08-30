@@ -579,7 +579,9 @@ export default function Campaigns() {
             </p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+        {/* min-w-0 — иначе флекс-элемент разрастается под ширину вкладок
+            и ряд статусов уезжает за пределы страницы. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-3 sm:justify-end">
           <SegmentTabs
             value={activeStatus}
             onChange={setStatus}
