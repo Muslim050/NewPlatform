@@ -45,7 +45,8 @@ import { Progress } from '@/components/ui/Progress.jsx'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
-import { Skeleton } from '@/components/ui/Skeleton'
+import { Loader } from '@/components/ui/Loader.jsx'
+import { FadeIn } from '@/components/ui/FadeIn.jsx'
 import { Tooltip } from '@/components/ui/Tooltip.jsx'
 import { CampaignForm } from '@/components/forms/CampaignForm.jsx'
 import { BrandTabs } from '@/components/campaigns/BrandTabs.jsx'
@@ -198,22 +199,6 @@ function brandsOf(campaigns, advertiserById) {
     },
     ...list,
   ]
-}
-
-/** Повторяет геометрию строк, чтобы список не прыгал при загрузке. */
-function CampaignListSkeleton() {
-  return (
-    <div className="divide-y divide-line">
-      {Array.from({ length: 6 }, (_, i) => (
-        <div key={i} className="flex items-center gap-3 px-5 py-4">
-          <Skeleton circle className="h-8 w-8 shrink-0" />
-          <Skeleton className="h-4 w-1/4" />
-          <Skeleton className="ml-auto h-6 w-28 shrink-0 rounded-full" />
-          <Skeleton className="h-4 w-20 shrink-0" />
-        </div>
-      ))}
-    </div>
-  )
 }
 
 export default function Campaigns() {
@@ -552,8 +537,12 @@ export default function Campaigns() {
     )
   }
 
+  // Пока кампаний нет, фильтры и вкладки брендов пустые — показываем только
+  // ожидание, а раздел проявляем целиком, когда данные пришли.
+  if (isPending) return <Loader label="Загружаем кампании…" />
+
   return (
-    <div>
+    <FadeIn>
       {/* Поиск, фильтр статусов и создание кампании — одной строкой */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Поиск всегда на виду: поле открыто, крестик очищает запрос. */}
@@ -820,9 +809,7 @@ export default function Campaigns() {
 
       {!showMonthReport && (
         <Card>
-          {isPending ? (
-            <CampaignListSkeleton />
-          ) : isError ? (
+          {isError ? (
             <EmptyState
               icon={Megaphone}
               title="Не удалось загрузить кампании"
@@ -1169,6 +1156,6 @@ export default function Campaigns() {
           })
         }
       />
-    </div>
+    </FadeIn>
   )
 }

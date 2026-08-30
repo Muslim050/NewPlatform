@@ -7,7 +7,6 @@ import { useLogin } from '@/features/auth/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/Button'
-import { Loader } from '@/components/ui/Loader.jsx'
 import { Field, Input } from '@/components/ui/Field'
 
 interface AudienceStat {
@@ -209,10 +208,6 @@ export default function Login() {
       },
     )
   }
-
-  // Пока проверяем логин и пароль, показываем фирменное ожидание: запрос
-  // к серверу занимает заметное время, и форма на это время не нужна.
-  if (isPending) return <Loader full label="Входим в платформу…" />
 
   return (
     <main className="grid min-h-screen bg-paper lg:grid-cols-[minmax(420px,0.84fr)_minmax(0,1.16fr)]">

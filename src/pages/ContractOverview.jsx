@@ -40,7 +40,8 @@ import { Badge } from '@/components/ui/Badge.jsx'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
-import { Skeleton } from '@/components/ui/Skeleton'
+import { Loader } from '@/components/ui/Loader.jsx'
+import { FadeIn } from '@/components/ui/FadeIn.jsx'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { ContractPreviewModal } from '@/components/campaigns/ContractPreviewModal.jsx'
 import { MoneyPopover } from '@/components/campaigns/MoneyPopover.jsx'
@@ -337,8 +338,11 @@ export default function ContractOverview() {
     )
   }
 
+  // Пока договоров нет, сводка показывала бы нули — оставляем одно ожидание.
+  if (isPending) return <Loader label="Загружаем договоры…" />
+
   return (
-    <div>
+    <FadeIn>
       {/* Сводка по договорам — сразу видно, сколько ждёт оплату. */}
       <div className="mb-5 grid gap-4 sm:grid-cols-3">
         <Tile
@@ -435,9 +439,7 @@ export default function ContractOverview() {
         />
       </div>
 
-      {isPending ? (
-        <ContractTableSkeleton />
-      ) : isError ? (
+      {isError ? (
         <Card>
           <EmptyState
             icon={FileText}
@@ -650,7 +652,7 @@ export default function ContractOverview() {
           onClose={() => setPaymentAnchor(null)}
         />
       )}
-    </div>
+    </FadeIn>
   )
 }
 
@@ -779,25 +781,6 @@ function PaymentPill({ status, editable, onOpen }) {
     >
       {label}
     </button>
-  )
-}
-
-/** Повторяет геометрию таблицы, чтобы страница не прыгала при загрузке. */
-function ContractTableSkeleton() {
-  return (
-    <Card className="overflow-hidden p-4">
-      <div className="space-y-3">
-        {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="flex items-center gap-4">
-            <Skeleton circle className="h-8 w-8 shrink-0" />
-            <Skeleton className="h-4 w-1/5" />
-            <Skeleton className="h-4 w-1/6" />
-            <Skeleton className="ml-auto h-4 w-1/6" />
-            <Skeleton className="h-6 w-24 shrink-0 rounded-full" />
-          </div>
-        ))}
-      </div>
-    </Card>
   )
 }
 

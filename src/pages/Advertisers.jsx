@@ -25,7 +25,8 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge.jsx'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
-import { Skeleton } from '@/components/ui/Skeleton'
+import { Loader } from '@/components/ui/Loader.jsx'
+import { FadeIn } from '@/components/ui/FadeIn.jsx'
 import { DropdownMenu } from '@/components/ui/DropdownMenu.jsx'
 import { AdvertiserForm } from '@/components/forms/AdvertiserForm.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
@@ -100,8 +101,12 @@ export default function Advertisers() {
 
   if (tab === 'users' && canManageUsers) return <Users tabs={tabs} />
 
+  // Пока брендов нет, показываем только ожидание: панель с поиском и
+  // пустыми вкладками рядом с лоадером выглядит недособранной.
+  if (isPending) return <Loader label="Загружаем рекламодателей…" />
+
   return (
-    <div>
+    <FadeIn>
       {/* Поиск и создание бренда — одной строкой */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
@@ -131,13 +136,7 @@ export default function Advertisers() {
 
       {tabs}
 
-      {isPending ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }, (_, i) => (
-            <AdvertiserCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : isError ? (
+      {isError ? (
         <Card>
           <EmptyState
             icon={Building2}
@@ -257,7 +256,7 @@ export default function Advertisers() {
         initial={modal.initial}
         onClose={() => setModal({ open: false, initial: null })}
       />
-    </div>
+    </FadeIn>
   )
 }
 
@@ -329,38 +328,6 @@ function StatusMenu({ value, brand, onPick }) {
         </span>
       )}
     </span>
-  )
-}
-
-/** Повторяет геометрию карточки бренда, чтобы список не прыгал при загрузке. */
-function AdvertiserCardSkeleton() {
-  return (
-    <Card className="p-5">
-      <div className="flex items-start justify-between">
-        <div className="flex min-w-0 flex-1 gap-3">
-          <Skeleton circle className="h-12 w-12 shrink-0" />
-          <div className="min-w-0 flex-1 space-y-2 pt-1">
-            <Skeleton className="h-4 w-2/3" />
-            <Skeleton className="h-3 w-2/5" />
-          </div>
-        </div>
-        <Skeleton className="h-4 w-4 shrink-0" />
-      </div>
-
-      <div className="mt-3 flex items-center gap-2">
-        <Skeleton className="h-6 w-20 rounded-full" />
-        <Skeleton className="h-3 w-1/2" />
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4">
-        {[0, 1].map((i) => (
-          <div key={i} className="space-y-2">
-            <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-4 w-8" />
-          </div>
-        ))}
-      </div>
-    </Card>
   )
 }
 

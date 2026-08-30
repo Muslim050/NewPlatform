@@ -1,10 +1,22 @@
 import { Logo } from '@/components/Logo'
 import { cn } from '@/lib/cn.js'
 
+// Дуга вырезается в кольцо маской: конический градиент сам по себе залил бы
+// весь круг. Хвост гаснет — так видно, куда бежит дуга.
+const ARC = {
+  background:
+    'conic-gradient(from 0deg, transparent 0deg 200deg, rgba(255,209,6,0.18) 300deg, #FFD106 352deg, transparent 360deg)',
+  WebkitMaskImage:
+    'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))',
+  maskImage:
+    'radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px))',
+  animationDuration: '1.6s',
+}
+
 /**
- * Ожидание с фирменным знаком: логотип в центре, вокруг бежит круг.
- * `full` растягивает лоадер на весь экран — это состояние загрузки
- * приложения, когда рисовать ещё нечего.
+ * Ожидание с фирменным знаком: логотип в центре, вокруг бежит дуга.
+ * `full` растягивает лоадер на весь экран — это вход в платформу; без него
+ * лоадер занимает место содержимого, пока данные раздела не пришли.
  *
  * @param {{
  *   label?: string,
@@ -13,30 +25,37 @@ import { cn } from '@/lib/cn.js'
  *   className?: string,
  * }} props
  */
-export function Loader({ label, size = 56, full = false, className }) {
-  // Кольцо крупнее знака: между ними остаётся воздух, иначе дуга липнет
-  // к логотипу и читается как рамка.
-  const ring = Math.round(size * 1.9)
-
+export function Loader({ label, size = 208, full = false, className }) {
   return (
     <div
       role="status"
       aria-live="polite"
       aria-busy="true"
       className={cn(
-        'flex flex-col items-center justify-center gap-4',
-        full ? 'min-h-screen bg-paper' : 'py-16',
+        'flex flex-col items-center justify-center gap-5',
+        full ? 'min-h-screen bg-paper' : 'py-20',
         className,
       )}
     >
       <div
         className="relative flex items-center justify-center"
-        style={{ width: ring, height: ring }}
+        style={{ width: size, height: size }}
       >
-        {/* Дорожка кольца — бледная, поверх неё бежит жёлтая дуга. */}
-        <span className="absolute inset-0 rounded-full border-2 border-ink/8" />
-        <span className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-[#FFD106] border-r-[#FFD106]/40" />
-        <Logo size={size} withWord={false} />
+        {/* Мягкое свечение под знаком — оно держит центр композиции. */}
+        <span className="absolute inset-[26%] rounded-full bg-[#FFD106]/20 blur-3xl" />
+        {/* Дорожка кольца: почти незаметная, дуга бежит по ней. */}
+        <span className="absolute inset-0 rounded-full border border-ink/8" />
+        <span
+          className="absolute inset-0 animate-spin rounded-full"
+          style={ARC}
+        />
+
+        <div className="relative flex flex-col items-center gap-2.5">
+          <Logo size={46} withWord={false} />
+          <span className="font-display-cond text-[15px] font-bold uppercase leading-none tracking-[0.14em] text-ink">
+            Setanta
+          </span>
+        </div>
       </div>
 
       {label && <p className="text-[13px] text-ink-muted">{label}</p>}

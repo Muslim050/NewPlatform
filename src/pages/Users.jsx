@@ -13,7 +13,8 @@ import { Badge } from '@/components/ui/Badge.jsx'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
-import { Skeleton } from '@/components/ui/Skeleton'
+import { Loader } from '@/components/ui/Loader.jsx'
+import { FadeIn } from '@/components/ui/FadeIn.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { UserForm } from '@/components/forms/UserForm.jsx'
 
@@ -75,8 +76,11 @@ export default function Users({ tabs = null }) {
     })
   }
 
+  // Пока список не пришёл, на экране только ожидание.
+  if (isPending) return <Loader label="Загружаем пользователей…" />
+
   return (
-    <div>
+    <FadeIn>
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search
@@ -119,9 +123,7 @@ export default function Users({ tabs = null }) {
         ]}
       />
 
-      {isPending ? (
-        <UserTableSkeleton />
-      ) : isError ? (
+      {isError ? (
         <Card>
           <EmptyState
             icon={UsersIcon}
@@ -257,26 +259,7 @@ export default function Users({ tabs = null }) {
         initial={modal.initial}
         onClose={() => setModal({ open: false, initial: null })}
       />
-    </div>
-  )
-}
-
-/** Повторяет геометрию таблицы, чтобы страница не прыгала при загрузке. */
-function UserTableSkeleton() {
-  return (
-    <Card className="overflow-hidden p-4">
-      <div className="space-y-3">
-        {Array.from({ length: 5 }, (_, i) => (
-          <div key={i} className="flex items-center gap-4">
-            <Skeleton circle className="h-8 w-8 shrink-0" />
-            <Skeleton className="h-4 w-1/5" />
-            <Skeleton className="h-4 w-1/6" />
-            <Skeleton className="ml-auto h-6 w-24 shrink-0 rounded-full" />
-            <Skeleton className="h-6 w-24 shrink-0 rounded-full" />
-          </div>
-        ))}
-      </div>
-    </Card>
+    </FadeIn>
   )
 }
 
