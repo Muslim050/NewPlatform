@@ -33,7 +33,11 @@ export function Loader({ label, size = 208, full = false, className }) {
       aria-busy="true"
       className={cn(
         'flex flex-col items-center justify-center gap-5',
-        full ? 'min-h-screen bg-paper' : 'py-20',
+        // Без `full` лоадер занимает всю видимую область раздела: шапка 64px
+        // плюс отступы main — иначе он прижимается к верху страницы.
+        full
+          ? 'min-h-screen bg-paper'
+          : 'min-h-[calc(100vh-112px)] sm:min-h-[calc(100vh-128px)]',
         className,
       )}
     >
