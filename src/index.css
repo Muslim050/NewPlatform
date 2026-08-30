@@ -86,7 +86,6 @@
     );
 
   --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-shimmer: shimmer 1.5s infinite;
 
   @keyframes fade-up {
     0% {
@@ -96,11 +95,6 @@
     100% {
       opacity: 1;
       transform: translateY(0);
-    }
-  }
-  @keyframes shimmer {
-    100% {
-      transform: translateX(100%);
     }
   }
 }
