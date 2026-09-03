@@ -19,7 +19,7 @@ import { Field, Input, Select, Textarea } from '@/components/ui/Field'
 import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { FilePicker } from '@/components/ui/FilePicker.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
-import { LEAGUES, PACKAGES } from '@/lib/metrics.js'
+import { ADV_STATUS, LEAGUES, PACKAGES } from '@/lib/metrics.js'
 import { formatDateTime } from '@/lib/format.js'
 import { uid } from '@/lib/id.js'
 import { cn } from '@/lib/cn.js'
@@ -382,14 +382,30 @@ export function AdvertiserForm({ open, onClose, initial }) {
           </Field>
         </div>
 
-        {/* Подставляется в договоры бренда и в кампании. */}
-        <Field label="Наименование юр. лица">
-          <Input
-            value={form.legalName}
-            onChange={(e) => set('legalName', e.target.value)}
-            placeholder="ООО «Пример»"
-          />
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Подставляется в договоры бренда и в кампании. */}
+          <Field label="Наименование юр. лица">
+            <Input
+              value={form.legalName}
+              onChange={(e) => set('legalName', e.target.value)}
+              placeholder="ООО «Пример»"
+            />
+          </Field>
+
+          {/* Тот же статус, что в плитке бренда: активен или расторгнут. */}
+          <Field label="Статус">
+            <Select
+              value={form.status}
+              onChange={(e) => set('status', e.target.value)}
+            >
+              {Object.entries(ADV_STATUS).map(([key, meta]) => (
+                <option key={key} value={key}>
+                  {meta.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
 
         <Field
           label="Реквизиты"

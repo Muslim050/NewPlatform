@@ -26,7 +26,7 @@ export function SegmentTabs({
   const layoutId = useId()
   // Длинный ряд (например, восемь статусов кампании) не помещается в строку.
   // Тогда он прокручивается: колесом над вкладками, выбранная — в виду.
-  const ref = useHorizontalScroll(value)
+  const { ref } = useHorizontalScroll(value)
 
   return (
     <div

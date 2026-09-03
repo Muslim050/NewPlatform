@@ -2,6 +2,8 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Check,
+  ChevronLeft,
+  ChevronRight,
   Download,
   FileSpreadsheet,
   Pencil,
@@ -434,7 +436,12 @@ export function CampaignTabs({
   const toast = useToast()
   // Лента вкладок: колесо мыши крутит её вбок, выбранная вкладка сама
   // подматывается в видимую часть.
-  const stripRef = useHorizontalScroll(value)
+  const {
+    ref: stripRef,
+    canLeft,
+    canRight,
+    scrollBy,
+  } = useHorizontalScroll(value)
   // Собирать отчёт может только площадка.
   const canAdd = Boolean(onAddCategory) && canEdit && !isAdvertiser
   // Крестики у категорий показываем только в режиме правки — по карандашу.
@@ -600,53 +607,85 @@ export function CampaignTabs({
     )
 
   return (
-    // Лента крутится колесом прямо над блоками: полосой снизу дотягиваться
-    // до дальних категорий неудобно.
-    <div
-      ref={stripRef}
-      className="no-scrollbar mb-4 overflow-x-auto overscroll-x-contain rounded-2xl border border-line bg-surface p-1.5 shadow-soft"
-    >
-      <div className="flex min-w-max items-center gap-1.5">
-        {groups.map((group, index) => {
-          // Группа с открытой вкладкой подсвечивается целиком — сразу видно,
-          // в каком блоке находишься.
-          const opened = group.items.some((tab) => tab.value === value)
-          return (
-            <Fragment key={group.id ?? group.name}>
-              <div
-                className={cn(
-                  'flex items-center gap-1.5 rounded-xl border p-2 transition-colors',
-                  opened
-                    ? 'border-indigo-500 bg-indigo-50 shadow-[0_0_0_3px_rgba(255,209,6,0.28)]'
-                    : 'border-ink/15 bg-paper',
-                )}
-              >
-                {/* Название категории — тёмной плашкой: активная вкладка
+    // Лента крутится колесом прямо над блоками и стрелками по краям:
+    // полосой снизу дотягиваться до дальних категорий неудобно.
+    <div className="relative mb-4">
+      {canLeft && <ScrollArrow side="left" onClick={() => scrollBy(-1)} />}
+      {canRight && <ScrollArrow side="right" onClick={() => scrollBy(1)} />}
+      <div
+        ref={stripRef}
+        className="no-scrollbar overflow-x-auto overscroll-x-contain rounded-2xl border border-line bg-surface p-1.5 shadow-soft"
+      >
+        <div className="flex min-w-max items-center gap-1.5">
+          {groups.map((group, index) => {
+            // Группа с открытой вкладкой подсвечивается целиком — сразу видно,
+            // в каком блоке находишься.
+            const opened = group.items.some((tab) => tab.value === value)
+            return (
+              <Fragment key={group.id ?? group.name}>
+                <div
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-xl border p-2 transition-colors',
+                    opened
+                      ? 'border-indigo-500 bg-indigo-50 shadow-[0_0_0_3px_rgba(255,209,6,0.28)]'
+                      : 'border-ink/15 bg-paper',
+                  )}
+                >
+                  {/* Название категории — тёмной плашкой: активная вкладка
                     жёлтая, поэтому группу метим контрастом, а не цветом. */}
-                <span className="whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-paper">
-                  {group.name}
-                </span>
-                {group.items.map(renderTab)}
-                {/* В режиме правки свои категории можно убрать —
+                  <span className="whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-paper">
+                    {group.name}
+                  </span>
+                  {group.items.map(renderTab)}
+                  {/* В режиме правки свои категории можно убрать —
                     постоянная Statistic остаётся. */}
-                {canAdd && editing && group.id && (
-                  <button
-                    type="button"
-                    onClick={() => removeCategory(group)}
-                    aria-label={`Убрать категорию ${group.name}`}
-                    title="Убрать категорию"
-                    className="ml-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger transition-colors hover:bg-danger hover:text-white focus-ring"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-              {canAdd && index === 0 && actionButtons}
-            </Fragment>
-          )
-        })}
+                  {canAdd && editing && group.id && (
+                    <button
+                      type="button"
+                      onClick={() => removeCategory(group)}
+                      aria-label={`Убрать категорию ${group.name}`}
+                      title="Убрать категорию"
+                      className="ml-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger transition-colors hover:bg-danger hover:text-white focus-ring"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                {canAdd && index === 0 && actionButtons}
+              </Fragment>
+            )
+          })}
+        </div>
       </div>
       {addMenu}
+    </div>
+  )
+}
+
+/**
+ * Стрелка у края ленты: листает её на экран. Под стрелкой — растушёвка,
+ * чтобы было видно, что за краем есть продолжение.
+ */
+function ScrollArrow({ side, onClick }) {
+  const left = side === 'left'
+  return (
+    <div
+      className={cn(
+        'pointer-events-none absolute inset-y-0 z-10 flex w-16 items-center',
+        left
+          ? 'left-0 justify-start bg-linear-to-r from-surface via-surface/85 to-transparent pl-1.5'
+          : 'right-0 justify-end bg-linear-to-l from-surface via-surface/85 to-transparent pr-1.5',
+      )}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={left ? 'Листать влево' : 'Листать вправо'}
+        title={left ? 'Листать влево' : 'Листать вправо'}
+        className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface text-ink-soft shadow-soft transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-ink focus-ring"
+      >
+        {left ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+      </button>
     </div>
   )
 }
