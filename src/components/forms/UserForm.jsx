@@ -11,25 +11,38 @@ import { Field, Input, Select } from '@/components/ui/Field'
 const ROLES = ['admin', 'viewer', 'advertiser']
 
 const emptyForm = {
+  firstName: '',
+  lastName: '',
   login: '',
-  name: '',
   email: '',
+  phone: '',
   role: 'viewer',
   advertiserId: '',
   isActive: true,
   password: '',
 }
 
-/** Пользователь с сервера → состояние формы. Пароль наружу не приходит. */
-const formFrom = (user) => ({
-  login: user.login,
-  name: user.name ?? '',
-  email: user.email ?? '',
-  role: user.role,
-  advertiserId: user.advertiserId ? String(user.advertiserId) : '',
-  isActive: user.isActive,
-  password: '',
-})
+/**
+ * Пользователь с сервера → состояние формы. Пароль наружу не приходит.
+ *
+ * Фамилии в API нет — имя приходит одной строкой, поэтому делим её по
+ * первому пробелу, а при сохранении склеиваем обратно. Уйдёт, когда
+ * на бэкенде появятся отдельные поля (см. docs/backend-todo.md).
+ */
+const formFrom = (user) => {
+  const [firstName = '', ...rest] = (user.name ?? '').trim().split(/\s+/)
+  return {
+    firstName,
+    lastName: rest.join(' '),
+    login: user.login,
+    email: user.email ?? '',
+    phone: '',
+    role: user.role,
+    advertiserId: user.advertiserId ? String(user.advertiserId) : '',
+    isActive: user.isActive,
+    password: '',
+  }
+}
 
 /**
  * Карточка пользователя платформы. Роль решает, что человек увидит:
@@ -70,7 +83,10 @@ export function UserForm({ open, onClose, initial }) {
 
     const user = {
       login: form.login.trim(),
-      name: form.name.trim(),
+      // Пока имя на сервере одно поле — склеиваем.
+      name: [form.firstName.trim(), form.lastName.trim()]
+        .filter(Boolean)
+        .join(' '),
       email: form.email.trim(),
       role: form.role,
       // Бренд есть только у рекламодателя — у остальных ролей его снимаем.
@@ -123,19 +139,18 @@ export function UserForm({ open, onClose, initial }) {
     >
       <div className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Логин" required error={errors.login}>
-            <Input
-              value={form.login}
-              onChange={(e) => set('login', e.target.value)}
-              placeholder="ivanov"
-              autoComplete="off"
-            />
-          </Field>
           <Field label="Имя">
             <Input
-              value={form.name}
-              onChange={(e) => set('name', e.target.value)}
-              placeholder="Имя Фамилия"
+              value={form.firstName}
+              onChange={(e) => set('firstName', e.target.value)}
+              placeholder="Тимур"
+            />
+          </Field>
+          <Field label="Фамилия">
+            <Input
+              value={form.lastName}
+              onChange={(e) => set('lastName', e.target.value)}
+              placeholder="Рахимов"
             />
           </Field>
         </div>
@@ -149,6 +164,49 @@ export function UserForm({ open, onClose, initial }) {
               placeholder="name@setanta.uz"
             />
           </Field>
+          {/* Телефона в API пока нет: поле стоит на месте, но не сохраняется —
+              включим, когда на бэкенде появится поле. */}
+          <Field
+            label="Номер телефона"
+            hint="Появится, когда поле добавят на сервере."
+          >
+            <Input
+              value={form.phone}
+              onChange={(e) => set('phone', e.target.value)}
+              placeholder="+998 90 000 00 00"
+              inputMode="tel"
+              disabled
+            />
+          </Field>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Логин" required error={errors.login}>
+            <Input
+              value={form.login}
+              onChange={(e) => set('login', e.target.value)}
+              placeholder="ivanov"
+              autoComplete="off"
+            />
+          </Field>
+          <Field
+            label="Роль"
+            hint="Наблюдатель видит всё, но ничего не меняет."
+          >
+            <Select
+              value={form.role}
+              onChange={(e) => set('role', e.target.value)}
+            >
+              {ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {ROLE_LABELS[role]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Пароль"
             required={!editing}
@@ -164,24 +222,6 @@ export function UserForm({ open, onClose, initial }) {
               placeholder={editing ? '••••••' : 'Не короче 8 символов'}
               autoComplete="new-password"
             />
-          </Field>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Роль"
-            hint="Наблюдатель видит всё, но ничего не меняет."
-          >
-            <Select
-              value={form.role}
-              onChange={(e) => set('role', e.target.value)}
-            >
-              {ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {ROLE_LABELS[role]}
-                </option>
-              ))}
-            </Select>
           </Field>
           {/* Бренд спрашиваем только у рекламодателя: остальные видят всех. */}
           {form.role === 'advertiser' && (
