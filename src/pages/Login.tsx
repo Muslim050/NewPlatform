@@ -202,7 +202,7 @@ export default function Login() {
       { login: username.trim(), password },
       {
         onSuccess: () => {
-          toast.success('Вы успешно вошли в систему Setanta Platform')
+          toast.success('Вы успешно вошли в систему Setanta Sports Platform')
           navigate({ to: '/app/campaigns' })
         },
       },

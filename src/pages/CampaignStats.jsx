@@ -33,6 +33,7 @@ import { Avatar } from '@/components/ui/Avatar.jsx'
 import { Badge } from '@/components/ui/Badge.jsx'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card.jsx'
+import { Loader } from '@/components/ui/Loader.jsx'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { MediaReport } from '@/components/campaigns/MediaReport.jsx'
@@ -78,6 +79,9 @@ export default function CampaignStats() {
       navigate({ to: '/app/campaigns', replace: true })
   }, [campaign, isPending, navigate])
 
+  // Пока список кампаний не пришёл, показываем ожидание: без него экран
+  // оставался пустым, а потом резко наполнялся.
+  if (isPending) return <Loader label="Загружаем статистику…" />
   if (!campaign) return null
 
   const advertiser = advertisers.find((a) => a.id === campaign.advertiserId)

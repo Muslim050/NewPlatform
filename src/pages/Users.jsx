@@ -15,7 +15,6 @@ import { Avatar } from '@/components/ui/Avatar.jsx'
 import { EmptyState } from '@/components/ui/EmptyState.jsx'
 import { Loader } from '@/components/ui/Loader.jsx'
 import { FadeIn } from '@/components/ui/FadeIn.jsx'
-import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { UserForm } from '@/components/forms/UserForm.jsx'
 
 /** Тон бейджа роли: у площадки права шире, чем у наблюдателя. */
@@ -38,28 +37,20 @@ export default function Users({ tabs = null }) {
   const toast = useToast()
   const confirm = useConfirm()
   const [q, setQ] = useState('')
-  const [role, setRole] = useState('all')
   const [modal, setModal] = useState({ open: false, initial: null })
 
   const users = data ?? []
   const brandName = (id) =>
     (advertisers ?? []).find((advertiser) => advertiser.id === id)?.name ?? ''
 
-  const counts = {
-    all: users.length,
-    admin: users.filter((u) => u.role === 'admin').length,
-    viewer: users.filter((u) => u.role === 'viewer').length,
-    advertiser: users.filter((u) => u.role === 'advertiser').length,
-  }
-
+  // Роль видно в самой таблице, отдельным фильтром её больше не режем:
+  // пользователей немного, и поиска по логину хватает.
   const query = q.trim().toLowerCase()
-  const filtered = users
-    .filter((u) => role === 'all' || u.role === role)
-    .filter((u) =>
-      `${u.login} ${u.name} ${u.email} ${brandName(u.advertiserId)}`
-        .toLowerCase()
-        .includes(query),
-    )
+  const filtered = users.filter((u) =>
+    `${u.login} ${u.name} ${u.email} ${brandName(u.advertiserId)}`
+      .toLowerCase()
+      .includes(query),
+  )
 
   const del = async (u) => {
     const ok = await confirm({
@@ -107,22 +98,6 @@ export default function Users({ tabs = null }) {
 
       {tabs}
 
-      <SegmentTabs
-        className="mb-5"
-        value={role}
-        onChange={setRole}
-        items={[
-          { value: 'all', label: 'Все', count: counts.all },
-          { value: 'admin', label: ROLE_LABELS.admin, count: counts.admin },
-          { value: 'viewer', label: ROLE_LABELS.viewer, count: counts.viewer },
-          {
-            value: 'advertiser',
-            label: ROLE_LABELS.advertiser,
-            count: counts.advertiser,
-          },
-        ]}
-      />
-
       {isError ? (
         <Card>
           <EmptyState
@@ -143,7 +118,7 @@ export default function Users({ tabs = null }) {
             title={users.length ? 'Ничего не нашлось' : 'Пользователей нет'}
             description={
               users.length
-                ? 'Попробуйте изменить запрос или снять фильтр роли.'
+                ? 'Попробуйте изменить запрос.'
                 : 'Заведите первого — он получит доступ к платформе.'
             }
             action={

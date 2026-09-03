@@ -56,8 +56,14 @@ export function Loader({ label, size = 208, full = false, className }) {
 
         <div className="relative flex flex-col items-center gap-2.5">
           <Logo size={46} withWord={false} />
-          <span className="font-display-cond text-[15px] font-bold uppercase leading-none tracking-[0.14em] text-ink">
-            Setanta
+          {/* Название набираем в два ряда, как в самом логотипе. */}
+          <span className="flex flex-col items-center font-display-cond uppercase text-ink">
+            <span className="text-[15px] font-bold leading-none tracking-[0.02em]">
+              Setanta Sports
+            </span>
+            <span className="mt-1 text-[10px] font-medium leading-none tracking-[0.22em] text-ink-muted">
+              Platform
+            </span>
           </span>
         </div>
       </div>
