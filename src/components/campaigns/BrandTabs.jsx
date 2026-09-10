@@ -28,7 +28,7 @@ export function BrandTabs({ items, value, onChange, className }) {
     <div
       ref={listRef}
       role="tablist"
-      aria-label="Бренды"
+      aria-label="Рекламодатели"
       className={cn(
         'no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 pt-2.5 md:flex-wrap md:overflow-visible',
         className,

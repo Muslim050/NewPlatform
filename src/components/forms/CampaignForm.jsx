@@ -295,7 +295,10 @@ export function CampaignForm({ open, onClose, initial }) {
 
         <div className="grid gap-4 sm:grid-cols-2">
           {/* Бренд заявки сменить нельзя: сервер берёт его из сессии автора. */}
-          <Field label="Рекламодатель" hint="Бренд заявки менять нельзя.">
+          <Field
+            label="Рекламодатель"
+            hint="Рекламодателя заявки менять нельзя."
+          >
             <Input value={advertiser?.name ?? '—'} disabled readOnly />
           </Field>
           {isAdmin && editing && (

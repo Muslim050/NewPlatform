@@ -31,7 +31,7 @@ const ROLE_TONE = {
 export default function Users({ tabs = null }) {
   const { user: me } = useAuth()
   const { data, isPending, isError, error, refetch } = useUsers()
-  // Бренды нужны только затем, чтобы показать, чей бренд видит рекламодатель.
+  // Рекламодатели нужны затем, чтобы показать, чей раздел видит человек.
   const { data: advertisers } = useAdvertisers()
   const { mutate: deleteUser } = useDeleteUser()
   const toast = useToast()
@@ -141,7 +141,7 @@ export default function Users({ tabs = null }) {
                 <Th>Пользователь</Th>
                 <Th>Email</Th>
                 <Th>Роль</Th>
-                <Th>Бренд</Th>
+                <Th>Рекламодатель</Th>
                 <Th>Доступ</Th>
                 <Th>Создан</Th>
                 <Th className="text-center">Действия</Th>

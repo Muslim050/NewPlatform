@@ -2,16 +2,15 @@ import { useEffect, useState } from 'react'
 import { UserCog } from 'lucide-react'
 import { useSaveUser } from '@/features/users/queries'
 import { useAdvertisers } from '@/features/advertisers/queries'
-import { ROLE_LABELS } from '@/features/auth/user'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button'
 import { Field, Input, Select } from '@/components/ui/Field'
 
-// Через платформу заводят только рекламодателей: площадку и наблюдателя
-// создаёт бэкенд напрямую. Роль уже заведённого человека из списка не
-// выкидываем — иначе правка его контактов молча сменила бы ему права.
-const ROLES = ['advertiser']
+// Через платформу заводят только рекламодателей — роль не спрашиваем.
+// У уже заведённой площадки или наблюдателя роль берётся из его карточки
+// и остаётся прежней: правка контактов не должна менять права.
+const DEFAULT_ROLE = 'advertiser'
 
 const emptyForm = {
   firstName: '',
@@ -19,7 +18,7 @@ const emptyForm = {
   login: '',
   email: '',
   phone: '',
-  role: 'advertiser',
+  role: DEFAULT_ROLE,
   advertiserId: '',
   isActive: true,
   password: '',
@@ -48,12 +47,12 @@ const formFrom = (user) => {
 }
 
 /**
- * Карточка пользователя платформы. Роль решает, что человек увидит:
- * рекламодателю нужен бренд, площадке и наблюдателю — нет.
+ * Карточка пользователя платформы. Заводим здесь только рекламодателей —
+ * им нужно указать, чей раздел человек будет видеть.
  */
 export function UserForm({ open, onClose, initial }) {
   const { mutate: saveUser, isPending } = useSaveUser()
-  // Бренд выбирается из тех же рекламодателей, что и в остальных разделах.
+  // Список тот же, что и в разделе «Рекламодатели».
   const { data: advertisers } = useAdvertisers()
   const toast = useToast()
   const editing = !!initial
@@ -71,10 +70,6 @@ export function UserForm({ open, onClose, initial }) {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
-  // Заводим только рекламодателей, но у открытой карточки площадки или
-  // наблюдателя показываем её собственную роль — чтобы её не подменить.
-  const roleOptions = ROLES.includes(form.role) ? ROLES : [form.role, ...ROLES]
-
   const submit = () => {
     const err = {}
     if (!form.login.trim()) err.login = 'Укажите логин'
@@ -84,7 +79,7 @@ export function UserForm({ open, onClose, initial }) {
     // «оставить прежний».
     if (!editing && !form.password) err.password = 'Задайте пароль'
     if (form.role === 'advertiser' && !form.advertiserId)
-      err.advertiserId = 'Выберите бренд'
+      err.advertiserId = 'Выберите рекламодателя'
     setErrors(err)
     if (Object.keys(err).length) return
 
@@ -96,7 +91,7 @@ export function UserForm({ open, onClose, initial }) {
         .join(' '),
       email: form.email.trim(),
       role: form.role,
-      // Бренд есть только у рекламодателя — у остальных ролей его снимаем.
+      // Связка есть только у рекламодателя — у остальных ролей её снимаем.
       advertiserId:
         form.role === 'advertiser' ? Number(form.advertiserId) : null,
       isActive: form.isActive,
@@ -131,7 +126,7 @@ export function UserForm({ open, onClose, initial }) {
       onClose={onClose}
       icon={UserCog}
       title={editing ? 'Редактировать пользователя' : 'Новый пользователь'}
-      description="Доступ к платформе и роль."
+      description="Доступ к платформе."
       size="lg"
       footer={
         <>
@@ -196,21 +191,6 @@ export function UserForm({ open, onClose, initial }) {
               autoComplete="off"
             />
           </Field>
-          <Field label="Роль" hint="Рекламодатель видит только свой бренд.">
-            <Select
-              value={form.role}
-              onChange={(e) => set('role', e.target.value)}
-            >
-              {roleOptions.map((role) => (
-                <option key={role} value={role}>
-                  {ROLE_LABELS[role]}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Пароль"
             required={!editing}
@@ -227,9 +207,13 @@ export function UserForm({ open, onClose, initial }) {
               autoComplete="new-password"
             />
           </Field>
-          {/* Бренд спрашиваем только у рекламодателя: остальные видят всех. */}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Рекламодателя спрашиваем только у этой роли: площадка и
+              наблюдатель видят всех. */}
           {form.role === 'advertiser' && (
-            <Field label="Бренд" required error={errors.advertiserId}>
+            <Field label="Рекламодатель" required error={errors.advertiserId}>
               <Select
                 value={form.advertiserId}
                 onChange={(e) => set('advertiserId', e.target.value)}
@@ -243,20 +227,19 @@ export function UserForm({ open, onClose, initial }) {
               </Select>
             </Field>
           )}
-        </div>
-
-        <Field
-          label="Доступ"
-          hint="Отключённый пользователь остаётся в списке, но войти не может."
-        >
-          <Select
-            value={form.isActive ? 'active' : 'inactive'}
-            onChange={(e) => set('isActive', e.target.value === 'active')}
+          <Field
+            label="Доступ"
+            hint="Отключённый не сможет войти, но останется в списке."
           >
-            <option value="active">Активен</option>
-            <option value="inactive">Отключён</option>
-          </Select>
-        </Field>
+            <Select
+              value={form.isActive ? 'active' : 'inactive'}
+              onChange={(e) => set('isActive', e.target.value === 'active')}
+            >
+              <option value="active">Активен</option>
+              <option value="inactive">Отключён</option>
+            </Select>
+          </Field>
+        </div>
       </div>
     </Modal>
   )
