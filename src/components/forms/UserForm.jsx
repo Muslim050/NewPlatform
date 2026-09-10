@@ -8,7 +8,10 @@ import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button'
 import { Field, Input, Select } from '@/components/ui/Field'
 
-const ROLES = ['admin', 'viewer', 'advertiser']
+// Через платформу заводят только рекламодателей: площадку и наблюдателя
+// создаёт бэкенд напрямую. Роль уже заведённого человека из списка не
+// выкидываем — иначе правка его контактов молча сменила бы ему права.
+const ROLES = ['advertiser']
 
 const emptyForm = {
   firstName: '',
@@ -16,7 +19,7 @@ const emptyForm = {
   login: '',
   email: '',
   phone: '',
-  role: 'viewer',
+  role: 'advertiser',
   advertiserId: '',
   isActive: true,
   password: '',
@@ -67,6 +70,10 @@ export function UserForm({ open, onClose, initial }) {
   }, [open, initial?.id])
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+
+  // Заводим только рекламодателей, но у открытой карточки площадки или
+  // наблюдателя показываем её собственную роль — чтобы её не подменить.
+  const roleOptions = ROLES.includes(form.role) ? ROLES : [form.role, ...ROLES]
 
   const submit = () => {
     const err = {}
@@ -189,15 +196,12 @@ export function UserForm({ open, onClose, initial }) {
               autoComplete="off"
             />
           </Field>
-          <Field
-            label="Роль"
-            hint="Наблюдатель видит всё, но ничего не меняет."
-          >
+          <Field label="Роль" hint="Рекламодатель видит только свой бренд.">
             <Select
               value={form.role}
               onChange={(e) => set('role', e.target.value)}
             >
-              {ROLES.map((role) => (
+              {roleOptions.map((role) => (
                 <option key={role} value={role}>
                   {ROLE_LABELS[role]}
                 </option>
