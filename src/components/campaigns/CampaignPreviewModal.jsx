@@ -3,6 +3,7 @@ import {
   BarChart3,
   Download,
   CalendarDays,
+  CalendarRange,
   ExternalLink,
   Gauge,
   FileText,
@@ -248,12 +249,12 @@ export function ContractTile({ icon: Icon, label, value, empty, file }) {
 }
 
 /**
- * Плитки с условиями договора — встают в общую сетку карточки. Срок
- * договора, юр. лицо и сроки оплаты сюда не выносим: это условия самого
- * договора, их место в его карточке.
+ * Плитки с условиями договора — встают в общую сетку карточки. Юр. лицо и
+ * сроки оплаты сюда не выносим: это внутренняя кухня, её место в карточке
+ * договора.
  *
- * Пакет и лиги кампания хранит снимком на момент создания, но сервер его
- * не заполняет — поэтому пустое поле добираем из договора
+ * Условия кампания хранит снимком на момент создания, но сервер его не
+ * заполняет — поэтому пустое поле добираем из договора
  * (см. docs/backend.md, п. 3.13).
  */
 function ContractTiles({ campaign, contract }) {
@@ -263,6 +264,8 @@ function ContractTiles({ campaign, contract }) {
   const leagues = campaign.leagues?.length
     ? campaign.leagues
     : contract?.leagues
+  const contractStart = campaign.contractStart || contract?.start
+  const contractEnd = campaign.contractEnd || contract?.end
 
   const tiles = [
     {
@@ -284,6 +287,15 @@ function ContractTiles({ campaign, contract }) {
       empty: 'Нет договора',
       // Есть скан — по клику скачивается прямо отсюда.
       file: contractFile,
+    },
+    {
+      label: 'Срок договора',
+      icon: CalendarRange,
+      value:
+        contractStart && contractEnd
+          ? `${formatDate(contractStart)} — ${formatDate(contractEnd)}`
+          : null,
+      empty: 'Не указан',
     },
   ]
 
