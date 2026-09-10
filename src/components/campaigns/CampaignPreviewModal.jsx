@@ -232,23 +232,34 @@ export function ContractTile({ icon: Icon, label, value, file }) {
   )
 }
 
-/** Плитки с условиями договора — встают в общую сетку карточки. */
-function ContractTiles({ campaign, advertiser }) {
+/**
+ * Плитки с условиями договора — встают в общую сетку карточки.
+ *
+ * Условия кампания хранит снимком на момент создания, но сервер его не
+ * всегда заполняет: у заявок со стенда пакет и лиги приходят пустыми, а
+ * срока договора нет вовсе. Поэтому пустое поле добираем из самого
+ * договора — карточка не должна выглядеть полупустой из-за этого
+ * (см. docs/backend.md, п. 3.13).
+ */
+function ContractTiles({ campaign, advertiser, contract }) {
   const { isAdvertiser } = useAuth()
   // Скан договора: у кампании свой либо общий из карточки бренда.
-  const contractFile =
-    campaign.contractFile ||
-    advertiser?.contracts?.find((c) => c.number === campaign.contractNumber)
-      ?.file ||
-    null
+  const contractFile = campaign.contractFile || contract?.file || null
+  const packageKey = campaign.package || contract?.package
+  const leagues = campaign.leagues?.length
+    ? campaign.leagues
+    : contract?.leagues
+  const legalName = campaign.legalName || advertiser?.legalName
+  const contractStart = campaign.contractStart || contract?.start
+  const contractEnd = campaign.contractEnd || contract?.end
+  const paymentDate = campaign.paymentDate || contract?.paymentDate
+
   const tiles = [
-    { label: 'Пакет', icon: Package, value: PACKAGES[campaign.package]?.label },
+    { label: 'Пакет', icon: Package, value: PACKAGES[packageKey]?.label },
     {
       label: 'Лиги',
       icon: Trophy,
-      value: campaign.leagues?.length
-        ? campaign.leagues.map(leagueLabel).join(', ')
-        : null,
+      value: leagues?.length ? leagues.map(leagueLabel).join(', ') : null,
     },
     {
       label: 'Номер договора',
@@ -261,24 +272,21 @@ function ContractTiles({ campaign, advertiser }) {
     {
       label: 'Юр. лицо',
       icon: Building2,
-      value: isAdvertiser ? null : campaign.legalName,
+      value: isAdvertiser ? null : legalName,
     },
     {
       label: 'Срок договора',
       icon: CalendarRange,
       value:
-        campaign.contractStart && campaign.contractEnd
-          ? `${formatDate(campaign.contractStart)} — ${formatDate(campaign.contractEnd)}`
+        contractStart && contractEnd
+          ? `${formatDate(contractStart)} — ${formatDate(contractEnd)}`
           : null,
     },
     {
       // Рекламодателю вместо сроков оплаты показываем прогресс оплаты.
       label: 'Сроки оплаты',
       icon: CalendarClock,
-      value:
-        !isAdvertiser && campaign.paymentDate
-          ? formatDate(campaign.paymentDate)
-          : null,
+      value: !isAdvertiser && paymentDate ? formatDate(paymentDate) : null,
     },
   ].filter((tile) => tile.value)
 
@@ -300,21 +308,23 @@ export function CampaignPreviewModal({
   const { isAdvertiser } = useAuth()
   const [showPayments, setShowPayments] = useState(false)
 
-  const payments = campaign?.payments ?? []
-
-  // Дату загрузки ролика кампания хранит у себя, но у старых записей её нет —
-  // тогда берём её из договора, если ролик там тот же самый.
+  // Договор кампании: из него берутся деньги, поступления и всё, чего нет
+  // в снимке условий самой кампании.
   const contract = (advertiser?.contracts ?? []).find(
     (c) => c.number === campaign?.contractNumber,
   )
+  // Поступления ведутся по договору, у кампании их нет.
+  const payments = contract?.payments ?? campaign?.payments ?? []
   // Деньги ведутся по договору, а не по кампании. Суммы приходят
   // decimal-строками — в расчётах они нужны числами.
   const budget = Number(contract?.budget) || 0
   const spent = Number(contract?.spent) || 0
   const pacing = budget ? (spent / budget) * 100 : 0
+  // Ролик у кампании свой, но чаще он один на договор — тогда показываем его.
+  const creativeUrl = campaign?.creativeUrl || contract?.creative?.url || ''
   const creativeAddedAt =
     campaign?.creativeAddedAt ||
-    (contract?.creative?.url && contract.creative.url === campaign?.creativeUrl
+    (contract?.creative?.url && contract.creative.url === creativeUrl
       ? contract.creative.addedAt
       : null)
 
@@ -373,11 +383,12 @@ export function CampaignPreviewModal({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <CreativeTile
-              url={campaign.creativeUrl}
-              addedAt={creativeAddedAt}
+            <CreativeTile url={creativeUrl} addedAt={creativeAddedAt} />
+            <ContractTiles
+              campaign={campaign}
+              advertiser={advertiser}
+              contract={contract}
             />
-            <ContractTiles campaign={campaign} advertiser={advertiser} />
 
             {/* Плитка оплаты: по клику раскрывается история выплат. */}
             <button
