@@ -228,7 +228,7 @@ export function UserForm({ open, onClose, initial }) {
             </Field>
           )}
           <Field
-            label="Доступ"
+            label="Статус"
             hint="Отключённый не сможет войти, но останется в списке."
           >
             <Select
