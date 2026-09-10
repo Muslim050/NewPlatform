@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
   BarChart3,
-  Building2,
   Download,
-  CalendarClock,
   CalendarDays,
-  CalendarRange,
   ExternalLink,
   Gauge,
   FileText,
@@ -193,7 +190,10 @@ function ContractTileDownload({ file, children }) {
  * Плитка договора — тот же формат, что у метрик, но текст поменьше.
  * file — скан договора: тогда плитка становится кнопкой скачивания.
  */
-export function ContractTile({ icon: Icon, label, value, file }) {
+export function ContractTile({ icon: Icon, label, value, empty, file }) {
+  // Значения нет — плитку всё равно показываем: сетка не должна разъезжаться
+  // из-за незаполненного поля. Заглушку рисуем приглушённой.
+  const missing = !value
   const body = (
     <>
       <div className="flex items-center justify-between gap-3">
@@ -202,15 +202,23 @@ export function ContractTile({ icon: Icon, label, value, file }) {
         </span>
         <span
           className={cn(
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900',
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+            missing
+              ? 'bg-ink/6 text-ink-muted'
+              : 'bg-indigo-100 text-indigo-900',
             file && 'transition-transform group-hover:scale-105',
           )}
         >
           <Icon size={16} />
         </span>
       </div>
-      <p className="mt-3 wrap-break-word text-[15px] font-semibold leading-snug text-ink">
-        {value}
+      <p
+        className={cn(
+          'mt-3 wrap-break-word text-[15px] font-semibold leading-snug',
+          missing ? 'text-ink-muted' : 'text-ink',
+        )}
+      >
+        {value || empty || 'Не указано'}
       </p>
       {file && (
         <p className="mt-1 flex items-center gap-1.5 text-[12px] font-medium text-indigo-800">
@@ -228,67 +236,56 @@ export function ContractTile({ icon: Icon, label, value, file }) {
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-paper/55 p-4">{body}</div>
+    <div
+      className={cn(
+        'rounded-2xl border p-4',
+        missing ? 'border-dashed border-line' : 'border-line bg-paper/55',
+      )}
+    >
+      {body}
+    </div>
   )
 }
 
 /**
- * Плитки с условиями договора — встают в общую сетку карточки.
+ * Плитки с условиями договора — встают в общую сетку карточки. Срок
+ * договора, юр. лицо и сроки оплаты сюда не выносим: это условия самого
+ * договора, их место в его карточке.
  *
- * Условия кампания хранит снимком на момент создания, но сервер его не
- * всегда заполняет: у заявок со стенда пакет и лиги приходят пустыми, а
- * срока договора нет вовсе. Поэтому пустое поле добираем из самого
- * договора — карточка не должна выглядеть полупустой из-за этого
+ * Пакет и лиги кампания хранит снимком на момент создания, но сервер его
+ * не заполняет — поэтому пустое поле добираем из договора
  * (см. docs/backend.md, п. 3.13).
  */
-function ContractTiles({ campaign, advertiser, contract }) {
-  const { isAdvertiser } = useAuth()
+function ContractTiles({ campaign, contract }) {
   // Скан договора: у кампании свой либо общий из карточки бренда.
   const contractFile = campaign.contractFile || contract?.file || null
   const packageKey = campaign.package || contract?.package
   const leagues = campaign.leagues?.length
     ? campaign.leagues
     : contract?.leagues
-  const legalName = campaign.legalName || advertiser?.legalName
-  const contractStart = campaign.contractStart || contract?.start
-  const contractEnd = campaign.contractEnd || contract?.end
-  const paymentDate = campaign.paymentDate || contract?.paymentDate
 
   const tiles = [
-    { label: 'Пакет', icon: Package, value: PACKAGES[packageKey]?.label },
+    {
+      label: 'Пакет',
+      icon: Package,
+      value: PACKAGES[packageKey]?.label,
+      empty: 'Не выбран',
+    },
     {
       label: 'Лиги',
       icon: Trophy,
       value: leagues?.length ? leagues.map(leagueLabel).join(', ') : null,
+      empty: 'Не выбраны',
     },
     {
       label: 'Номер договора',
       icon: FileText,
       value: campaign.contractNumber,
+      empty: 'Нет договора',
       // Есть скан — по клику скачивается прямо отсюда.
       file: contractFile,
     },
-    // Юр. лицо и освоение бюджета — внутренняя кухня, рекламодателю не нужны.
-    {
-      label: 'Юр. лицо',
-      icon: Building2,
-      value: isAdvertiser ? null : legalName,
-    },
-    {
-      label: 'Срок договора',
-      icon: CalendarRange,
-      value:
-        contractStart && contractEnd
-          ? `${formatDate(contractStart)} — ${formatDate(contractEnd)}`
-          : null,
-    },
-    {
-      // Рекламодателю вместо сроков оплаты показываем прогресс оплаты.
-      label: 'Сроки оплаты',
-      icon: CalendarClock,
-      value: !isAdvertiser && paymentDate ? formatDate(paymentDate) : null,
-    },
-  ].filter((tile) => tile.value)
+  ]
 
   return (
     <>
@@ -384,11 +381,7 @@ export function CampaignPreviewModal({
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             <CreativeTile url={creativeUrl} addedAt={creativeAddedAt} />
-            <ContractTiles
-              campaign={campaign}
-              advertiser={advertiser}
-              contract={contract}
-            />
+            <ContractTiles campaign={campaign} contract={contract} />
 
             {/* Плитка оплаты: по клику раскрывается история выплат. */}
             <button
