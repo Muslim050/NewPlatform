@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { Field, Input, Select } from '@/components/ui/Field'
 import { CreativeLink } from '@/components/campaigns/CreativePlayer.jsx'
 import { Logo } from '@/components/Logo'
-import { PACKAGES, STATUS, leagueLabel, statusLabel } from '@/lib/metrics.js'
+import { STATUS, leagueLabel, statusLabel } from '@/lib/metrics.js'
 import { formatDate, formatDateTime } from '@/lib/format.js'
 
 const emptyForm = {
@@ -294,147 +294,137 @@ export function CampaignForm({ open, onClose, initial }) {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {/* Бренд заявки сменить нельзя: сервер берёт его из сессии автора. */}
+          {/* Лиги ведёт площадка в договоре: сервер снимает их с него сам и
+              на запись у кампании закрывает. Здесь только показываем. */}
           <Field
-            label="Рекламодатель"
-            hint="Рекламодателя заявки менять нельзя."
+            label="Лиги"
+            hint={
+              selectedContract ? undefined : 'Появятся из выбранного договора.'
+            }
           >
-            <Input value={advertiser?.name ?? '—'} disabled readOnly />
+            <Input
+              value={(selectedContract?.leagues ?? [])
+                .map(leagueLabel)
+                .join(', ')}
+              placeholder="Из договора"
+              disabled
+              readOnly
+            />
           </Field>
-          {isAdmin && editing && (
-            <Field label="Статус">
-              <Select
-                value={form.status}
-                onChange={(e) => set('status', e.target.value)}
-              >
-                {Object.entries(STATUS)
-                  .filter(([k]) => k !== 'archived')
-                  .map(([k, v]) => (
-                    <option key={k} value={k}>
-                      {v.label}
-                    </option>
-                  ))}
-              </Select>
-            </Field>
-          )}
+
+          {/* Ролик сервер хранит ссылкой: файл к кампании прикрепить некуда,
+              поля под идентификатор файла у неё нет (docs/backend.md, п. 3.4). */}
+          <Field label="Рекламный ролик" error={errors.creativeUrl}>
+            <div className="flex items-center gap-2">
+              <Input
+                value={form.creativeUrl}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    creativeUrl: e.target.value,
+                    creativeName: '',
+                  }))
+                }
+                placeholder="https://example.com/creative.mp4"
+                inputMode="url"
+                // Рекламодателю ролик приходит из договора — он его не правит.
+                disabled={isAdvertiser && !!selectedContract?.creative}
+              />
+              <CreativeLink
+                url={isValidUrl(form.creativeUrl) ? form.creativeUrl : ''}
+              />
+            </div>
+            {form.creativeUrl && (
+              <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-ink-muted">
+                <Film size={13} className="shrink-0 text-indigo-800" />
+                <span className="min-w-0 truncate">
+                  {form.creativeName || fileNameFromUrl(form.creativeUrl)}
+                </span>
+                {form.creativeAddedAt && (
+                  <span className="shrink-0 tnum">
+                    · добавлен {formatDateTime(form.creativeAddedAt)}
+                  </span>
+                )}
+              </p>
+            )}
+          </Field>
         </div>
 
-        {/* Ролик сервер хранит ссылкой — как и логотип бренда. */}
-        <Field
-          label="Рекламный ролик"
-          error={errors.creativeUrl}
-          hint="Ссылка на видео: файл сервер пока не принимает, хранилища для него нет."
-        >
-          <div className="flex items-center gap-2">
-            <Input
-              value={form.creativeUrl}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  creativeUrl: e.target.value,
-                  creativeName: '',
-                }))
-              }
-              placeholder="https://example.com/creative.mp4"
-              inputMode="url"
-              // Рекламодателю ролик приходит из договора — он его не правит.
-              disabled={isAdvertiser && !!selectedContract?.creative}
-            />
-            <CreativeLink
-              url={isValidUrl(form.creativeUrl) ? form.creativeUrl : ''}
-            />
+        {/* Срок договора менять отсюда нельзя — он живёт в карточке бренда. */}
+        <div>
+          <p className="mb-2 text-[13px] font-medium text-ink-soft">
+            Срок договора
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Начало">
+              <Input
+                value={
+                  selectedContract?.start
+                    ? formatDate(selectedContract.start)
+                    : ''
+                }
+                placeholder="Из договора"
+                disabled
+                readOnly
+              />
+            </Field>
+            <Field label="Окончание">
+              <Input
+                value={
+                  selectedContract?.end ? formatDate(selectedContract.end) : ''
+                }
+                placeholder="Из договора"
+                disabled
+                readOnly
+              />
+            </Field>
           </div>
-          {form.creativeUrl && (
-            <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-ink-muted">
-              <Film size={13} className="shrink-0 text-indigo-800" />
-              <span className="min-w-0 truncate">
-                {form.creativeName || fileNameFromUrl(form.creativeUrl)}
+        </div>
+
+        {/* Скан договора: скачивание закрыто токеном, поэтому не ссылка,
+            а кнопка — файл тянем транспортом и отдаём блобом. */}
+        <Field label="Файл договора">
+          {selectedContract?.file?.url ? (
+            <button
+              type="button"
+              onClick={() => saveFile(selectedContract.file)}
+              className="flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2.5 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+            >
+              <FileText size={16} className="shrink-0 text-indigo-800" />
+              <span className="min-w-0 flex-1 truncate">
+                {selectedContract.file.name}
               </span>
-              {form.creativeAddedAt && (
-                <span className="shrink-0 tnum">
-                  · добавлен {formatDateTime(form.creativeAddedAt)}
-                </span>
-              )}
-            </p>
+              <span className="flex shrink-0 items-center gap-1.5 text-ink-muted">
+                <Download size={15} />
+                Скачать договор
+              </span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 rounded-xl border border-dashed border-line px-3 py-2.5 text-[13px] text-ink-muted">
+              <FileText size={16} className="shrink-0" />
+              {selectedContract ? 'К договору не приложен' : 'Из договора'}
+            </div>
           )}
         </Field>
 
-        {/* Условия договора ведёт площадка в карточке бренда: здесь они
-            только показываются — сервер снимет их с договора сам. */}
-        <div className="rounded-2xl border border-line bg-paper/55 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-            Из договора
-          </p>
-          {selectedContract ? (
-            <dl className="mt-3 space-y-2">
-              <Row
-                label="Пакет"
-                value={PACKAGES[selectedContract.package]?.label}
-              />
-              <Row
-                label="Лиги"
-                value={(selectedContract.leagues ?? [])
-                  .map(leagueLabel)
-                  .join(', ')}
-              />
-              {/* Юр. лицо — внутренняя кухня, рекламодателю не нужно. */}
-              {isAdmin && (
-                <Row label="Юр. лицо" value={selectedContract.legalName} />
-              )}
-              <Row
-                label="Срок договора"
-                value={
-                  selectedContract.start && selectedContract.end
-                    ? `${formatDate(selectedContract.start)} — ${formatDate(
-                        selectedContract.end,
-                      )}`
-                    : ''
-                }
-              />
-              <Row
-                label="Дата оплаты"
-                value={
-                  selectedContract.paymentDate
-                    ? formatDate(selectedContract.paymentDate)
-                    : ''
-                }
-              />
-              {selectedContract.file?.url && (
-                <div className="pt-1">
-                  {/* Скачивание закрыто токеном — тянем файл транспортом. */}
-                  <button
-                    type="button"
-                    onClick={() => saveFile(selectedContract.file)}
-                    className="flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
-                  >
-                    <FileText size={16} className="shrink-0 text-indigo-800" />
-                    <span className="min-w-0 flex-1 truncate">
-                      {selectedContract.file.name}
-                    </span>
-                    <Download size={15} className="shrink-0 text-ink-muted" />
-                  </button>
-                </div>
-              )}
-            </dl>
-          ) : (
-            <p className="mt-2 text-[13px] text-ink-muted">
-              Выберите номер договора — условия подставятся из него.
-            </p>
-          )}
-        </div>
+        {/* Статус ведёт площадка и только у заведённой заявки. */}
+        {isAdmin && editing && (
+          <Field label="Статус">
+            <Select
+              value={form.status}
+              onChange={(e) => set('status', e.target.value)}
+            >
+              {Object.entries(STATUS)
+                .filter(([k]) => k !== 'archived')
+                .map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v.label}
+                  </option>
+                ))}
+            </Select>
+          </Field>
+        )}
       </div>
     </Modal>
-  )
-}
-
-/** Строка «поле — значение» в справке по договору. */
-function Row({ label, value }) {
-  return (
-    <div className="flex flex-col gap-0.5 text-[13px] sm:flex-row sm:items-baseline sm:gap-4">
-      <dt className="shrink-0 text-ink-muted sm:w-36">{label}</dt>
-      <dd className="min-w-0 font-medium text-ink">
-        {value || <span className="text-ink-muted">не заполнено</span>}
-      </dd>
-    </div>
   )
 }
