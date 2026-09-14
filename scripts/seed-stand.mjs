@@ -35,9 +35,10 @@ const ONLY = (arg('only', '') || '')
   .filter(Boolean)
 const DRY = args.includes('--dry')
 
-/** Пароль демо-учётки бренда: латиница из названия плюс цифры. */
+/** Логин, пароль и почта демо-учётки — всё от названия бренда. */
 const slugOf = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '')
 const passwordFor = (name) => `${slugOf(name)}12345`
+const emailFor = (name) => `${slugOf(name)}@gmail.com`
 
 let token = null
 
@@ -238,10 +239,26 @@ async function syncContracts(brandId, mockContracts, report) {
 
 async function syncUser(brand, standUsers, report) {
   const login_ = slugOf(brand.name)
+  const email = emailFor(brand.name)
   const existing = standUsers.find(
     (u) => u.login === login_ || u.advertiserId === brand.id,
   )
-  if (existing) return { login: existing.login, password: null }
+  if (existing) {
+    // Почту дописываем, если её не заводили: в таблице пользователей
+    // колонка иначе пустует. Свой адрес не трогаем. Адрес берём от логина:
+    // у заведённых раньше учёток он может отличаться от названия бренда.
+    const ownEmail = emailFor(existing.login)
+    if (!existing.email) {
+      report.emails.push(`${existing.login} → ${ownEmail}`)
+      if (!DRY) {
+        await api(`/users/${existing.id}`, {
+          method: 'PATCH',
+          body: { email: ownEmail },
+        })
+      }
+    }
+    return { login: existing.login, password: null }
+  }
 
   const password = passwordFor(brand.name)
   report.usersCreated.push(`${login_} / ${password}`)
@@ -252,7 +269,7 @@ async function syncUser(brand, standUsers, report) {
     body: {
       login: login_,
       name: brand.name,
-      email: '',
+      email,
       role: 'advertiser',
       advertiserId: brand.id,
       isActive: true,
@@ -333,6 +350,7 @@ async function main() {
     contractsUpdated: [],
     money: [],
     usersCreated: [],
+    emails: [],
     campaigns: [],
   }
   const credentials = []
@@ -415,6 +433,7 @@ async function main() {
   section('Договоры поправлены:', report.contractsUpdated)
   section('Деньги:', report.money)
   section('Учётки заведены (логин / пароль):', report.usersCreated)
+  section('Почта учёток:', report.emails)
   section('Кампании:', report.campaigns)
   if (!report.brandsCreated.length && !report.usersCreated.length) {
     console.log('\nНовых брендов и учёток не понадобилось.')
