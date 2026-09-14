@@ -980,7 +980,7 @@ function YoutubeAnalytics({ data, editing, patch }) {
               YouTube Analytics
             </div>
             <h2 className="mt-2 font-display text-2xl font-semibold text-ink sm:text-3xl">
-              Статистика канала
+              Статистика YouTube канала
             </h2>
             <div className="mt-1 max-w-xl text-sm text-ink-muted">
               <EditText
