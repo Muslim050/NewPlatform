@@ -284,6 +284,39 @@ function paymentsFor(contractId, spent, seed) {
   })
 }
 
+/**
+ * Демо-история выплат кампании. Суммы дробим теми же долями, что и у
+ * договора, но привязываем к её собственному «оплачено» — иначе история
+ * не сойдётся с цифрой в карточке. Даты идут от старта кампании.
+ */
+function campaignPayments(campaign, seed) {
+  const spent = campaign.spent ?? 0
+  if (spent <= 0 || !campaign.startDate) return []
+  const shares = PAYMENT_SPLITS[seed % PAYMENT_SPLITS.length]
+  const start = new Date(`${campaign.startDate}T00:00:00`)
+  const step = 3 + (seed % 7)
+  let left = spent
+
+  return shares.map((share, i) => {
+    const last = i === shares.length - 1
+    const amount = last ? left : Math.round(spent * share)
+    left -= amount
+    const date = new Date(start)
+    // Первый платёж — до старта, остальные расходятся по ходу кампании.
+    date.setDate(date.getDate() - 2 + i * step)
+    const hour = pad(9 + ((seed + i * 3) % 9))
+    const minute = pad((seed * 17 + i * 23) % 60)
+    return {
+      id: `pay_${campaign.id}_${i + 1}`,
+      amount,
+      createdAt:
+        `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+        `T${hour}:${minute}:00`,
+      seq: i + 1,
+    }
+  })
+}
+
 function contractsFor(advertiser, index) {
   return CONTRACT_TEMPLATES.map((template, order) => {
     const id = `ctr_${advertiser.id.replace('adv_', '')}_${template.suffix}`
@@ -1286,12 +1319,20 @@ export const CAMPAIGNS = [
   const pool = fitting.length ? fitting : contracts
   const contract = pool[seen % (pool.length || 1)]
   const creativeAddedAt = creativeAddedAtFor(campaign, seen)
+  // История выплат — у самой кампании: в карточке рядом с ней показана её
+  // же цифра «оплачено», и суммы должны сходиться.
+  const payments = campaignPayments(campaign, seen)
   if (!contract) {
-    return creativeAddedAt ? { ...campaign, creativeAddedAt } : campaign
+    return {
+      ...campaign,
+      payments,
+      ...(creativeAddedAt ? { creativeAddedAt } : null),
+    }
   }
 
   return {
     ...campaign,
+    payments,
     ...(creativeAddedAt ? { creativeAddedAt } : null),
     contractNumber: contract.number,
     legalName: contract.legalName,
@@ -1318,6 +1359,7 @@ export function buildSeed() {
       ...c,
       channelIds: [...c.channelIds],
       leagues: [...c.leagues],
+      payments: (c.payments ?? []).map((p) => ({ ...p })),
     })),
   }
 }
