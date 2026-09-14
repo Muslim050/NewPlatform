@@ -26,6 +26,7 @@ import {
   formatMoney,
   formatMoneyCompact,
   formatPct,
+  paidAtOf,
 } from '@/lib/format.js'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Tooltip } from '@/components/ui/Tooltip.jsx'
@@ -441,7 +442,7 @@ export function CampaignPreviewModal({
                       className="flex items-center justify-between gap-2 rounded-xl bg-surface px-3 py-2"
                     >
                       <span className="text-[12px] text-ink-muted tnum">
-                        {formatDateTime(payment.createdAt)}
+                        {formatDateTime(paidAtOf(payment))}
                       </span>
                       <span className="shrink-0 text-[13px] font-semibold text-emerald-700 tnum">
                         + {formatMoney(payment.amount)}

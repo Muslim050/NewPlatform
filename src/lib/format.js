@@ -79,3 +79,9 @@ export function initials(name = '') {
     .map((w) => w[0]?.toUpperCase() || '')
     .join('')
 }
+
+/**
+ * Когда деньги пришли. На сервере поле называется `paidAt`, в демо-данных —
+ * `createdAt`; второе уйдёт вместе с моком.
+ */
+export const paidAtOf = (payment) => payment?.paidAt ?? payment?.createdAt

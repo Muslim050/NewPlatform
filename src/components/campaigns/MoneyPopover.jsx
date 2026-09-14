@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Trash2, X } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
-import { formatDateTime, formatMoney, formatPct } from '@/lib/format.js'
+import {
+  formatDateTime,
+  formatMoney,
+  formatPct,
+  paidAtOf,
+} from '@/lib/format.js'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
 import { cn } from '@/lib/cn.js'
@@ -24,12 +29,6 @@ const amountField = (value) => {
   const rounded = Math.round(Number(value) || 0)
   return rounded ? groupDigits(String(rounded)) : ''
 }
-
-/**
- * Когда деньги пришли. На сервере поле называется `paidAt`, в демо-данных —
- * `createdAt`; второе уйдёт вместе с моком.
- */
-const paidAtOf = (payment) => payment.paidAt ?? payment.createdAt
 
 /** Дата со временем для input[type=datetime-local] — в местной зоне. */
 const toDateTimeInput = (date) => {
