@@ -138,6 +138,26 @@ function fillDemoStatuses(contract) {
   }
 }
 
+/**
+ * Демо-история поступлений у кампании: в базах, созданных до её появления,
+ * список пустой. Добираем его из сида — но только если своих поступлений
+ * не заводили и «оплачено» не правили руками: иначе история разойдётся
+ * с цифрой, показанной рядом с ней.
+ */
+function fillCampaignPayments(campaign) {
+  const own = campaign.payments ?? []
+  if (own.length) return campaign
+
+  const seed = SEED_CAMPAIGNS.get(campaign.id)
+  if (!seed?.payments?.length || campaign.spent !== seed.spent) {
+    return own === campaign.payments ? campaign : { ...campaign, payments: own }
+  }
+  return {
+    ...campaign,
+    payments: seed.payments.map((payment) => ({ ...payment })),
+  }
+}
+
 function normalizeDatabase(database) {
   const shouldUpdateDemoStatuses =
     database.campaignStatusLayoutVersion !== CAMPAIGN_STATUS_LAYOUT_VERSION
@@ -227,7 +247,10 @@ function normalizeDatabase(database) {
   const knownIds = new Set((database.campaigns ?? []).map((c) => c.id))
   const missingSeedCampaigns = SEED_CAMPAIGN_LIST.filter(
     (campaign) => !knownIds.has(campaign.id),
-  ).map((campaign) => ({ ...campaign, payments: [] }))
+  ).map((campaign) => ({
+    ...campaign,
+    payments: (campaign.payments ?? []).map((payment) => ({ ...payment })),
+  }))
 
   return {
     advertisers,
@@ -235,9 +258,7 @@ function normalizeDatabase(database) {
     campaigns: [...(database.campaigns ?? []), ...missingSeedCampaigns].map(
       (rawCampaign) => {
         // История поступлений появилась позже — в старых записях её нет.
-        const campaign = rawCampaign.payments
-          ? rawCampaign
-          : { ...rawCampaign, payments: [] }
+        const campaign = fillCampaignPayments(rawCampaign)
         const normalizedCampaign = normalizeCampaignStatus(campaign)
         const demoStatus = DEMO_CAMPAIGN_STATUSES[campaign.id]
         const withStatus =
