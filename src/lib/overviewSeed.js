@@ -51,67 +51,6 @@ export const OVERVIEW_DEFAULTS = {
       ),
     },
   ],
-  // Отчёт YouTube-канала: сводные цифры и разбивка аудитории в процентах.
-  // Данные приходят из YouTube Analytics выгрузкой, в API их пока нет.
-  youtube: {
-    channel: 'Setanta Sports Uzbekistan',
-    totals: [
-      { id: 'yt_views', label: 'Кол-во просмотров', value: 11881841 },
-      { id: 'yt_likes', label: 'Кол-во лайков', value: 296705 },
-      { id: 'yt_dislikes', label: 'Кол-во дизлайков', value: 4210 },
-      { id: 'yt_comments', label: 'Кол-во комментариев', value: 22465 },
-      {
-        id: 'yt_minutes',
-        label: 'Среднее кол-во минут просмотров',
-        value: 58375352,
-      },
-    ],
-    breakdown: [
-      {
-        id: 'yt_gender',
-        title: 'Пол',
-        items: [
-          { id: 'yt_g_f', label: 'Ж', value: 15.7 },
-          { id: 'yt_g_m', label: 'М', value: 84.1 },
-          { id: 'yt_g_x', label: 'Не указан', value: 0.1 },
-        ],
-      },
-      {
-        id: 'yt_age',
-        title: 'Возраст',
-        items: [
-          { id: 'yt_a_13', label: '13–17', value: 8.7 },
-          { id: 'yt_a_18', label: '18–24', value: 21.5 },
-          { id: 'yt_a_25', label: '25–34', value: 34.7 },
-          { id: 'yt_a_35', label: '35–44', value: 23.9 },
-          { id: 'yt_a_45', label: '45–54', value: 6.4 },
-          { id: 'yt_a_55', label: '55–64', value: 3.1 },
-          { id: 'yt_a_65', label: '65+', value: 1.6 },
-        ],
-      },
-      {
-        id: 'yt_geo',
-        title: 'Гео',
-        items: [
-          { id: 'yt_geo_uz', label: 'UZ', value: 98.2 },
-          { id: 'yt_geo_ru', label: 'RU', value: 0.5 },
-          { id: 'yt_geo_kg', label: 'KG', value: 0.3 },
-          { id: 'yt_geo_other', label: 'Другие', value: 0.7 },
-        ],
-      },
-      {
-        id: 'yt_device',
-        title: 'Девайсы',
-        items: [
-          { id: 'yt_d_tv', label: 'ТВ', value: 4.7 },
-          { id: 'yt_d_phone', label: 'Телефон', value: 40.7 },
-          { id: 'yt_d_tablet', label: 'Планшет', value: 53.1 },
-          { id: 'yt_d_desktop', label: 'Компьютер', value: 1 },
-          { id: 'yt_d_other', label: 'Не определено', value: 0.5 },
-        ],
-      },
-    ],
-  },
   audience: {
     malePct: 95.5,
     ageTitle: 'Возрастная структура',
@@ -247,20 +186,6 @@ export function overviewForPeriod(period) {
       value: scale(row.value, 1 + ((month + rowIndex) % 6) * 0.04),
     })),
   }))
-  overview.youtube.totals = overview.youtube.totals.map((item, index) => ({
-    ...item,
-    value: scale(item.value, 1 + ((month + index) % 4) * 0.03),
-  }))
   // Доли аудитории оставляем прежними: они меняются медленнее объёмов.
   return overview
-}
-
-/**
- * Обзор за месяц, дополненный недостающими разделами. Сохранённые раньше
- * месяцы не знают о разделах, добавленных позже, — иначе страница падала бы
- * на первом же обращении к ним.
- */
-export function fillOverview(saved, period) {
-  const defaults = overviewForPeriod(period)
-  return saved ? { ...defaults, ...saved } : defaults
 }
