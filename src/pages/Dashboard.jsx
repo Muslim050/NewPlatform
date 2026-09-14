@@ -2,6 +2,8 @@ import { useState } from 'react'
 import {
   Check,
   Clapperboard,
+  Eye,
+  MessageSquare,
   Instagram,
   MapPin,
   MonitorSmartphone,
@@ -11,7 +13,10 @@ import {
   RadioTower,
   RotateCcw,
   Send,
+  ThumbsDown,
+  ThumbsUp,
   Timer,
+  Youtube,
   Trash2,
   Trophy,
   Tv,
@@ -21,6 +26,7 @@ import {
 import { useAuth } from '@/features/auth/useAuth'
 import { useData } from '@/context/DataContext.jsx'
 import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
+import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import { formatCompact, formatPct, formatNumber } from '@/lib/format.js'
@@ -905,6 +911,142 @@ function AudienceBreakdown({ data, editing, patch }) {
   )
 }
 
+// Иконки сводных цифр YouTube: порядок тот же, что в выгрузке аналитики.
+const YT_ICONS = [Eye, ThumbsUp, ThumbsDown, MessageSquare, Timer]
+
+/** Одна доля разбивки: подпись сверху, процент снизу. */
+function YoutubeShare({ item, editing, onChange }) {
+  return (
+    <div className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-2.5 py-2 text-center">
+      <div className="truncate text-[11px] font-medium text-ink-muted">
+        <EditText
+          editing={editing}
+          value={item.label}
+          onChange={(label) => onChange({ ...item, label })}
+          className="text-center"
+        />
+      </div>
+      <div className="mt-1 text-[13px] font-semibold text-ink tnum">
+        <EditNumber
+          editing={editing}
+          value={item.value}
+          onChange={(value) => onChange({ ...item, value })}
+        >
+          {formatPct(item.value, 1)}
+        </EditNumber>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Отчёт YouTube-канала: сводные цифры выгрузки и разбивка аудитории.
+ * Данные ведутся вручную — в API этого раздела пока нет.
+ */
+function YoutubeAnalytics({ data, editing, patch }) {
+  const youtube = data.youtube
+  const setYoutube = (part) => patch({ youtube: { ...youtube, ...part } })
+
+  const setTotal = (next) =>
+    setYoutube({
+      totals: youtube.totals.map((item) => (item.id === next.id ? next : item)),
+    })
+
+  const setItem = (groupId, next) =>
+    setYoutube({
+      breakdown: youtube.breakdown.map((group) =>
+        group.id === groupId
+          ? {
+              ...group,
+              items: group.items.map((item) =>
+                item.id === next.id ? next : item,
+              ),
+            }
+          : group,
+      ),
+    })
+
+  return (
+    <div>
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between gap-4 border-b border-line p-5 pb-4">
+          <div className="min-w-0">
+            <h3 className="font-display text-base font-semibold text-ink">
+              Статистика канала
+            </h3>
+            <p className="truncate text-[13px] text-ink-muted">
+              <EditText
+                editing={editing}
+                value={youtube.channel}
+                onChange={(channel) => setYoutube({ channel })}
+              />
+            </p>
+          </div>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-danger/10 text-danger">
+            <Youtube size={18} />
+          </span>
+        </div>
+
+        <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-5">
+          {youtube.totals.map((item, index) => {
+            const Icon = YT_ICONS[index] ?? Eye
+            return (
+              <div
+                key={item.id}
+                className="group rounded-2xl border border-line bg-paper/55 p-4 transition-colors hover:border-indigo-300"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 flex-1 text-[11px] font-medium uppercase tracking-[0.12em] text-ink-muted">
+                    <EditText
+                      editing={editing}
+                      value={item.label}
+                      onChange={(label) => setTotal({ ...item, label })}
+                    />
+                  </span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-900 transition-transform group-hover:scale-105">
+                    <Icon size={16} />
+                  </span>
+                </div>
+                <div className="mt-3 font-display text-2xl font-semibold text-ink tnum">
+                  <EditNumber
+                    editing={editing}
+                    value={item.value}
+                    onChange={(value) => setTotal({ ...item, value })}
+                  >
+                    {formatNumber(item.value)}
+                  </EditNumber>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </Card>
+
+      {/* Разбивка аудитории: каждая группа — своя карточка, иначе на узком
+          экране двадцать колонок в строку не помещаются. */}
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        {youtube.breakdown.map((group) => (
+          <Card key={group.id} className="p-5">
+            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+              {group.title}
+            </h4>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {group.items.map((item) => (
+                <YoutubeShare
+                  key={item.id}
+                  item={item}
+                  editing={editing}
+                  onChange={(next) => setItem(group.id, next)}
+                />
+              ))}
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { user, canEdit, isAdvertiser } = useAuth()
   const { overviewFor, saveOverview, resetOverview } = useData()
@@ -919,6 +1061,10 @@ export default function Dashboard() {
   const period = `${year}-${String(month + 1).padStart(2, '0')}`
   const years = [now.getFullYear() - 1, now.getFullYear()]
   const overview = overviewFor(period)
+
+  // Разделы обзора разведены по вкладкам: цифр много, на одной странице
+  // они не читаются.
+  const [tab, setTab] = useState('media')
 
   // Правки копим в черновике: «Отмена» возвращает сохранённые данные.
   const [draft, setDraft] = useState(null)
@@ -1017,9 +1163,26 @@ export default function Dashboard() {
         />
       </div>
 
-      <MediaSummary data={data} editing={editing} patch={patch} />
-      <AudienceAgeReport data={data} editing={editing} patch={patch} />
-      <AudienceBreakdown data={data} editing={editing} patch={patch} />
+      <div className="mb-4">
+        <SegmentTabs
+          items={[
+            { value: 'media', label: 'Медиа и аудитория' },
+            { value: 'youtube', label: 'YouTube аналитика' },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </div>
+
+      {tab === 'media' ? (
+        <>
+          <MediaSummary data={data} editing={editing} patch={patch} />
+          <AudienceAgeReport data={data} editing={editing} patch={patch} />
+          <AudienceBreakdown data={data} editing={editing} patch={patch} />
+        </>
+      ) : (
+        <YoutubeAnalytics data={data} editing={editing} patch={patch} />
+      )}
     </div>
   )
 }
