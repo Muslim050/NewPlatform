@@ -17,7 +17,6 @@ const emptyForm = {
   lastName: '',
   login: '',
   email: '',
-  phone: '',
   role: DEFAULT_ROLE,
   advertiserId: '',
   isActive: true,
@@ -38,7 +37,6 @@ const formFrom = (user) => {
     lastName: rest.join(' '),
     login: user.login,
     email: user.email ?? '',
-    phone: '',
     role: user.role,
     advertiserId: user.advertiserId ? String(user.advertiserId) : '',
     isActive: user.isActive,
@@ -157,30 +155,14 @@ export function UserForm({ open, onClose, initial }) {
           </Field>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Email" error={errors.email}>
-            <Input
-              type="email"
-              value={form.email}
-              onChange={(e) => set('email', e.target.value)}
-              placeholder="name@setanta.uz"
-            />
-          </Field>
-          {/* Телефона в API пока нет: поле стоит на месте, но не сохраняется —
-              включим, когда на бэкенде появится поле. */}
-          <Field
-            label="Номер телефона"
-            hint="Появится, когда поле добавят на сервере."
-          >
-            <Input
-              value={form.phone}
-              onChange={(e) => set('phone', e.target.value)}
-              placeholder="+998 90 000 00 00"
-              inputMode="tel"
-              disabled
-            />
-          </Field>
-        </div>
+        <Field label="Email" error={errors.email}>
+          <Input
+            type="email"
+            value={form.email}
+            onChange={(e) => set('email', e.target.value)}
+            placeholder="name@setanta.uz"
+          />
+        </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Логин" required error={errors.login}>
