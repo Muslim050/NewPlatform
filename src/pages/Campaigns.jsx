@@ -903,19 +903,13 @@ export default function Campaigns() {
                           />
                         )}
                         <div className="min-w-0">
-                          {c.creativeUrl ? (
-                            <a
-                              href={c.creativeUrl}
-                              download
-                              className="block truncate text-sm font-medium text-black underline-offset-2 hover:text-indigo-400 hover:underline focus-ring"
-                            >
-                              {c.name}
-                            </a>
-                          ) : (
-                            <p className="truncate text-sm font-medium text-ink">
-                              {c.name}
-                            </p>
-                          )}
+                          {/* Название — просто текст. Ссылкой на ролик оно
+                              быть перестало: файл из нашего хранилища по
+                              прямой ссылке не отдаётся, а смотреть ролик
+                              удобнее из карточки кампании. */}
+                          <p className="truncate text-sm font-medium text-ink">
+                            {c.name}
+                          </p>
                           <p className="truncate text-[12px] text-ink-muted">
                             {showBudget && (
                               <span className="md:hidden">
