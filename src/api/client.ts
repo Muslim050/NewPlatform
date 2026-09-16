@@ -14,6 +14,16 @@ import type { RefreshResponse, TokenPair } from './types'
 const BASE_URL = import.meta.env.VITE_API_URL ?? ''
 const API_PREFIX = '/api/v1'
 
+/**
+ * Origin бэкенда. Пустой BASE_URL значит «свой же origin через прокси» —
+ * тогда берём адрес страницы. Нужен там, где ссылку на файл требуется
+ * отдать серверу абсолютной: `creativeUrl` у кампании — обычное URL-поле.
+ */
+export function apiOrigin(): string {
+  if (BASE_URL) return BASE_URL.replace(/\/+$/, '')
+  return typeof window === 'undefined' ? '' : window.location.origin
+}
+
 /** Уходят без заголовка Authorization: токена ещё (или уже) нет. */
 const ANONYMOUS_PATHS = ['/auth/login', '/auth/refresh']
 /**

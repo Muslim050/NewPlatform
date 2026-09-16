@@ -19,8 +19,13 @@ export function useUploadFile() {
   })
 }
 
-/** Ссылка на чужой хост — её отдаём браузеру как есть. */
-const isExternal = (url: string) => /^https?:\/\//i.test(url)
+/**
+ * Ссылка на чужой хост — её отдаём браузеру как есть. Наше хранилище под
+ * этот случай не попадает, даже когда адрес абсолютный: файл оттуда
+ * выдаётся только с токеном.
+ */
+const isExternal = (url: string) =>
+  /^https?:\/\//i.test(url) && !filesApi.isStoredUrl(url)
 
 /**
  * Сохранение файла на диск. Скачивание на сервере закрыто токеном, поэтому
@@ -61,5 +66,32 @@ export function useFileDownload() {
     [],
   )
 
-  return { save, pendingUrl }
+  /**
+   * Открыть файл в новой вкладке. Для ролика это естественнее скачивания,
+   * но прямую ссылку так не отдать: браузер пойдёт без заголовка и получит
+   * 401. Поэтому тянем содержимое транспортом и открываем уже блоб.
+   */
+  const open = useCallback(
+    async (file: { name?: string; url?: string } | null | undefined) => {
+      if (!file?.url) return
+      if (isExternal(file.url)) {
+        window.open(file.url, '_blank', 'noopener')
+        return
+      }
+
+      setPendingUrl(file.url)
+      try {
+        const blob = await filesApi.download(file.url)
+        const objectUrl = URL.createObjectURL(blob)
+        window.open(objectUrl, '_blank', 'noopener')
+        // Вкладке нужно время прочитать блоб — отзываем адрес с запасом.
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+      } finally {
+        setPendingUrl(null)
+      }
+    },
+    [],
+  )
+
+  return { save, open, pendingUrl }
 }

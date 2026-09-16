@@ -9,6 +9,7 @@ import {
   FileText,
   Film,
   FolderOpen,
+  Loader2,
   Package,
   Trophy,
 } from 'lucide-react'
@@ -33,6 +34,7 @@ import { Tooltip } from '@/components/ui/Tooltip.jsx'
 import { Button } from '@/components/ui/Button'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { useFileDownload } from '@/features/files/queries'
+import { isStoredUrl } from '@/api/endpoints/files'
 import { cn } from '@/lib/cn.js'
 
 const STATUS_UI = {
@@ -123,8 +125,44 @@ export function CampaignStatusPill({ status, pacing, createdAt }) {
   )
 }
 
-/** Плитка ролика — по клику видео открывается в новой вкладке. */
+/** Внутренности плитки ролика — одни и те же у ссылки и у кнопки. */
+function CreativeBody({ addedAt, loading }) {
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
+          Ролик
+        </span>
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900 transition-transform group-hover:scale-105">
+          {loading ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <Film size={16} />
+          )}
+        </span>
+      </div>
+      <p className="mt-3 flex items-center gap-1.5 font-display text-xl font-semibold text-ink">
+        {loading ? 'Открываем…' : 'Смотреть'}
+        <ExternalLink size={15} className="text-ink-muted" />
+      </p>
+      {/* Когда ролик загрузили — видно прямо в карточке кампании. */}
+      {addedAt && (
+        <p className="mt-1 text-[11px] text-ink-muted tnum">
+          Добавлен {formatDateTime(addedAt)}
+        </p>
+      )}
+    </>
+  )
+}
+
+/**
+ * Плитка ролика — по клику видео открывается в новой вкладке. Ролик из
+ * нашего хранилища закрыт токеном: его тянем транспортом и открываем блобом,
+ * прямая ссылка вернула бы 401.
+ */
 export function CreativeTile({ url, addedAt }) {
+  const { open, pendingUrl } = useFileDownload()
+
   if (!url) {
     return (
       <div className="rounded-2xl border border-dashed border-line p-4">
@@ -141,32 +179,32 @@ export function CreativeTile({ url, addedAt }) {
     )
   }
 
+  const shell =
+    'group rounded-2xl border border-line bg-paper/55 p-4 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring'
+
+  if (isStoredUrl(url)) {
+    return (
+      <button
+        type="button"
+        onClick={() => open({ url, name: 'Рекламный ролик' })}
+        disabled={pendingUrl === url}
+        title="Открыть ролик в новой вкладке"
+        className={shell}
+      >
+        <CreativeBody addedAt={addedAt} loading={pendingUrl === url} />
+      </button>
+    )
+  }
+
   return (
     <a
       href={url}
       target="_blank"
       rel="noreferrer"
       title="Открыть ролик в новой вкладке"
-      className="group rounded-2xl border border-line bg-paper/55 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+      className={shell}
     >
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
-          Ролик
-        </span>
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900 transition-transform group-hover:scale-105">
-          <Film size={16} />
-        </span>
-      </div>
-      <p className="mt-3 flex items-center gap-1.5 font-display text-xl font-semibold text-ink">
-        Смотреть
-        <ExternalLink size={15} className="text-ink-muted" />
-      </p>
-      {/* Когда ролик загрузили — видно прямо в карточке кампании. */}
-      {addedAt && (
-        <p className="mt-1 text-[11px] text-ink-muted tnum">
-          Добавлен {formatDateTime(addedAt)}
-        </p>
-      )}
+      <CreativeBody addedAt={addedAt} />
     </a>
   )
 }

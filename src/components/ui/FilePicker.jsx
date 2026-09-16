@@ -29,15 +29,22 @@ export function FilePicker({
    */
   local = false,
   emptyLabel = 'Выбрать файл',
-  // Подпись отдельной кнопки скачивания под полем — если файл уже загружен.
+  // Подпись отдельной кнопки под полем — если файл уже загружен.
   downloadLabel,
+  /**
+   * Что делает кнопка под полем: `download` сохраняет файл на диск,
+   * `open` открывает его в новой вкладке — так удобнее смотреть ролик.
+   */
+  action = 'download',
+  /** Поле только для чтения: файл пришёл из другой сущности. */
+  disabled = false,
   icon: Icon = FileText,
   className,
 }) {
   const inputRef = useRef(null)
   const toast = useToast()
   const { mutate: uploadFile, isPending: uploading } = useUploadFile()
-  const { save, pendingUrl } = useFileDownload()
+  const { save, open, pendingUrl } = useFileDownload()
   const downloading = !!url && pendingUrl === url
 
   const pick = (e) => {
@@ -71,9 +78,9 @@ export function FilePicker({
     )
   }
 
-  const download = () =>
-    save({ name, url }).catch((error) =>
-      toast.error(error.message || 'Не удалось скачать файл'),
+  const run = () =>
+    (action === 'open' ? open : save)({ name, url }).catch((error) =>
+      toast.error(error.message || 'Не удалось получить файл'),
     )
 
   // Файл, выбранный локально, уже лежит в blob: — его скачивать неоткуда.
@@ -101,7 +108,7 @@ export function FilePicker({
         />
         <button
           type="button"
-          disabled={uploading}
+          disabled={uploading || disabled}
           onClick={() => inputRef.current?.click()}
           title={name || emptyLabel}
           className={cn(
@@ -126,7 +133,7 @@ export function FilePicker({
         {name && downloadable && !downloadLabel && (
           <button
             type="button"
-            onClick={download}
+            onClick={run}
             disabled={downloading}
             aria-label="Скачать файл"
             title="Скачать файл"
@@ -139,7 +146,7 @@ export function FilePicker({
             )}
           </button>
         )}
-        {name && (
+        {name && !disabled && (
           <button
             type="button"
             aria-label="Убрать файл"
@@ -162,7 +169,7 @@ export function FilePicker({
       {downloadLabel && name && downloadable && (
         <button
           type="button"
-          onClick={download}
+          onClick={run}
           disabled={downloading}
           className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-line bg-paper/55 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
         >
@@ -171,7 +178,7 @@ export function FilePicker({
           ) : (
             <Download size={15} className="text-indigo-800" />
           )}
-          {downloading ? 'Скачиваем…' : downloadLabel}
+          {downloading ? 'Загружаем…' : downloadLabel}
         </button>
       )}
     </div>

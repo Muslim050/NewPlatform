@@ -10,10 +10,11 @@ import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button'
 import { Field, Input, Select } from '@/components/ui/Field'
-import { CreativeLink } from '@/components/campaigns/CreativePlayer.jsx'
+import { FilePicker } from '@/components/ui/FilePicker.jsx'
+import { absoluteUrl } from '@/api/endpoints/files'
 import { Logo } from '@/components/Logo'
 import { STATUS, leagueLabel, statusLabel } from '@/lib/metrics.js'
-import { formatDate, formatDateTime } from '@/lib/format.js'
+import { formatDate } from '@/lib/format.js'
 
 const emptyForm = {
   name: '',
@@ -102,12 +103,26 @@ export function CampaignForm({ open, onClose, initial }) {
       name,
       ...(creative
         ? {
-            creativeUrl: creative.url,
+            creativeUrl: absoluteUrl(creative.url),
             creativeName: creative.name,
             creativeAddedAt: creative.addedAt || '',
           }
         : null),
     }))
+  }
+
+  /**
+   * Выбрали или убрали ролик. Загрузчик отвечает относительной ссылкой —
+   * кампании кладём абсолютную: её `creativeUrl` проверяется как URL.
+   */
+  const pickCreative = (file) => {
+    setForm((f) => ({
+      ...f,
+      creativeUrl: file ? absoluteUrl(file.url) : '',
+      creativeName: file?.name ?? '',
+      creativeAddedAt: file?.addedAt ?? '',
+    }))
+    setErrors((e) => ({ ...e, creativeUrl: undefined }))
   }
 
   const submit = () => {
@@ -312,41 +327,24 @@ export function CampaignForm({ open, onClose, initial }) {
             />
           </Field>
 
-          {/* Ролик сервер хранит ссылкой: файл к кампании прикрепить некуда,
-              поля под идентификатор файла у неё нет (docs/backend.md, п. 3.4). */}
+          {/* Ролик заливаем через общий загрузчик, а кампании достаётся
+              ссылка на него: своего поля под файл у неё нет. Адрес нужен
+              абсолютный — относительный путь сервер как URL не принимает. */}
           <Field label="Рекламный ролик" error={errors.creativeUrl}>
-            <div className="flex items-center gap-2">
-              <Input
-                value={form.creativeUrl}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    creativeUrl: e.target.value,
-                    creativeName: '',
-                  }))
-                }
-                placeholder="https://example.com/creative.mp4"
-                inputMode="url"
-                // Рекламодателю ролик приходит из договора — он его не правит.
-                disabled={isAdvertiser && !!selectedContract?.creative}
-              />
-              <CreativeLink
-                url={isValidUrl(form.creativeUrl) ? form.creativeUrl : ''}
-              />
-            </div>
-            {form.creativeUrl && (
-              <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-ink-muted">
-                <Film size={13} className="shrink-0 text-indigo-800" />
-                <span className="min-w-0 truncate">
-                  {form.creativeName || fileNameFromUrl(form.creativeUrl)}
-                </span>
-                {form.creativeAddedAt && (
-                  <span className="shrink-0 tnum">
-                    · добавлен {formatDateTime(form.creativeAddedAt)}
-                  </span>
-                )}
-              </p>
-            )}
+            <FilePicker
+              kind="creative"
+              name={form.creativeName || fileNameFromUrl(form.creativeUrl)}
+              url={form.creativeUrl}
+              addedAt={form.creativeAddedAt}
+              accept="video/*"
+              icon={Film}
+              emptyLabel="Загрузить ролик"
+              downloadLabel="Посмотреть ролик"
+              action="open"
+              onPick={pickCreative}
+              // Рекламодателю ролик приходит из договора — он его не правит.
+              disabled={isAdvertiser && !!selectedContract?.creative}
+            />
           </Field>
         </div>
 
