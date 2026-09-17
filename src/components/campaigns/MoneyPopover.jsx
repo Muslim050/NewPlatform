@@ -78,9 +78,19 @@ export function MoneyPopover({
   // ехать и от прокрутки контейнера, и от перерисовки строк.
   useEffect(() => {
     let frame = 0
-    const track = () => {
-      frame = requestAnimationFrame(track)
-      if (!anchorEl.isConnected) return onClose()
+    let stopped = false
+    // Закрылись — гасим цикл: до размонтирования успело бы пройти ещё
+    // несколько кадров, и onClose дёргался бы на каждом.
+    const close = () => {
+      stopped = true
+      onClose()
+    }
+    // Только измерение. Кадр отсюда не планируется — иначе каждое событие
+    // scroll заводило бы собственную цепочку rAF, а cleanup отменял бы
+    // только последнюю.
+    const measure = () => {
+      if (stopped) return
+      if (!anchorEl.isConnected) return close()
       const rect = anchorEl.getBoundingClientRect()
       const viewport = Math.max(
         window.innerHeight,
@@ -88,20 +98,25 @@ export function MoneyPopover({
       )
       // Ячейка уехала из видимой части — закрываем, чтобы поповер не «висел».
       if (viewport && (rect.bottom < 0 || rect.top > viewport)) {
-        return onClose()
+        return close()
       }
       setAnchor((prev) =>
         prev.top === rect.top && prev.right === rect.right ? prev : rect,
       )
     }
-    frame = requestAnimationFrame(track)
+    // Цепочка кадров ровно одна на весь эффект.
+    const loop = () => {
+      measure()
+      if (!stopped) frame = requestAnimationFrame(loop)
+    }
+    frame = requestAnimationFrame(loop)
     // Дублируем событиями: кадры не идут, если вкладка ушла в фон.
-    window.addEventListener('scroll', track, true)
-    window.addEventListener('resize', track)
+    window.addEventListener('scroll', measure, true)
+    window.addEventListener('resize', measure)
     return () => {
       cancelAnimationFrame(frame)
-      window.removeEventListener('scroll', track, true)
-      window.removeEventListener('resize', track)
+      window.removeEventListener('scroll', measure, true)
+      window.removeEventListener('resize', measure)
     }
   }, [anchorEl, onClose])
 
