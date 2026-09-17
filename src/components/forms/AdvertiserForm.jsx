@@ -611,7 +611,10 @@ export function AdvertiserForm({ open, onClose, initial }) {
                   placeholder="Например, Д-2026/114"
                 />
               </Field>
-              <Field label="Файл договора">
+              <Field
+                label="Файл договора"
+                hint="Выберите договор или перетащите файл"
+              >
                 <FilePicker
                   accept=".pdf,.doc,.docx,image/*"
                   kind="contract"

@@ -345,7 +345,7 @@ export function CampaignForm({ open, onClose, initial }) {
             hint={
               creativeLocked
                 ? 'Ролик приходит из выбранного договора'
-                : 'Выберите файл или перетащите его на поле'
+                : 'Выберите ролик или перетащите файл'
             }
           >
             <FilePicker

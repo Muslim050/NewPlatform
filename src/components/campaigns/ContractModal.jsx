@@ -323,7 +323,10 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
                   placeholder="Например, Кондиционеры — лето"
                 />
               </Field>
-              <Field label="Рекламный ролик">
+              <Field
+                label="Рекламный ролик"
+                hint="Выберите ролик или перетащите файл"
+              >
                 <FilePicker
                   accept="video/*"
                   icon={Film}
@@ -369,7 +372,10 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
                 placeholder="Например, Д-2026/114"
               />
             </Field>
-            <Field label="Файл договора">
+            <Field
+              label="Файл договора"
+              hint="Выберите договор или перетащите файл"
+            >
               <FilePicker
                 accept=".pdf,.doc,.docx,image/*"
                 kind="contract"
