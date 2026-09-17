@@ -1052,3 +1052,7 @@ export function TotalStatisticsReport() {
     </div>
   )
 }
+
+// Выгрузка всей статистики берёт те же данные, что показывают панели:
+// сохранённые правки, а если их нет — сид.
+export { SOCIAL_CHANNELS, SPOT_SEED, TOTAL_SEED, loadSocialReport, loadStats }

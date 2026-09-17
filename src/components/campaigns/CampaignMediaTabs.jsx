@@ -1166,3 +1166,6 @@ export function EditableSpotTable({ tableKey, title, subtitle }) {
     </Card>
   )
 }
+
+// Выгрузка всей статистики собирает те же строки, что видит таблица.
+export { loadRows as loadPlanRows, COLUMNS as PLAN_COLUMNS }

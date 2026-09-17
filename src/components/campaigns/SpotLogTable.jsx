@@ -329,3 +329,6 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
     </Card>
   )
 }
+
+// Выгрузка всей статистики читает лог теми же правилами, что таблица.
+export { loadRows as loadSpotLogRows }

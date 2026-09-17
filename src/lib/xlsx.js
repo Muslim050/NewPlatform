@@ -142,9 +142,26 @@ function columnLetter(index) {
   return letter
 }
 
-/** Книга из одного листа: значения пишем строками (inlineStr) — этого хватает. */
-export function buildXlsx({ sheetName = 'Sheet1', rows = [] }) {
-  const sheetRowsXml = rows
+/** Имя листа: Excel запрещает часть символов и режет длину до 31. */
+function sheetTitle(name, index, taken) {
+  const clean =
+    String(name ?? '')
+      .replace(/[[\]:*?/\\]/g, ' ')
+      .trim()
+      .slice(0, 31) || `Лист ${index + 1}`
+  // Одинаковых имён книга не допускает — различаем номером.
+  let title = clean
+  let n = 2
+  while (taken.has(title.toLowerCase())) {
+    const suffix = ` ${n++}`
+    title = clean.slice(0, 31 - suffix.length) + suffix
+  }
+  taken.add(title.toLowerCase())
+  return title
+}
+
+function sheetXml(rows) {
+  const body = rows
     .map((row, rowIndex) => {
       const cells = row
         .map((value, columnIndex) =>
@@ -157,6 +174,25 @@ export function buildXlsx({ sheetName = 'Sheet1', rows = [] }) {
     })
     .join('')
 
+  return (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    `<sheetData>${body}</sheetData></worksheet>`
+  )
+}
+
+/**
+ * Книга из нескольких листов: sheets — [{ name, rows }]. Значения пишем
+ * строками (inlineStr), этого хватает и для чисел.
+ */
+export function buildXlsxBook({ sheets = [] }) {
+  const list = sheets.length ? sheets : [{ name: 'Sheet1', rows: [] }]
+  const taken = new Set()
+  const named = list.map((sheet, index) => ({
+    name: sheetTitle(sheet.name, index, taken),
+    rows: sheet.rows ?? [],
+  }))
+
   const files = {
     '[Content_Types].xml':
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -164,7 +200,12 @@ export function buildXlsx({ sheetName = 'Sheet1', rows = [] }) {
       '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
       '<Default Extension="xml" ContentType="application/xml"/>' +
       '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
-      '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+      named
+        .map(
+          (_, index) =>
+            `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`,
+        )
+        .join('') +
       '</Types>',
     '_rels/.rels':
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -175,16 +216,28 @@ export function buildXlsx({ sheetName = 'Sheet1', rows = [] }) {
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
       'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
-      `<sheets><sheet name="${escapeXml(sheetName).slice(0, 31)}" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+      '<sheets>' +
+      named
+        .map(
+          (sheet, index) =>
+            `<sheet name="${escapeXml(sheet.name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`,
+        )
+        .join('') +
+      '</sheets></workbook>',
     'xl/_rels/workbook.xml.rels':
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+      named
+        .map(
+          (_, index) =>
+            `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`,
+        )
+        .join('') +
       '</Relationships>',
-    'xl/worksheets/sheet1.xml':
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-      `<sheetData>${sheetRowsXml}</sheetData></worksheet>`,
+  }
+
+  for (const [index, sheet] of named.entries()) {
+    files[`xl/worksheets/sheet${index + 1}.xml`] = sheetXml(sheet.rows)
   }
 
   const zipped = zipSync(
@@ -195,6 +248,11 @@ export function buildXlsx({ sheetName = 'Sheet1', rows = [] }) {
   return new Blob([zipped], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
+}
+
+/** Книга из одного листа — частый случай отдельной таблицы. */
+export function buildXlsx({ sheetName = 'Sheet1', rows = [] }) {
+  return buildXlsxBook({ sheets: [{ name: sheetName, rows }] })
 }
 
 /** Сохранение блоба на диск через временную ссылку. */
