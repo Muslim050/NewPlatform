@@ -10,9 +10,20 @@ const TONES = {
   soft: 'bg-indigo-100 ring-1 ring-inset ring-indigo-300',
 }
 
+// Заливка вкладки статусом — только у невыбранной: у выбранной подложка
+// занята жёлтым, иначе непонятно, какая вкладка открыта. Красим только то,
+// что требует внимания; «всё в порядке» остаётся нейтральным.
+const STATUS_TONES = {
+  awaiting:
+    'bg-danger/10 text-danger ring-1 ring-inset ring-danger/25 hover:bg-danger/15',
+}
+
 /**
  * Сегментированный переключатель.
- * items: [{ value, label, count? }], value, onChange, tone: accent | soft
+ * items: [{ value, label, count?, status?, statusHint? }], value, onChange,
+ * tone: accent | soft. `status` (awaiting) красит невыбранную вкладку,
+ * `statusHint` объясняет её состояние словами — цвет один смысл нести не
+ * может, и он же остаётся подсказкой у вкладок без заливки.
  */
 export function SegmentTabs({
   items,
@@ -38,17 +49,24 @@ export function SegmentTabs({
     >
       {items.map((it) => {
         const active = it.value === value
+        const status = !active ? STATUS_TONES[it.status] : null
         return (
           <button
             key={it.value}
             type="button"
             data-active={active}
             onClick={() => onChange(it.value)}
+            // Подсказка и подпись для скринридера: по одному цвету статус
+            // не прочитать.
+            title={it.statusHint ? `${it.label} — ${it.statusHint}` : undefined}
+            aria-label={
+              it.statusHint ? `${it.label}, ${it.statusHint}` : undefined
+            }
             className={cn(
               'relative shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-[13px] font-medium transition-colors focus-ring',
               active
                 ? 'text-ink'
-                : 'text-ink-soft  hover:bg-indigo-50 hover:text-ink',
+                : (status ?? 'text-ink-soft hover:bg-indigo-50 hover:text-ink'),
             )}
           >
             {active && (
@@ -66,7 +84,10 @@ export function SegmentTabs({
                     'rounded-full px-1.5 text-[11px] tnum',
                     active
                       ? 'bg-black/8 text-ink'
-                      : 'bg-ink/[0.07] text-ink-soft',
+                      : status
+                        ? // На цветной подложке счётчик берёт её же цвет.
+                          'bg-surface/70 text-current'
+                        : 'bg-ink/[0.07] text-ink-soft',
                   )}
                 >
                   {it.count}

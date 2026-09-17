@@ -154,6 +154,9 @@ function contractsOf(advertiser, campaigns) {
     value: contract.number,
     label: contract.number,
     count: campaigns.filter((c) => c.contractNumber === contract.number).length,
+    // Статус оплаты нужен вкладке: по нему она красится ещё до выбора.
+    paymentStatus: contract.paymentStatus,
+    statusByPeriod: contract.paymentStatusByPeriod ?? {},
   }))
 }
 
@@ -475,6 +478,25 @@ export default function Campaigns() {
           ?.changedAt ??
         null))
 
+  /**
+   * Вкладки договоров помечаем неоплаченностью: статус берём тот же, что
+   * покажет карточка после выбора, — месяца, если он открыт, иначе
+   * договора. Выбранную вкладку SegmentTabs не красит: там подложка выбора.
+   */
+  const contractTabs = contracts.map((item) => {
+    const status =
+      (activePeriod ? item.statusByPeriod[activePeriod]?.status : null) ??
+      item.paymentStatus
+    const paid = status === 'paid'
+    return {
+      ...item,
+      // Оплаченный договор не красим: цветом помечаем только то, что ждёт
+      // денег, иначе ряд превращается в светофор и сигнал теряется.
+      status: paid ? undefined : 'awaiting',
+      statusHint: paid ? 'оплачен' : 'ожидает оплату',
+    }
+  })
+
   // Раскраска вкладок месяцев за показанный год.
   const monthStatuses = MONTHS.reduce((acc, month) => {
     const entry = statusByPeriod[periodKey(activeYear, month)]
@@ -642,7 +664,7 @@ export default function Campaigns() {
               onChange={(value) =>
                 setContract(value === activeContract ? ALL_CONTRACTS : value)
               }
-              items={contracts}
+              items={contractTabs}
             />
           )}
           {activeContract !== ALL_CONTRACTS && (
