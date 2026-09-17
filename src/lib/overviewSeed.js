@@ -68,15 +68,6 @@ export const OVERVIEW_DEFAULTS = {
     ],
     breakdown: [
       {
-        id: 'yt_gender',
-        title: 'Пол',
-        items: [
-          { id: 'yt_g_f', label: 'Ж', value: 15.7 },
-          { id: 'yt_g_m', label: 'М', value: 84.1 },
-          { id: 'yt_g_x', label: 'Не указан', value: 0.1 },
-        ],
-      },
-      {
         id: 'yt_age',
         title: 'Возраст',
         items: [
@@ -90,13 +81,12 @@ export const OVERVIEW_DEFAULTS = {
         ],
       },
       {
-        id: 'yt_geo',
-        title: 'Гео',
+        id: 'yt_gender',
+        title: 'Пол',
         items: [
-          { id: 'yt_geo_uz', label: 'UZ', value: 98.2 },
-          { id: 'yt_geo_ru', label: 'RU', value: 0.5 },
-          { id: 'yt_geo_kg', label: 'KG', value: 0.3 },
-          { id: 'yt_geo_other', label: 'Другие', value: 0.7 },
+          { id: 'yt_g_f', label: 'Ж', value: 15.7 },
+          { id: 'yt_g_m', label: 'М', value: 84.1 },
+          { id: 'yt_g_x', label: 'Не указан', value: 0.1 },
         ],
       },
       {
@@ -108,6 +98,16 @@ export const OVERVIEW_DEFAULTS = {
           { id: 'yt_d_tablet', label: 'Планшет', value: 53.1 },
           { id: 'yt_d_desktop', label: 'Компьютер', value: 1 },
           { id: 'yt_d_other', label: 'Не определено', value: 0.5 },
+        ],
+      },
+      {
+        id: 'yt_geo',
+        title: 'Гео',
+        items: [
+          { id: 'yt_geo_uz', label: 'UZ', value: 98.2 },
+          { id: 'yt_geo_ru', label: 'RU', value: 0.5 },
+          { id: 'yt_geo_kg', label: 'KG', value: 0.3 },
+          { id: 'yt_geo_other', label: 'Другие', value: 0.7 },
         ],
       },
     ],

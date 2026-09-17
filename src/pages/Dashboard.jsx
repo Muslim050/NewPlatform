@@ -952,9 +952,24 @@ function YoutubeShare({ item, color, editing, onChange }) {
  * Отчёт YouTube-канала: сводные цифры выгрузки и разбивка аудитории.
  * Данные ведутся вручную — в API этого раздела пока нет.
  */
+/**
+ * Порядок карточек разбивки. Задаём его на отрисовке, а не только в сиде:
+ * месяцы, сохранённые раньше, помнят прежний порядок и сами его не меняют.
+ * Незнакомая группа уходит в конец, а не теряется.
+ */
+const YT_BREAKDOWN_ORDER = ['yt_age', 'yt_gender', 'yt_device', 'yt_geo']
+
+const ytGroupRank = (id) => {
+  const index = YT_BREAKDOWN_ORDER.indexOf(id)
+  return index === -1 ? YT_BREAKDOWN_ORDER.length : index
+}
+
 function YoutubeAnalytics({ data, editing, patch }) {
   const youtube = data.youtube
   const setYoutube = (part) => patch({ youtube: { ...youtube, ...part } })
+  const breakdown = [...youtube.breakdown].sort(
+    (a, b) => ytGroupRank(a.id) - ytGroupRank(b.id),
+  )
 
   const setTotal = (next) =>
     setYoutube({
@@ -1039,7 +1054,7 @@ function YoutubeAnalytics({ data, editing, patch }) {
       {/* Разбивка аудитории: каждая группа — своя карточка, иначе на узком
           экране двадцать колонок в строку не помещаются. */}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        {youtube.breakdown.map((group) => (
+        {breakdown.map((group) => (
           <Card
             key={group.id}
             className="p-5 transition-colors hover:border-indigo-300"
