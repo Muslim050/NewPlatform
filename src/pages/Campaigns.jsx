@@ -52,6 +52,7 @@ import { CampaignForm } from '@/components/forms/CampaignForm.jsx'
 import { BrandTabs } from '@/components/campaigns/BrandTabs.jsx'
 import { MonthTabs, MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
 import { MediaReport } from '@/components/campaigns/MediaReport.jsx'
+import { useCampaignTabs } from '@/components/campaigns/CampaignMediaTabs.jsx'
 import { MoneyPopover } from '@/components/campaigns/MoneyPopover.jsx'
 import { ContractModal } from '@/components/campaigns/ContractModal.jsx'
 import {
@@ -153,6 +154,9 @@ function contractsOf(advertiser, campaigns) {
     value: contract.number,
     label: contract.number,
     count: campaigns.filter((c) => c.contractNumber === contract.number).length,
+    // Статус оплаты нужен вкладке: по нему она красится ещё до выбора.
+    paymentStatus: contract.paymentStatus,
+    statusByPeriod: contract.paymentStatusByPeriod ?? {},
   }))
 }
 
@@ -202,7 +206,7 @@ function brandsOf(campaigns, advertiserById) {
 }
 
 export default function Campaigns() {
-  const { user, isAdmin, isAdvertiser, canEdit } = useAuth()
+  const { user, isAdmin, isAdvertiser, isViewer, canEdit } = useAuth()
   const navigate = useNavigate()
   // const { advertiserById, update } = useData()
   const {
@@ -322,6 +326,25 @@ export default function Campaigns() {
       : ((contractBrand?.contracts ?? []).find(
           (c) => c.number === activeContract,
         ) ?? null)
+  // Состав вкладок отчёта — тот же, что рисует MediaReport ниже: по нему
+  // собираем выгрузку всей статистики, лист на вкладку.
+  const { tabs: reportTabs } = useCampaignTabs(selectedContract?.id)
+
+  /** Вся статистика отчёта одной книгой .xlsx. */
+  const downloadStats = async () => {
+    const [{ buildXlsxBook, downloadBlob }, { buildReportSheets }] =
+      await Promise.all([
+        import('@/lib/xlsx.js'),
+        import('@/components/campaigns/reportExport.js'),
+      ])
+    const blob = buildXlsxBook({
+      sheets: buildReportSheets({ tabs: reportTabs, isViewer }),
+    })
+    // Номер договора идёт в имя файла, а косая черта в нём недопустима.
+    const scope = selectedContract?.number ?? 'все договоры'
+    downloadBlob(blob, `Статистика ${scope.replace(/\//g, '-')}.xlsx`)
+  }
+
   const contractBudget = toNumber(selectedContract?.budget)
   const contractPacing = contractBudget
     ? (toNumber(selectedContract?.spent) / contractBudget) * 100
@@ -454,6 +477,25 @@ export default function Campaigns() {
         selectedContract?.paymentLog?.find((e) => e.status === paymentStatus)
           ?.changedAt ??
         null))
+
+  /**
+   * Вкладки договоров помечаем неоплаченностью: статус берём тот же, что
+   * покажет карточка после выбора, — месяца, если он открыт, иначе
+   * договора. Выбранную вкладку SegmentTabs не красит: там подложка выбора.
+   */
+  const contractTabs = contracts.map((item) => {
+    const status =
+      (activePeriod ? item.statusByPeriod[activePeriod]?.status : null) ??
+      item.paymentStatus
+    const paid = status === 'paid'
+    return {
+      ...item,
+      // Оплаченный договор не красим: цветом помечаем только то, что ждёт
+      // денег, иначе ряд превращается в светофор и сигнал теряется.
+      status: paid ? undefined : 'awaiting',
+      statusHint: paid ? 'оплачен' : 'ожидает оплату',
+    }
+  })
 
   // Раскраска вкладок месяцев за показанный год.
   const monthStatuses = MONTHS.reduce((acc, month) => {
@@ -622,7 +664,7 @@ export default function Campaigns() {
               onChange={(value) =>
                 setContract(value === activeContract ? ALL_CONTRACTS : value)
               }
-              items={contracts}
+              items={contractTabs}
             />
           )}
           {activeContract !== ALL_CONTRACTS && (
@@ -797,7 +839,7 @@ export default function Campaigns() {
 
       {/* Внутри месяца переключаем статистику и список кампаний. */}
       {monthOpened && (
-        <div className="mb-4">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
           <SegmentTabs
             value={monthView}
             onChange={setMonthTab}
@@ -806,6 +848,16 @@ export default function Campaigns() {
               { value: 'stats', label: 'Статистика' },
             ]}
           />
+          <Button
+            variant="secondary"
+            // Высота под сегментные табы: их 42px против дефолтных 44px кнопки.
+            className="h-[42px] shrink-0"
+            onClick={downloadStats}
+            title="Все вкладки отчёта одной книгой .xlsx"
+          >
+            <Download size={16} />
+            Скачать статистику
+          </Button>
         </div>
       )}
 

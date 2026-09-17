@@ -69,6 +69,7 @@ const arrowClass =
  * клик по выбранному месяцу).
  * years: доступные годы, counts: сколько кампаний попадает в каждый месяц,
  * statuses: { [месяц]: 'paid' | 'awaiting' } — статус оплаты договора за месяц.
+ * resetLabel: что делает крестик — страницы трактуют сброс по-разному.
  */
 export function MonthTabs({
   year,
@@ -78,6 +79,7 @@ export function MonthTabs({
   onChange,
   counts,
   statuses,
+  resetLabel = 'Показать все месяцы',
   className,
 }) {
   const index = years.indexOf(year)
@@ -87,6 +89,8 @@ export function MonthTabs({
   const now = new Date()
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth()
+  // Состояние по умолчанию: страницы открываются на текущем месяце.
+  const atDefault = year === currentYear && value === currentMonth
 
   return (
     <div className={cn('flex  items-center gap-2', className)}>
@@ -168,14 +172,16 @@ export function MonthTabs({
         })}
       </div>
 
-      {/* Пока месяц выбран, рядом висит крестик: по повторному клику по
-          вкладке догадываются не все. */}
-      {value != null && (
+      {/* Крестик появляется, только когда ушли от того, что страница
+          открывает сама, — текущего месяца. Сбрасывать состояние, в которое
+          и так попадаешь при входе, нечего. По повторному клику по вкладке
+          догадываются не все, поэтому на других месяцах он нужен. */}
+      {value != null && !atDefault && (
         <button
           type="button"
           onClick={() => onChange(null)}
-          aria-label="Показать все месяцы"
-          title="Показать все месяцы"
+          aria-label={resetLabel}
+          title={resetLabel}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-danger/25 bg-danger text-white transition-colors hover:bg-danger/50 hover:text-white focus-ring"
         >
           <X size={16} />

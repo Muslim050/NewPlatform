@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
-import { ArrowRight, VolumeX } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, VolumeX } from 'lucide-react'
 import { isApiError } from '@/api/errors'
 import { useLogin } from '@/features/auth/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
@@ -187,6 +187,8 @@ export default function Login() {
   const { mutate: signIn, isPending, error } = useLogin()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  // Пароль набирают вслепую и ошибаются — глазик показывает набранное.
+  const [passwordShown, setPasswordShown] = useState(false)
 
   // Сообщение под полем пароля: ошибку формы отдаёт сервер, а сеть
   // и всё остальное сводим к одной понятной фразе.
@@ -240,13 +242,28 @@ export default function Login() {
             </Field>
 
             <Field label="Пароль" error={errorMessage}>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••"
-                autoComplete="current-password"
-              />
+              <div className="relative">
+                <Input
+                  type={passwordShown ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••"
+                  autoComplete="current-password"
+                  // Место под кнопку: иначе длинный пароль уезжает под неё.
+                  className="pr-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setPasswordShown((shown) => !shown)}
+                  aria-label={
+                    passwordShown ? 'Скрыть пароль' : 'Показать пароль'
+                  }
+                  title={passwordShown ? 'Скрыть пароль' : 'Показать пароль'}
+                  className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-ink-muted transition-colors hover:text-ink focus-ring"
+                >
+                  {passwordShown ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </Field>
 
             <Button

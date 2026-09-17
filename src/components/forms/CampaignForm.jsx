@@ -16,6 +16,13 @@ import { Logo } from '@/components/Logo'
 import { STATUS, leagueLabel, statusLabel } from '@/lib/metrics.js'
 import { formatDate } from '@/lib/format.js'
 
+/**
+ * Статусы, которых нет в выборе: оплату ведёт договор — помесячно и своим
+ * статусом, — поэтому у кампании такой статус её дублировал бы. Архив
+ * отсюда тоже не ставится.
+ */
+const HIDDEN_STATUS = ['archived', 'awaiting_payment', 'paid']
+
 const emptyForm = {
   name: '',
   objective: 'awareness',
@@ -413,7 +420,12 @@ export function CampaignForm({ open, onClose, initial }) {
               onChange={(e) => set('status', e.target.value)}
             >
               {Object.entries(STATUS)
-                .filter(([k]) => k !== 'archived')
+                // Скрытый статус оставляем, если он уже стоит у кампании:
+                // иначе select показал бы первый вариант и сохранение молча
+                // сменило бы статус заявки.
+                .filter(
+                  ([k]) => !HIDDEN_STATUS.includes(k) || k === form.status,
+                )
                 .map(([k, v]) => (
                   <option key={k} value={k}>
                     {v.label}

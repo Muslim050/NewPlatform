@@ -164,6 +164,24 @@ export interface SaveAdvertiserInput {
 }
 
 /**
+ * Что успело примениться до сбоя. Цепочка сохранения неатомарна: бренд,
+ * его поля и каждый договор — отдельные запросы, транзакции у API нет.
+ * Упало посередине — часть уже на сервере, и форма обязана об этом узнать,
+ * иначе повтор заведёт второй бренд или дубли договоров.
+ */
+export interface PartialSave {
+  advertiserId: number
+  /** Карточка с сервера; `null` — перечитать не вышло, например нет сети. */
+  advertiser: Advertiser | null
+}
+
+/** Что успело записаться, если сохранение сорвалось. */
+export function partialSaveOf(error: unknown): PartialSave | null {
+  if (!error || typeof error !== 'object') return null
+  return (error as { partialSave?: PartialSave }).partialSave ?? null
+}
+
+/**
  * Сохранение карточки бренда целиком: сам бренд и его договоры. Договоры
  * идут отдельными запросами — так устроен API.
  */
@@ -188,27 +206,47 @@ export function useSaveAdvertiser() {
           advertiser,
         )
 
-      if (id && advertiserChanged) {
-        await advertisersApi.update(id, advertiser)
+      // Дальше бренд на сервере уже есть: либо он там был, либо мы его
+      // только что завели. Всё, что упадёт ниже, оставит карточку
+      // недописанной, поэтому ошибку отдаём вместе с её состоянием.
+      try {
+        if (id && advertiserChanged) {
+          await advertisersApi.update(id, advertiser)
+        }
+
+        const contractsChanged = await syncContracts(
+          advertiserId,
+          contracts,
+          previousContracts,
+        )
+
+        // Менять было нечего — не ходим на сервер и за карточкой.
+        if (!advertiserChanged && !contractsChanged && previousAdvertiser) {
+          return previousAdvertiser
+        }
+
+        // Возвращаем карточку с сервера: у созданных договоров появились
+        // настоящие id, и форма должна узнать о них — иначе повторное
+        // сохранение создало бы их заново.
+        // await обязателен: без него отказ этого запроса прошёл бы мимо
+        // catch ниже — функция уже вернула бы промис.
+        return await advertisersApi.get(advertiserId)
+      } catch (error) {
+        const partialSave: PartialSave = {
+          advertiserId,
+          // Перечитать может и не выйти — сбой бывает сетевым. Тогда
+          // форме останется хотя бы id, чтобы не завести бренд второй раз.
+          advertiser: await advertisersApi.get(advertiserId).catch(() => null),
+        }
+        if (error && typeof error === 'object') {
+          Object.assign(error, { partialSave })
+        }
+        throw error
       }
-
-      const contractsChanged = await syncContracts(
-        advertiserId,
-        contracts,
-        previousContracts,
-      )
-
-      // Менять было нечего — не ходим на сервер и за карточкой.
-      if (!advertiserChanged && !contractsChanged && previousAdvertiser) {
-        return previousAdvertiser
-      }
-
-      // Возвращаем карточку с сервера: у созданных договоров появились
-      // настоящие id, и форма должна узнать о них — иначе повторное
-      // сохранение создало бы их заново.
-      return advertisersApi.get(advertiserId)
     },
-    onSuccess: () => {
+    // Инвалидируем и после сбоя: цепочка неатомарна, часть правок могла
+    // примениться, и кэш об этом уже не знает.
+    onSettled: () => {
       client.invalidateQueries({ queryKey: advertiserKeys.all })
     },
   })

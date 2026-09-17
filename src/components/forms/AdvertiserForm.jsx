@@ -9,9 +9,13 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Logo } from '@/components/Logo'
-import { useSaveAdvertiser } from '@/features/advertisers/queries'
+import {
+  partialSaveOf,
+  useSaveAdvertiser,
+} from '@/features/advertisers/queries'
 import { contractFileInput } from '@/features/contracts/files'
-import { useFileDownload } from '@/features/files/queries'
+import { absoluteUrl, isStoredUrl } from '@/api/endpoints/files'
+import { useFileDownload, useFileSrc } from '@/features/files/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button'
@@ -70,10 +74,12 @@ const contractsFingerprint = (contracts = []) =>
 /** В базе логотип хранится ссылкой — в форме к нему добавляем имя файла. */
 const logoToFile = (logo) => {
   if (!logo) return null
-  // У загруженного файла ссылка вида data:/blob: — имени в ней нет.
-  const inline = logo.startsWith('data:') || logo.startsWith('blob:')
+  // Имени в ссылке нет ни у выбранного файла (data:/blob:), ни у нашего
+  // хранилища — там путь оканчивается слагом и словом «download».
+  const nameless =
+    logo.startsWith('data:') || logo.startsWith('blob:') || isStoredUrl(logo)
   return {
-    name: inline ? 'Логотип бренда' : logo.split('/').pop() || 'Логотип',
+    name: nameless ? 'Логотип бренда' : logo.split('/').pop() || 'Логотип',
     url: logo,
   }
 }
@@ -177,6 +183,41 @@ export function AdvertiserForm({ open, onClose, initial }) {
   // заменяется свежим ответом: там уже есть id созданных договоров, и с ним
   // же сравниваются следующие правки.
   const [source, setSource] = useState(initial)
+  // Бренд, заведённый в сорванном сохранении. Держим отдельно от source:
+  // карточку могло не выйти перечитать, но id уже занят, и повтор должен
+  // править его, а не заводить второй.
+  const [createdId, setCreatedId] = useState(null)
+  // Логотип из хранилища закрыт токеном — предпросмотру нужен blob-адрес.
+  const logoPreview = useFileSrc(form.logo?.url)
+
+  /**
+   * Переносит форму на то, что реально лежит на сервере, не трогая ввод:
+   * source становится новой опорой для диффа, а договорам, которые успели
+   * создаться, локальный id меняется на серверный. Сопоставляем по номеру —
+   * договор без номера форма и не отправляет.
+   */
+  const adoptServerState = (fresh) => {
+    setSource(fresh)
+    const savedIdByNumber = new Map(
+      (fresh.contracts ?? []).map((contract) => [
+        (contract.number ?? '').trim(),
+        contract.id,
+      ]),
+    )
+    setForm((current) => ({
+      ...current,
+      contracts: current.contracts.map((contract) =>
+        typeof contract.id === 'number'
+          ? contract
+          : {
+              ...contract,
+              id:
+                savedIdByNumber.get((contract.number ?? '').trim()) ??
+                contract.id,
+            },
+      ),
+    }))
+  }
 
   useEffect(() => {
     if (!saved) return
@@ -188,6 +229,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
     if (!open) return
     setTab('main')
     setSource(initial)
+    setCreatedId(null)
     setForm(initial ? formFrom(initial) : emptyForm)
     setErrors({})
     setSaved(false)
@@ -239,10 +281,10 @@ export function AdvertiserForm({ open, onClose, initial }) {
       color: form.color,
     }
 
-    // Логотип API хранит ссылкой не длиннее 500 символов, поэтому файл,
-    // выбранный в форме (data:-URL), отправить нельзя — нужен загрузчик
-    // файлов на бэкенде. Ссылку отправляем, файл молча не теряем: прежнее
-    // значение остаётся на сервере.
+    // Логотип API хранит ссылкой не длиннее 500 символов: файл уходит через
+    // `POST /files` ещё в загрузчике, сюда приходит уже его адрес. Остаться
+    // data:/blob: значение может только от старых карточек — такое сервер
+    // не примет, и прежнее значение остаётся нетронутым.
     const logo = form.logo?.url ?? null
     const inlineLogo = isInlineFile(logo)
     // Ссылку отправляем, выбранный файл — нет: сервер его не примет,
@@ -265,7 +307,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
 
     saveAdvertiser(
       {
-        id: source?.id,
+        id: source?.id ?? createdId,
         advertiser,
         contracts,
         previousAdvertiser: source,
@@ -297,11 +339,29 @@ export function AdvertiserForm({ open, onClose, initial }) {
           onClose()
         },
         onError: (err) => {
+          // Цепочка сохранения неатомарна: часть запросов могла примениться
+          // до сбоя. Переводим форму на фактическое состояние сервера,
+          // сохраняя несохранённый ввод, — иначе повтор завёл бы второй
+          // бренд или дубли уже созданных договоров.
+          const partial = partialSaveOf(err)
+          if (partial) {
+            setCreatedId(partial.advertiserId)
+            if (partial.advertiser) adoptServerState(partial.advertiser)
+          }
+
           // Сервер вернул ошибки по полям — показываем их прямо в форме.
           if (err.fields && Object.keys(err.fields).length) {
             setErrors(err.fields)
           }
-          toast.error(err.message || 'Не удалось сохранить рекламодателя')
+
+          const message = err.message || 'Не удалось сохранить рекламодателя'
+          toast.error(
+            // Бренд завели мы же, в этой попытке: без этой оговорки человек
+            // закроет карточку и заведёт его ещё раз.
+            partial && !editing
+              ? `${message}. Бренд ${advertiser.name} уже заведён — сохраните ещё раз, дубля не будет`
+              : message,
+          )
         },
       },
     )
@@ -445,26 +505,13 @@ export function AdvertiserForm({ open, onClose, initial }) {
           {/* Логотип показывается вместо инициалов в карточках и таблицах. */}
           <Field
             label="Логотип рекламодателя"
-            hint="Сервер сохраняет только ссылку: вставьте адрес картинки. Файл можно выбрать для предпросмотра, но на сервер он не уйдёт — там пока нет хранилища файлов."
+            hint="Выберите картинку или перетащите файл на поле — логотип заменит инициалы в карточках и таблицах."
           >
-            <Input
-              value={isInlineFile(form.logo?.url) ? '' : (form.logo?.url ?? '')}
-              onChange={(e) => {
-                const url = e.target.value.trim()
-                set(
-                  'logo',
-                  url ? { name: url.split('/').pop() || 'Логотип', url } : null,
-                )
-              }}
-              placeholder="https://example.com/logo.png"
-              inputMode="url"
-              className="mb-2"
-            />
             <div className="flex items-center gap-3">
-              {form.logo?.url && (
+              {logoPreview && (
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-black/5">
                   <img
-                    src={form.logo.url}
+                    src={logoPreview}
                     alt=""
                     className="h-full w-full object-contain p-1"
                   />
@@ -474,11 +521,20 @@ export function AdvertiserForm({ open, onClose, initial }) {
                 accept="image/*"
                 icon={ImageIcon}
                 kind="logo"
-                local
                 emptyLabel="Загрузить логотип"
                 name={form.logo?.name}
                 url={form.logo?.url}
-                onPick={(logo) => set('logo', logo)}
+                // Загрузчик отвечает относительной ссылкой, а `logo`
+                // проверяется как URL и относительный путь отклоняет
+                // (docs/backend.md, п. 3.3) — храним абсолютную.
+                onPick={(logo) =>
+                  set(
+                    'logo',
+                    logo
+                      ? { name: logo.name, url: absoluteUrl(logo.url) }
+                      : null,
+                  )
+                }
                 className="min-w-0 flex-1"
               />
             </div>
