@@ -84,6 +84,8 @@ export function CampaignForm({ open, onClose, initial }) {
   const selectedContract = contracts.find(
     (c) => c.number === form.contractNumber,
   )
+  // Рекламодателю ролик приходит из договора — он его не правит и не грузит.
+  const creativeLocked = isAdvertiser && !!selectedContract?.creative
 
   useEffect(() => {
     if (!open) return
@@ -337,7 +339,15 @@ export function CampaignForm({ open, onClose, initial }) {
           {/* Ролик заливаем через общий загрузчик, а кампании достаётся
               ссылка на него: своего поля под файл у неё нет. Адрес нужен
               абсолютный — относительный путь сервер как URL не принимает. */}
-          <Field label="Рекламный ролик" error={errors.creativeUrl}>
+          <Field
+            label="Рекламный ролик"
+            error={errors.creativeUrl}
+            hint={
+              creativeLocked
+                ? 'Ролик приходит из выбранного договора'
+                : 'Выберите файл или перетащите его на поле'
+            }
+          >
             <FilePicker
               kind="creative"
               name={form.creativeName || fileNameFromUrl(form.creativeUrl)}
@@ -349,8 +359,7 @@ export function CampaignForm({ open, onClose, initial }) {
               downloadLabel="Посмотреть ролик"
               action="open"
               onPick={pickCreative}
-              // Рекламодателю ролик приходит из договора — он его не правит.
-              disabled={isAdvertiser && !!selectedContract?.creative}
+              disabled={creativeLocked}
             />
           </Field>
         </div>

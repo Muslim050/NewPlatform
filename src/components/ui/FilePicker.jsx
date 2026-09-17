@@ -111,6 +111,10 @@ export function FilePicker({
           type="file"
           accept={accept}
           onChange={pick}
+          // Поле стоит внутри <label>, поэтому клик по подписи доходит до
+          // скрытого input и открывает системный диалог даже там, где
+          // выбирать нечего. Флаг нужен и здесь, не только на кнопке.
+          disabled={uploading || disabled}
           className="hidden"
         />
         <button

@@ -505,7 +505,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
           {/* Логотип показывается вместо инициалов в карточках и таблицах. */}
           <Field
             label="Логотип рекламодателя"
-            hint="Выберите картинку или перетащите файл на поле — логотип заменит инициалы в карточках и таблицах."
+            hint="Выберите логотип или перетащите файл"
           >
             <div className="flex items-center gap-3">
               {logoPreview && (
