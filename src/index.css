@@ -35,6 +35,14 @@
   --color-warning: #d98a00;
   --color-danger: #e5484d;
 
+  /* Токены shadcn/ui: их ждут компоненты с ui.shadcn.com — сейчас chart
+     (тултип и легенда). Свои имена не переименовываем, а сопоставляем. */
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-ink);
+  --color-muted: rgba(23, 22, 28, 0.05);
+  --color-muted-foreground: var(--color-ink-muted);
+  --color-border: var(--color-line);
+
   --font-display: Setantica, system-ui, sans-serif;
   --font-display-cond: 'Setantica Cond', Setantica, system-ui, sans-serif;
   --font-sans: 'Noto Sans', system-ui, -apple-system, sans-serif;

@@ -34,7 +34,8 @@ import { cloneOverview } from '@/lib/overviewSeed.js'
 import { PageHeader } from '@/components/PageHeader.jsx'
 import { Card } from '@/components/ui/Card.jsx'
 import { Button } from '@/components/ui/Button'
-import { DonutChart } from '@/components/charts/DonutChart.jsx'
+import { SharePie } from '@/components/charts/SharePie.jsx'
+import { colorAt } from '@/components/charts/palette.js'
 import { uid } from '@/lib/id.js'
 import { cn } from '@/lib/cn.js'
 
@@ -557,7 +558,7 @@ function AudienceAgeReport({ data, editing, patch }) {
             </div>
           </div>
           <div className="flex flex-col items-center gap-6 p-5 sm:flex-row sm:justify-center sm:p-6">
-            <DonutChart
+            <SharePie
               data={ageShare}
               size={220}
               thickness={34}
@@ -596,7 +597,7 @@ function AudienceAgeReport({ data, editing, patch }) {
                 key={platform.id}
                 className="flex flex-col items-center gap-4 rounded-2xl border border-line/80 bg-paper/55 p-4"
               >
-                <DonutChart
+                <SharePie
                   data={platform.data}
                   size={176}
                   thickness={30}
@@ -791,7 +792,7 @@ function AudienceBreakdown({ data, editing, patch }) {
           </span>
         </div>
         <div className="mt-5 flex flex-col items-center gap-5 sm:flex-row sm:justify-center">
-          <DonutChart
+          <SharePie
             data={deviceShare}
             size={190}
             thickness={22}
@@ -915,16 +916,24 @@ function AudienceBreakdown({ data, editing, patch }) {
 const YT_ICONS = [Eye, ThumbsUp, ThumbsDown, MessageSquare, Timer]
 
 /** Одна доля разбивки: подпись сверху, процент снизу. */
-function YoutubeShare({ item, editing, onChange }) {
+function YoutubeShare({ item, color, editing, onChange }) {
   return (
-    <div className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-2.5 py-2 text-center transition-colors hover:border-indigo-300 hover:bg-indigo-50">
-      <div className="truncate text-[11px] font-medium text-ink-muted">
-        <EditText
-          editing={editing}
-          value={item.label}
-          onChange={(label) => onChange({ ...item, label })}
-          className="text-center"
+    <div className="min-w-0 rounded-xl border border-line bg-surface px-2.5 py-2 text-center transition-colors hover:border-indigo-300 hover:bg-indigo-50">
+      <div className="flex min-w-0 items-center justify-center gap-1.5">
+        {/* Метка цвета связывает подпись с сектором диаграммы. */}
+        <span
+          aria-hidden="true"
+          className="h-2 w-2 shrink-0 rounded-[2px]"
+          style={{ background: color }}
         />
+        <span className="min-w-0 truncate text-[11px] font-medium text-ink-muted">
+          <EditText
+            editing={editing}
+            value={item.label}
+            onChange={(label) => onChange({ ...item, label })}
+            className="text-center"
+          />
+        </span>
       </div>
       <div className="mt-1 text-[13px] font-semibold text-ink tnum">
         <EditNumber
@@ -1038,15 +1047,21 @@ function YoutubeAnalytics({ data, editing, patch }) {
             <h4 className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
               {group.title}
             </h4>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {group.items.map((item) => (
-                <YoutubeShare
-                  key={item.id}
-                  item={item}
-                  editing={editing}
-                  onChange={(next) => setItem(group.id, next)}
-                />
-              ))}
+            {/* Кольцо показывает соотношение, подписи рядом — точные доли:
+                по цвету одному их различать нельзя. */}
+            <div className="mt-3 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+              <SharePie data={group.items} size={148} thickness={26} />
+              <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-3">
+                {group.items.map((item, index) => (
+                  <YoutubeShare
+                    key={item.id}
+                    item={item}
+                    color={colorAt(item, index)}
+                    editing={editing}
+                    onChange={(next) => setItem(group.id, next)}
+                  />
+                ))}
+              </div>
             </div>
           </Card>
         ))}
