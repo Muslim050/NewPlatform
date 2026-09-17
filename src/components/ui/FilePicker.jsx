@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Download, FileText, Loader2, Paperclip, X } from 'lucide-react'
 import { cn } from '@/lib/cn.js'
 import { formatDateTime } from '@/lib/format.js'
@@ -6,9 +6,9 @@ import { useToast } from '@/components/ui/Toast.jsx'
 import { useFileDownload, useUploadFile } from '@/features/files/queries'
 
 /**
- * Поле выбора файла: клик по нему открывает системный диалог, выбранный файл
- * сразу уходит на сервер (`POST /files`). Тип и размер проверяет сервер —
- * по назначению из `kind`.
+ * Поле выбора файла: клик открывает системный диалог, файл можно и просто
+ * бросить на поле. Выбранный сразу уходит на сервер (`POST /files`); тип и
+ * размер проверяет сервер — по назначению из `kind`.
  *
  * onPick получает `{ id, name, url, addedAt }` либо null, если файл убрали.
  * `id` — то, что уходит в сущность (`fileId`, `creativeId`), `addedAt`
@@ -22,12 +22,6 @@ export function FilePicker({
   accept,
   /** Назначение файла: contract, creative или logo. */
   kind = 'contract',
-  /**
-   * Не отправлять файл на сервер, а показать его локально. Нужно логотипу
-   * бренда: сервер хранит его ссылкой и не принимает адрес собственного
-   * загрузчика — до тех пор поле работает как предпросмотр.
-   */
-  local = false,
   emptyLabel = 'Выбрать файл',
   // Подпись отдельной кнопки под полем — если файл уже загружен.
   downloadLabel,
@@ -46,22 +40,11 @@ export function FilePicker({
   const { mutate: uploadFile, isPending: uploading } = useUploadFile()
   const { save, open, pendingUrl } = useFileDownload()
   const downloading = !!url && pendingUrl === url
+  // Файл тащат над полем — подсвечиваем, что его тут ждут.
+  const [dragging, setDragging] = useState(false)
 
-  const pick = (e) => {
-    const picked = e.target.files?.[0]
-    // Сбрасываем input, иначе повторный выбор того же файла не сработает.
-    e.target.value = ''
-    if (!picked) return
-
-    if (local) {
-      onPick({
-        name: picked.name,
-        url: URL.createObjectURL(picked),
-        addedAt: new Date().toISOString(),
-      })
-      return
-    }
-
+  const send = (picked) => {
+    if (!picked || uploading || disabled) return
     uploadFile(
       { file: picked, kind },
       {
@@ -78,6 +61,20 @@ export function FilePicker({
     )
   }
 
+  const pick = (e) => {
+    const picked = e.target.files?.[0]
+    // Сбрасываем input, иначе повторный выбор того же файла не сработает.
+    e.target.value = ''
+    send(picked)
+  }
+
+  const drop = (e) => {
+    e.preventDefault()
+    setDragging(false)
+    // Папку и несколько файлов разом не берём — поле хранит один файл.
+    send(e.dataTransfer.files?.[0])
+  }
+
   const run = () =>
     (action === 'open' ? open : save)({ name, url }).catch((error) =>
       toast.error(error.message || 'Не удалось получить файл'),
@@ -92,11 +89,21 @@ export function FilePicker({
     // min-w-0 — чтобы длинное имя файла обрезалось, а не растягивало поле.
     <div className={cn('min-w-0 space-y-2', className)}>
       <div
+        // Поле принимает файл и броском — обработчики висят на всей рамке,
+        // а не на скрытом input: до него курсор не доводят.
+        onDragOver={(e) => {
+          if (disabled) return
+          e.preventDefault()
+          setDragging(true)
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={disabled ? undefined : drop}
         className={cn(
           'flex h-11 w-full items-center gap-1 rounded-xl border pr-2 transition-colors',
           name
             ? 'border-line bg-surface hover:border-indigo-300'
             : 'border-dashed border-line bg-surface hover:border-indigo-300 hover:bg-indigo-50',
+          dragging && 'border-solid border-indigo-400 bg-indigo-50',
         )}
       >
         <input

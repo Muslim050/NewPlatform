@@ -1,5 +1,6 @@
 import { cn } from '@/lib/cn.js'
 import { initials as toInitials } from '@/lib/format.js'
+import { useFileSrc } from '@/features/files/queries'
 
 const sizes = {
   sm: 'h-8 w-8 text-[11px] rounded-lg',
@@ -26,7 +27,12 @@ export function Avatar({
   children,
   src,
 }) {
-  if (src && children == null) {
+  // Логотип может лежать в нашем хранилище — туда `<img>` без токена не
+  // пустят, поэтому адрес получаем блобом. Пока файл едет, показываем
+  // инициалы: пустая белая плитка выглядит как сломанная картинка.
+  const logo = useFileSrc(src)
+
+  if (logo && children == null) {
     return (
       <span
         className={cn(
@@ -36,7 +42,7 @@ export function Avatar({
         )}
       >
         <img
-          src={src}
+          src={logo}
           alt={name}
           loading="lazy"
           className={cn(

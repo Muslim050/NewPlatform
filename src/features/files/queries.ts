@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import * as filesApi from '@/api/endpoints/files'
 import type { StoredFile } from '@/api/types'
 
@@ -26,6 +26,30 @@ export function useUploadFile() {
  */
 const isExternal = (url: string) =>
   /^https?:\/\//i.test(url) && !filesApi.isStoredUrl(url)
+
+/**
+ * Адрес картинки для `<img src>`. За файлом нашего хранилища браузер пойдёт
+ * без заголовка и получит 401, поэтому тянем его транспортом и отдаём
+ * blob-адрес. Чужие ссылки и локальный предпросмотр возвращаем как есть;
+ * пока файл едет, возвращаем `undefined` — вызывающий показывает инициалы.
+ */
+export function useFileSrc(url: string | null | undefined): string | undefined {
+  const stored = filesApi.isStoredUrl(url)
+
+  const { data } = useQuery({
+    queryKey: ['files', 'blob', url],
+    queryFn: () =>
+      filesApi.download(url!).then((blob) => URL.createObjectURL(blob)),
+    enabled: stored,
+    // Один логотип — один запрос на сессию: отзывать адрес блоба некому,
+    // пока он висит в разметке, поэтому держим его в кэше до перезагрузки.
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
+  })
+
+  return stored ? data : (url ?? undefined)
+}
 
 /**
  * Сохранение файла на диск. Скачивание на сервере закрыто токеном, поэтому
