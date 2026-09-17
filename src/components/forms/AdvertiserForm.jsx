@@ -9,7 +9,10 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Logo } from '@/components/Logo'
-import { useSaveAdvertiser } from '@/features/advertisers/queries'
+import {
+  partialSaveOf,
+  useSaveAdvertiser,
+} from '@/features/advertisers/queries'
 import { contractFileInput } from '@/features/contracts/files'
 import { useFileDownload } from '@/features/files/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
@@ -177,6 +180,39 @@ export function AdvertiserForm({ open, onClose, initial }) {
   // заменяется свежим ответом: там уже есть id созданных договоров, и с ним
   // же сравниваются следующие правки.
   const [source, setSource] = useState(initial)
+  // Бренд, заведённый в сорванном сохранении. Держим отдельно от source:
+  // карточку могло не выйти перечитать, но id уже занят, и повтор должен
+  // править его, а не заводить второй.
+  const [createdId, setCreatedId] = useState(null)
+
+  /**
+   * Переносит форму на то, что реально лежит на сервере, не трогая ввод:
+   * source становится новой опорой для диффа, а договорам, которые успели
+   * создаться, локальный id меняется на серверный. Сопоставляем по номеру —
+   * договор без номера форма и не отправляет.
+   */
+  const adoptServerState = (fresh) => {
+    setSource(fresh)
+    const savedIdByNumber = new Map(
+      (fresh.contracts ?? []).map((contract) => [
+        (contract.number ?? '').trim(),
+        contract.id,
+      ]),
+    )
+    setForm((current) => ({
+      ...current,
+      contracts: current.contracts.map((contract) =>
+        typeof contract.id === 'number'
+          ? contract
+          : {
+              ...contract,
+              id:
+                savedIdByNumber.get((contract.number ?? '').trim()) ??
+                contract.id,
+            },
+      ),
+    }))
+  }
 
   useEffect(() => {
     if (!saved) return
@@ -188,6 +224,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
     if (!open) return
     setTab('main')
     setSource(initial)
+    setCreatedId(null)
     setForm(initial ? formFrom(initial) : emptyForm)
     setErrors({})
     setSaved(false)
@@ -265,7 +302,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
 
     saveAdvertiser(
       {
-        id: source?.id,
+        id: source?.id ?? createdId,
         advertiser,
         contracts,
         previousAdvertiser: source,
@@ -297,11 +334,29 @@ export function AdvertiserForm({ open, onClose, initial }) {
           onClose()
         },
         onError: (err) => {
+          // Цепочка сохранения неатомарна: часть запросов могла примениться
+          // до сбоя. Переводим форму на фактическое состояние сервера,
+          // сохраняя несохранённый ввод, — иначе повтор завёл бы второй
+          // бренд или дубли уже созданных договоров.
+          const partial = partialSaveOf(err)
+          if (partial) {
+            setCreatedId(partial.advertiserId)
+            if (partial.advertiser) adoptServerState(partial.advertiser)
+          }
+
           // Сервер вернул ошибки по полям — показываем их прямо в форме.
           if (err.fields && Object.keys(err.fields).length) {
             setErrors(err.fields)
           }
-          toast.error(err.message || 'Не удалось сохранить рекламодателя')
+
+          const message = err.message || 'Не удалось сохранить рекламодателя'
+          toast.error(
+            // Бренд завели мы же, в этой попытке: без этой оговорки человек
+            // закроет карточку и заведёт его ещё раз.
+            partial && !editing
+              ? `${message}. Бренд ${advertiser.name} уже заведён — сохраните ещё раз, дубля не будет`
+              : message,
+          )
         },
       },
     )
