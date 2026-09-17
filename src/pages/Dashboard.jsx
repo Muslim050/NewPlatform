@@ -1189,6 +1189,8 @@ export default function Dashboard() {
           onYearChange={pickYear}
           value={month}
           onChange={pickMonth}
+          // В обзоре месяц обязателен, поэтому сброс возвращает к текущему.
+          resetLabel="Вернуться к текущему месяцу"
         />
       </div>
 
