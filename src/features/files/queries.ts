@@ -1,11 +1,13 @@
-import { useCallback, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import * as filesApi from '@/api/endpoints/files'
 import type { StoredFile } from '@/api/types'
 
 /**
  * Загрузка файла. Сервер отдаёт `{id, name, url, …}`: `id` уходит в сущность
- * (`fileId`, `creativeId`), остальное показываем в интерфейсе.
+ * (`fileId`, `creativeId`, `logoId`), остальное показываем в интерфейсе.
+ *
+ * Показ и скачивание живут в `download.ts`: файл отдаётся по слагу без
+ * авторизации, и ссылки на него хватает.
  */
 export function useUploadFile() {
   return useMutation({
@@ -17,105 +19,4 @@ export function useUploadFile() {
       kind: filesApi.FileKind
     }): Promise<StoredFile> => filesApi.upload(file, kind),
   })
-}
-
-/**
- * Ссылка на чужой хост — её отдаём браузеру как есть. Наше хранилище под
- * этот случай не попадает, даже когда адрес абсолютный: файл оттуда
- * выдаётся только с токеном.
- */
-const isExternal = (url: string) =>
-  /^https?:\/\//i.test(url) && !filesApi.isStoredUrl(url)
-
-/**
- * Адрес картинки для `<img src>`. За файлом нашего хранилища браузер пойдёт
- * без заголовка и получит 401, поэтому тянем его транспортом и отдаём
- * blob-адрес. Чужие ссылки и локальный предпросмотр возвращаем как есть;
- * пока файл едет, возвращаем `undefined` — вызывающий показывает инициалы.
- */
-export function useFileSrc(url: string | null | undefined): string | undefined {
-  const stored = filesApi.isStoredUrl(url)
-
-  const { data } = useQuery({
-    queryKey: ['files', 'blob', url],
-    queryFn: () =>
-      filesApi.download(url!).then((blob) => URL.createObjectURL(blob)),
-    enabled: stored,
-    // Один логотип — один запрос на сессию: отзывать адрес блоба некому,
-    // пока он висит в разметке, поэтому держим его в кэше до перезагрузки.
-    staleTime: Infinity,
-    gcTime: Infinity,
-    retry: false,
-  })
-
-  return stored ? data : (url ?? undefined)
-}
-
-/**
- * Сохранение файла на диск. Скачивание на сервере закрыто токеном, поэтому
- * ссылку нельзя просто положить в `<a download>`: файл тянем транспортом
- * и отдаём браузеру уже блобом.
- */
-export function useFileDownload() {
-  // Пока идёт скачивание, кнопка показывает это — файлы бывают тяжёлыми.
-  const [pendingUrl, setPendingUrl] = useState<string | null>(null)
-
-  const save = useCallback(
-    async (file: { name?: string; url?: string } | null | undefined) => {
-      if (!file?.url) return
-      const name = file.name || 'file'
-
-      if (isExternal(file.url)) {
-        // Внешние ссылки (например, старые логотипы) токена не требуют.
-        window.open(file.url, '_blank', 'noopener')
-        return
-      }
-
-      setPendingUrl(file.url)
-      try {
-        const blob = await filesApi.download(file.url)
-        const objectUrl = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = objectUrl
-        link.download = name
-        document.body.append(link)
-        link.click()
-        link.remove()
-        // Отзываем не сразу: Safari успевает начать скачивание не мгновенно.
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000)
-      } finally {
-        setPendingUrl(null)
-      }
-    },
-    [],
-  )
-
-  /**
-   * Открыть файл в новой вкладке. Для ролика это естественнее скачивания,
-   * но прямую ссылку так не отдать: браузер пойдёт без заголовка и получит
-   * 401. Поэтому тянем содержимое транспортом и открываем уже блоб.
-   */
-  const open = useCallback(
-    async (file: { name?: string; url?: string } | null | undefined) => {
-      if (!file?.url) return
-      if (isExternal(file.url)) {
-        window.open(file.url, '_blank', 'noopener')
-        return
-      }
-
-      setPendingUrl(file.url)
-      try {
-        const blob = await filesApi.download(file.url)
-        const objectUrl = URL.createObjectURL(blob)
-        window.open(objectUrl, '_blank', 'noopener')
-        // Вкладке нужно время прочитать блоб — отзываем адрес с запасом.
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
-      } finally {
-        setPendingUrl(null)
-      }
-    },
-    [],
-  )
-
-  return { save, open, pendingUrl }
 }

@@ -37,6 +37,7 @@ import { Loader } from '@/components/ui/Loader.jsx'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { MediaReport } from '@/components/campaigns/MediaReport.jsx'
+import { advertiserLogo } from '@/features/advertisers/logo'
 
 const METRICS = {
   spent: { label: 'Расход', color: '#FFD106', format: formatMoneyCompact },
@@ -136,7 +137,7 @@ export default function CampaignStats() {
               <Avatar
                 name={advertiser.name}
                 color={advertiser.color}
-                src={advertiser.logo}
+                src={advertiserLogo(advertiser)}
                 size="lg"
               />
             )}

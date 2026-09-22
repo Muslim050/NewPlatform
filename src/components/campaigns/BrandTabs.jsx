@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn.js'
 /**
  * Вкладки брендов над таблицей кампаний: переносятся по строкам, чтобы все
  * бренды были на виду. На узких экранах — лента с прокруткой.
- * items: [{ id, name, color, count, sent }], value, onChange
+ * items: [{ id, name, color, logo, count, active, sent }], value, onChange
  */
 export function BrandTabs({ items, value, onChange, className }) {
   const listRef = useRef(null)
@@ -52,13 +52,11 @@ export function BrandTabs({ items, value, onChange, className }) {
                 : 'border-line bg-surface hover:bg-ink/3',
             )}
           >
-            {/* На месте инициалов — счётчик кампаний бренда. */}
             {b.color ? (
-              <Avatar name={b.name} color={b.color} size="sm" className="tnum">
-                {b.count}
-              </Avatar>
+              <Avatar name={b.name} color={b.color} src={b.logo} size="sm" />
             ) : (
-              // Вкладка «Все» — без бренда, поэтому подложка нейтральная.
+              // Вкладка «Все» — бренда нет, поэтому в кружке счётчик,
+              // а подложка нейтральная.
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/6 text-[11px] font-semibold text-ink-soft tnum">
                 {b.count}
               </span>
@@ -71,6 +69,15 @@ export function BrandTabs({ items, value, onChange, className }) {
             >
               {b.name}
             </span>
+            {/* Счётчик кампаний: в кружке теперь логотип бренда. */}
+            {b.color && (
+              <span
+                className="rounded-full bg-ink/6 px-1.5 text-[11px] font-medium text-ink-soft tnum"
+                title={`Всего кампаний: ${b.count}`}
+              >
+                {b.count}
+              </span>
+            )}
             {/* Зелёная метка — сколько кампаний бренда идёт прямо сейчас. */}
             {b.active > 0 && (
               <span

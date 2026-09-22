@@ -1,6 +1,6 @@
 import { cn } from '@/lib/cn.js'
 import { initials as toInitials } from '@/lib/format.js'
-import { useFileSrc } from '@/features/files/queries'
+import { fileHref } from '@/features/files/download'
 
 const sizes = {
   sm: 'h-8 w-8 text-[11px] rounded-lg',
@@ -27,10 +27,7 @@ export function Avatar({
   children,
   src,
 }) {
-  // Логотип может лежать в нашем хранилище — туда `<img>` без токена не
-  // пустят, поэтому адрес получаем блобом. Пока файл едет, показываем
-  // инициалы: пустая белая плитка выглядит как сломанная картинка.
-  const logo = useFileSrc(src)
+  const logo = fileHref(src)
 
   if (logo && children == null) {
     return (

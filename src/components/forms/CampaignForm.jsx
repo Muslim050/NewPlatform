@@ -4,7 +4,7 @@ import { Download, FileText, Film } from 'lucide-react'
 // не подключены: import { useData } from '@/context/DataContext.jsx'
 import { useVisibleAdvertisers } from '@/features/advertisers/queries'
 import { useSaveCampaign } from '@/features/campaigns/queries'
-import { useFileDownload } from '@/features/files/queries'
+import { downloadFile } from '@/features/files/download'
 import { useAuth } from '@/features/auth/useAuth'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
@@ -30,11 +30,54 @@ const emptyForm = {
   startDate: '',
   endDate: '',
   // Ролик приходит из выбранной рекламной кампании — дефолта нет.
-  creativeUrl: '',
-  creativeName: '',
-  // Когда ролик загрузили — показываем это рядом с полем и в карточке.
-  creativeAddedAt: '',
+  // Внутри — `{ id?, name, url, addedAt }`: id есть у своего файла,
+  // у ролика договора его нет, такой уходит ссылкой.
+  creative: null,
   contractNumber: '',
+}
+
+/** Имя файла из ссылки — подпись ролику, если своей нет. */
+const fileNameFromUrl = (url) => (url ? url.split('/').pop() || '' : '')
+
+/**
+ * Ролик кампании: загруженный файл лежит в `creative`, у записей постарше
+ * вместо него внешняя ссылка в `creativeUrl`.
+ */
+const campaignCreative = (campaign) => {
+  if (campaign.creative?.url) return { ...campaign.creative }
+  if (!campaign.creativeUrl) return null
+  return {
+    name: campaign.creativeName || fileNameFromUrl(campaign.creativeUrl),
+    url: campaign.creativeUrl,
+    addedAt: campaign.creativeAddedAt || '',
+  }
+}
+
+/**
+ * Ролик в полях запроса. Свой файл уходит идентификатором из загрузчика;
+ * ролик договора — ссылкой: id файла договор наружу не отдаёт, только
+ * `{name, url, addedAt}`. Ссылка обязана быть абсолютной — `creativeUrl`
+ * сервер проверяет как URL.
+ */
+const creativeInput = (creative) => {
+  if (creative?.id) {
+    // Файл заменяет ссылку: иначе в кампании осталось бы два ролика сразу.
+    return {
+      creativeId: creative.id,
+      creativeUrl: '',
+      creativeName: '',
+      creativeAddedAt: null,
+    }
+  }
+  return {
+    creativeId: null,
+    creativeUrl: creative ? absoluteUrl(creative.url) : '',
+    creativeName: creative?.name ?? '',
+    // Дату загрузки ставим сами, если ролик появился только что.
+    creativeAddedAt: creative
+      ? creative.addedAt || new Date().toISOString()
+      : null,
+  }
 }
 
 /** Кампания с сервера → состояние формы. */
@@ -44,30 +87,13 @@ const formFrom = (campaign) => ({
   status: campaign.status,
   startDate: campaign.startDate ?? '',
   endDate: campaign.endDate ?? '',
-  creativeUrl: campaign.creativeUrl || '',
-  creativeName: campaign.creativeName || '',
-  creativeAddedAt: campaign.creativeAddedAt || '',
+  creative: campaignCreative(campaign),
   contractNumber: campaign.contractNumber || '',
 })
-
-/** Сервер принимает в `creativeUrl` только абсолютную ссылку. */
-function isValidUrl(value) {
-  if (!value) return false
-  try {
-    const url = new URL(value)
-    return url.protocol === 'http:' || url.protocol === 'https:'
-  } catch {
-    return false
-  }
-}
-
-/** Имя файла из ссылки — подпись ролику, если своей нет. */
-const fileNameFromUrl = (url) => (url ? url.split('/').pop() || '' : '')
 
 export function CampaignForm({ open, onClose, initial }) {
   const { mutate: saveCampaign, isPending } = useSaveCampaign()
   const { data: advertisers = [] } = useVisibleAdvertisers()
-  const { save: saveFile } = useFileDownload()
   const { user, isAdmin, isAdvertiser } = useAuth()
   const toast = useToast()
   const editing = !!initial
@@ -107,32 +133,11 @@ export function CampaignForm({ open, onClose, initial }) {
       name && name === selectedContract?.campaignName
         ? selectedContract.creative
         : null
-    setForm((f) => ({
-      ...f,
-      name,
-      ...(creative
-        ? {
-            creativeUrl: absoluteUrl(creative.url),
-            creativeName: creative.name,
-            creativeAddedAt: creative.addedAt || '',
-          }
-        : null),
-    }))
+    setForm((f) => ({ ...f, name, ...(creative ? { creative } : null) }))
   }
 
-  /**
-   * Выбрали или убрали ролик. Загрузчик отвечает относительной ссылкой —
-   * кампании кладём абсолютную: её `creativeUrl` проверяется как URL.
-   */
-  const pickCreative = (file) => {
-    setForm((f) => ({
-      ...f,
-      creativeUrl: file ? absoluteUrl(file.url) : '',
-      creativeName: file?.name ?? '',
-      creativeAddedAt: file?.addedAt ?? '',
-    }))
-    setErrors((e) => ({ ...e, creativeUrl: undefined }))
-  }
+  /** Выбрали или убрали ролик. Загрузчик отдаёт `{ id, name, url, addedAt }`. */
+  const pickCreative = (file) => setForm((f) => ({ ...f, creative: file }))
 
   const submit = () => {
     const err = {}
@@ -142,13 +147,9 @@ export function CampaignForm({ open, onClose, initial }) {
     if (form.startDate && form.endDate && form.endDate < form.startDate) {
       err.endDate = 'Окончание должно быть позже начала'
     }
-    if (form.creativeUrl.trim() && !isValidUrl(form.creativeUrl.trim())) {
-      err.creativeUrl = 'Нужна ссылка вида https://…'
-    }
     setErrors(err)
     if (Object.keys(err).length) return
 
-    const creativeUrl = form.creativeUrl.trim()
     const campaign = {
       name: form.name.trim(),
       objective: form.objective,
@@ -157,14 +158,7 @@ export function CampaignForm({ open, onClose, initial }) {
       // Условия договора сервер проставляет сам по его номеру: пакет, лиги,
       // юр. лицо, срок и дату оплаты отправлять не нужно.
       contractNumber: form.contractNumber.trim(),
-      creativeUrl,
-      creativeName: creativeUrl
-        ? form.creativeName || fileNameFromUrl(creativeUrl)
-        : '',
-      // Дату загрузки ставим сами, если ролик появился только что.
-      creativeAddedAt: creativeUrl
-        ? form.creativeAddedAt || new Date().toISOString()
-        : null,
+      ...creativeInput(form.creative),
     }
     // Статус ведёт площадка, и только у существующей заявки: новая всегда
     // заводится как «Отправлен».
@@ -336,12 +330,8 @@ export function CampaignForm({ open, onClose, initial }) {
             />
           </Field>
 
-          {/* Ролик заливаем через общий загрузчик, а кампании достаётся
-              ссылка на него: своего поля под файл у неё нет. Адрес нужен
-              абсолютный — относительный путь сервер как URL не принимает. */}
           <Field
             label="Рекламный ролик"
-            error={errors.creativeUrl}
             hint={
               creativeLocked
                 ? 'Ролик приходит из выбранного договора'
@@ -350,9 +340,9 @@ export function CampaignForm({ open, onClose, initial }) {
           >
             <FilePicker
               kind="creative"
-              name={form.creativeName || fileNameFromUrl(form.creativeUrl)}
-              url={form.creativeUrl}
-              addedAt={form.creativeAddedAt}
+              name={form.creative?.name}
+              url={form.creative?.url}
+              addedAt={form.creative?.addedAt}
               accept="video/*"
               icon={Film}
               emptyLabel="Загрузить ролик"
@@ -401,7 +391,7 @@ export function CampaignForm({ open, onClose, initial }) {
           {selectedContract?.file?.url ? (
             <button
               type="button"
-              onClick={() => saveFile(selectedContract.file)}
+              onClick={() => downloadFile(selectedContract.file)}
               className="flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2.5 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
             >
               <FileText size={16} className="shrink-0 text-indigo-800" />

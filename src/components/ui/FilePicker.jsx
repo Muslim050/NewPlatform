@@ -3,7 +3,8 @@ import { Download, FileText, Loader2, Paperclip, X } from 'lucide-react'
 import { cn } from '@/lib/cn.js'
 import { formatDateTime } from '@/lib/format.js'
 import { useToast } from '@/components/ui/Toast.jsx'
-import { useFileDownload, useUploadFile } from '@/features/files/queries'
+import { useUploadFile } from '@/features/files/queries'
+import { downloadFile, openFile } from '@/features/files/download'
 
 /**
  * Поле выбора файла: клик открывает системный диалог, файл можно и просто
@@ -11,8 +12,8 @@ import { useFileDownload, useUploadFile } from '@/features/files/queries'
  * размер проверяет сервер — по назначению из `kind`.
  *
  * onPick получает `{ id, name, url, addedAt }` либо null, если файл убрали.
- * `id` — то, что уходит в сущность (`fileId`, `creativeId`), `addedAt`
- * проставляет сервер.
+ * `id` — то, что уходит в сущность (`fileId`, `creativeId`, `logoId`),
+ * `addedAt` проставляет сервер.
  */
 export function FilePicker({
   name,
@@ -38,8 +39,6 @@ export function FilePicker({
   const inputRef = useRef(null)
   const toast = useToast()
   const { mutate: uploadFile, isPending: uploading } = useUploadFile()
-  const { save, open, pendingUrl } = useFileDownload()
-  const downloading = !!url && pendingUrl === url
   // Файл тащат над полем — подсвечиваем, что его тут ждут.
   const [dragging, setDragging] = useState(false)
 
@@ -75,10 +74,7 @@ export function FilePicker({
     send(e.dataTransfer.files?.[0])
   }
 
-  const run = () =>
-    (action === 'open' ? open : save)({ name, url }).catch((error) =>
-      toast.error(error.message || 'Не удалось получить файл'),
-    )
+  const run = () => (action === 'open' ? openFile : downloadFile)({ name, url })
 
   // Файл, выбранный локально, уже лежит в blob: — его скачивать неоткуда.
   const downloadable = !!url && !url.startsWith('blob:')
@@ -145,16 +141,11 @@ export function FilePicker({
           <button
             type="button"
             onClick={run}
-            disabled={downloading}
             aria-label="Скачать файл"
             title="Скачать файл"
             className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-ink/6 hover:text-indigo-800 focus-ring"
           >
-            {downloading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Download size={14} />
-            )}
+            <Download size={14} />
           </button>
         )}
         {name && !disabled && (
@@ -181,15 +172,10 @@ export function FilePicker({
         <button
           type="button"
           onClick={run}
-          disabled={downloading}
           className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-line bg-paper/55 text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
         >
-          {downloading ? (
-            <Loader2 size={15} className="animate-spin text-indigo-800" />
-          ) : (
-            <Download size={15} className="text-indigo-800" />
-          )}
-          {downloading ? 'Загружаем…' : downloadLabel}
+          <Download size={15} className="text-indigo-800" />
+          {downloadLabel}
         </button>
       )}
     </div>

@@ -138,8 +138,8 @@ async function toResult<T>(response: Response): Promise<T> {
 
 /**
  * Единственная точка выхода в сеть. Здесь живут префикс, токен, разбор
- * ошибок и прозрачное обновление истёкшего access. Ответ отдаётся сырым:
- * разбирают его `request` и `requestBlob`.
+ * ошибок и прозрачное обновление истёкшего access. Ответ отдаётся сырым —
+ * разбирает его `request`.
  */
 async function perform(
   path: string,
@@ -181,12 +181,4 @@ export async function request<T>(
   options: RequestOptions = {},
 ): Promise<T> {
   return toResult<T>(await perform(path, options))
-}
-
-/**
- * Файл с сервера. Скачивание закрыто токеном, поэтому тянем его тем же
- * транспортом: у <img src> и <a download> заголовка нет, они получили бы 401.
- */
-export async function requestBlob(path: string): Promise<Blob> {
-  return (await perform(path)).blob()
 }

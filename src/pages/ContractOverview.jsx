@@ -51,6 +51,7 @@ import {
   periodKey,
 } from '@/components/campaigns/StatusPopover.jsx'
 import { cn } from '@/lib/cn.js'
+import { advertiserLogo } from '@/features/advertisers/logo'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i)
 
@@ -511,7 +512,7 @@ export default function ContractOverview() {
                         <Avatar
                           name={advertiser.name}
                           color={advertiser.color}
-                          src={advertiser.logo}
+                          src={advertiserLogo(advertiser)}
                           size="sm"
                         />
                         <span className="min-w-0">

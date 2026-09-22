@@ -10,7 +10,7 @@ import {
   useUpdateContract,
 } from '@/features/contracts/queries'
 import { contractFileInput } from '@/features/contracts/files'
-import { useFileDownload } from '@/features/files/queries'
+import { downloadFile } from '@/features/files/download'
 import { useAuth } from '@/features/auth/useAuth'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
@@ -66,8 +66,6 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
   const { mutate: updateContract } = useUpdateContract()
   const { mutate: deleteContract } = useDeleteContract()
   const { mutate: saveCampaignInfo } = useSaveCampaignInfo()
-  // Скачивание на сервере закрыто токеном — тянем файл транспортом.
-  const { save: saveFile } = useFileDownload()
   const { isAdvertiser, canEdit } = useAuth()
   const toast = useToast()
   const confirm = useConfirm()
@@ -271,7 +269,7 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
             <div className="pt-2">
               <button
                 type="button"
-                onClick={() => saveFile(form.file)}
+                onClick={() => downloadFile(form.file)}
                 className="flex w-full items-center gap-2 rounded-xl border border-line bg-paper/55 px-3 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
               >
                 <FileText size={16} className="shrink-0 text-indigo-800" />
@@ -293,7 +291,7 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
             <div className="pt-2">
               <button
                 type="button"
-                onClick={() => saveFile(form.creative)}
+                onClick={() => downloadFile(form.creative)}
                 className="flex w-full items-center gap-2 rounded-xl border border-line bg-paper/55 px-3 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
               >
                 <Film size={16} className="shrink-0 text-indigo-800" />
@@ -402,7 +400,7 @@ export function ContractModal({ open, contract, advertiser, onClose }) {
               {form.creative && (
                 <button
                   type="button"
-                  onClick={() => saveFile(form.creative)}
+                  onClick={() => downloadFile(form.creative)}
                   className="mt-2 flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
                 >
                   <Film size={16} className="shrink-0 text-indigo-800" />

@@ -9,7 +9,6 @@ import {
   FileText,
   Film,
   FolderOpen,
-  Loader2,
   Package,
   Trophy,
 } from 'lucide-react'
@@ -33,9 +32,9 @@ import { Modal } from '@/components/ui/Modal.jsx'
 import { Tooltip } from '@/components/ui/Tooltip.jsx'
 import { Button } from '@/components/ui/Button'
 import { Progress } from '@/components/ui/Progress.jsx'
-import { useFileDownload } from '@/features/files/queries'
-import { isStoredUrl } from '@/api/endpoints/files'
+import { downloadFile, fileHref } from '@/features/files/download'
 import { cn } from '@/lib/cn.js'
+import { advertiserLogo } from '@/features/advertisers/logo'
 
 const STATUS_UI = {
   sent: {
@@ -126,7 +125,7 @@ export function CampaignStatusPill({ status, pacing, createdAt }) {
 }
 
 /** Внутренности плитки ролика — одни и те же у ссылки и у кнопки. */
-function CreativeBody({ addedAt, loading }) {
+function CreativeBody({ addedAt }) {
   return (
     <>
       <div className="flex items-center justify-between gap-3">
@@ -134,15 +133,11 @@ function CreativeBody({ addedAt, loading }) {
           Ролик
         </span>
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-900 transition-transform group-hover:scale-105">
-          {loading ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Film size={16} />
-          )}
+          <Film size={16} />
         </span>
       </div>
       <p className="mt-3 flex items-center gap-1.5 font-display text-xl font-semibold text-ink">
-        {loading ? 'Открываем…' : 'Смотреть'}
+        Смотреть
         <ExternalLink size={15} className="text-ink-muted" />
       </p>
       {/* Когда ролик загрузили — видно прямо в карточке кампании. */}
@@ -156,13 +151,11 @@ function CreativeBody({ addedAt, loading }) {
 }
 
 /**
- * Плитка ролика — по клику видео открывается в новой вкладке. Ролик из
- * нашего хранилища закрыт токеном: его тянем транспортом и открываем блобом,
- * прямая ссылка вернула бы 401.
+ * Плитка ролика — по клику видео открывается в новой вкладке. Ролик нашего
+ * хранилища и ролик по внешней ссылке открываются одинаково: файл отдаётся
+ * по слагу без авторизации.
  */
 export function CreativeTile({ url, addedAt }) {
-  const { open, pendingUrl } = useFileDownload()
-
   if (!url) {
     return (
       <div className="rounded-2xl border border-dashed border-line p-4">
@@ -182,23 +175,9 @@ export function CreativeTile({ url, addedAt }) {
   const shell =
     'group rounded-2xl border border-line bg-paper/55 p-4 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring'
 
-  if (isStoredUrl(url)) {
-    return (
-      <button
-        type="button"
-        onClick={() => open({ url, name: 'Рекламный ролик' })}
-        disabled={pendingUrl === url}
-        title="Открыть ролик в новой вкладке"
-        className={shell}
-      >
-        <CreativeBody addedAt={addedAt} loading={pendingUrl === url} />
-      </button>
-    )
-  }
-
   return (
     <a
-      href={url}
+      href={fileHref(url)}
       target="_blank"
       rel="noreferrer"
       title="Открыть ролик в новой вкладке"
@@ -211,13 +190,10 @@ export function CreativeTile({ url, addedAt }) {
 
 /** Плитка-кнопка: по клику скачивает файл договора. */
 function ContractTileDownload({ file, children }) {
-  const { save, pendingUrl } = useFileDownload()
-
   return (
     <button
       type="button"
-      onClick={() => save(file)}
-      disabled={pendingUrl === file.url}
+      onClick={() => downloadFile(file)}
       title={file.name}
       className="group rounded-2xl border border-line bg-paper/55 p-4 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
     >
@@ -292,13 +268,13 @@ export function ContractTile({ icon: Icon, label, value, empty, file }) {
  * сроки оплаты сюда не выносим: это внутренняя кухня, её место в карточке
  * договора.
  *
- * Условия кампания хранит снимком на момент создания, но сервер его не
- * заполняет — поэтому пустое поле добираем из договора
- * (см. docs/backend.md, п. 3.13).
+ * Условия кампания хранит снимком на момент создания. Сервер его заполняет
+ * (docs/backend.md, п. 3.13), но у записей, заведённых до этого, снимок
+ * пустой — там поле добираем из договора.
  */
 function ContractTiles({ campaign, contract }) {
-  // Скан договора: у кампании свой либо общий из карточки бренда.
-  const contractFile = campaign.contractFile || contract?.file || null
+  // Скан у кампании не хранится — он общий, из карточки договора.
+  const contractFile = contract?.file ?? null
   const packageKey = campaign.package || contract?.package
   const leagues = campaign.leagues?.length
     ? campaign.leagues
@@ -369,12 +345,16 @@ export function CampaignPreviewModal({
   const spent = Number(contract?.spent) || 0
   const pacing = budget ? (spent / budget) * 100 : 0
   // Ролик у кампании свой, но чаще он один на договор — тогда показываем его.
-  const creativeUrl = campaign?.creativeUrl || contract?.creative?.url || ''
-  const creativeAddedAt =
-    campaign?.creativeAddedAt ||
-    (contract?.creative?.url && contract.creative.url === creativeUrl
-      ? contract.creative.addedAt
-      : null)
+  // Свой ролик приходит файлом (`creative`), у записей постарше — ссылкой.
+  const creative =
+    campaign?.creative ??
+    (campaign?.creativeUrl
+      ? { url: campaign.creativeUrl, addedAt: campaign.creativeAddedAt }
+      : null) ??
+    contract?.creative ??
+    null
+  const creativeUrl = creative?.url ?? ''
+  const creativeAddedAt = creative?.addedAt ?? null
 
   // Открыли другую кампанию — историю снова прячем.
   useEffect(() => {
@@ -386,7 +366,7 @@ export function CampaignPreviewModal({
       open={!!campaign}
       onClose={onClose}
       icon={FolderOpen}
-      logo={advertiser?.logo}
+      logo={advertiserLogo(advertiser)}
       title={campaign?.name || 'Кампания'}
       description={advertiser?.name || 'Карточка кампании'}
       size="lg"

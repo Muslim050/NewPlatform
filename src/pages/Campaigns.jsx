@@ -17,7 +17,7 @@ import { useAuth } from '@/features/auth/useAuth'
 // Кампании и договоры переехали на сервер. Мок остаётся для разделов,
 // которые ещё не подключены: import { useData } from '@/context/DataContext.jsx'
 import { useVisibleAdvertisers } from '@/features/advertisers/queries'
-import { useFileDownload } from '@/features/files/queries'
+import { downloadFile } from '@/features/files/download'
 import {
   useDeletePayment,
   useSaveContractAmounts,
@@ -60,6 +60,7 @@ import {
   periodKey,
 } from '@/components/campaigns/StatusPopover.jsx'
 import { cn } from '@/lib/cn.js'
+import { advertiserLogo } from '@/features/advertisers/logo'
 import {
   CampaignPreviewModal,
   CampaignStatusPill,
@@ -183,6 +184,7 @@ function brandsOf(campaigns, advertiserById) {
         id: adv.id,
         name: adv.name,
         color: adv.color,
+        logo: advertiserLogo(adv),
         count: 1,
         sent: isNew ? 1 : 0,
         active: isActive ? 1 : 0,
@@ -223,7 +225,6 @@ export default function Campaigns() {
   const { mutate: savePaymentStatusFor } = useSetPaymentStatus()
   const { mutate: updatePayment } = useUpdatePayment()
   const { mutate: deletePayment } = useDeletePayment()
-  const { save: saveFile } = useFileDownload()
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -693,7 +694,7 @@ export default function Campaigns() {
                 size="sm"
                 variant="secondary"
                 aria-label="Скачать договор"
-                onClick={() => saveFile(selectedContract.file)}
+                onClick={() => downloadFile(selectedContract.file)}
               >
                 <Download size={15} />
               </Button>
@@ -950,7 +951,7 @@ export default function Campaigns() {
                           <Avatar
                             name={adv.name}
                             color={adv.color}
-                            src={adv.logo}
+                            src={advertiserLogo(adv)}
                             size="sm"
                           />
                         )}

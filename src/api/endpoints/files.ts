@@ -1,4 +1,4 @@
-import { apiOrigin, request, requestBlob } from '../client'
+import { apiOrigin, request } from '../client'
 import type { StoredFile } from '../types'
 
 /**
@@ -15,26 +15,17 @@ export function upload(file: File, kind: FileKind): Promise<StoredFile> {
   return request<StoredFile>('/files', { method: 'POST', body: form })
 }
 
-/** Ссылка нашего хранилища — такой файл отдаётся только с токеном. */
+/** Ссылка нашего хранилища — в отличие от внешней, на чужой хост. */
 export function isStoredUrl(url: string | null | undefined): boolean {
   return /\/api\/v1\/files\/[^/]+\/download\/?$/.test(url ?? '')
 }
 
 /**
- * Абсолютный адрес файла. Загрузчик отвечает относительной ссылкой, а
- * `creativeUrl` у кампании проверяется как URL и относительный путь
- * отклоняет (docs/backend.md, п. 3.4).
+ * Абсолютный адрес файла. Загрузчик отвечает относительной ссылкой — её
+ * доводит до сервера прокси, но когда фронт ходит к API напрямую
+ * (`VITE_API_URL`), origin приходится добавлять самим.
  */
 export function absoluteUrl(url: string): string {
   if (!url || /^https?:\/\//i.test(url)) return url
   return `${apiOrigin()}${url.startsWith('/') ? '' : '/'}${url}`
-}
-
-/**
- * Содержимое файла. Ссылка может прийти и относительной, и абсолютной —
- * транспорт сам добавит origin и префикс `/api/v1`, поэтому снимаем оба.
- */
-export function download(url: string): Promise<Blob> {
-  const path = url.replace(/^https?:\/\/[^/]+/i, '').replace(/^\/api\/v1/, '')
-  return requestBlob(path)
 }

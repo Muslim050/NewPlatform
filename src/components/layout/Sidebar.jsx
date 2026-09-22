@@ -8,6 +8,7 @@ import { Logo } from '@/components/Logo'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { userSubtitle, userTitle } from '@/features/auth/user'
 import { cn } from '@/lib/cn.js'
+import { advertiserLogo } from '@/features/advertisers/logo'
 
 export function Sidebar({ onNavigate, collapsed = false }) {
   const { user, isViewer } = useAuth()
@@ -99,7 +100,7 @@ export function Sidebar({ onNavigate, collapsed = false }) {
         <Avatar
           name={title}
           color={adv ? adv.color : '#FFD106'}
-          src={adv?.logo}
+          src={advertiserLogo(adv)}
           size="md"
         />
         {!collapsed && (

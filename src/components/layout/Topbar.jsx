@@ -14,6 +14,7 @@ import { useAdvertiser } from '@/features/advertisers/queries'
 import { NAV } from '@/lib/nav.js'
 import { Avatar } from '@/components/ui/Avatar.jsx'
 import { userSubtitle, userTitle } from '@/features/auth/user'
+import { advertiserLogo } from '@/features/advertisers/logo'
 
 export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
   const { user, logout } = useAuth()
@@ -89,7 +90,7 @@ export function Topbar({ onBurger, sidebarCollapsed, onToggleSidebar }) {
             <Avatar
               name={title}
               color={adv ? adv.color : '#FFD106'}
-              src={adv?.logo}
+              src={advertiserLogo(adv)}
               size="sm"
             />
             <ChevronDown size={15} className="text-ink-muted" />

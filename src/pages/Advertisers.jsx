@@ -32,6 +32,7 @@ import { AdvertiserForm } from '@/components/forms/AdvertiserForm.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import Users from '@/pages/Users.jsx'
 import { cn } from '@/lib/cn.js'
+import { advertiserLogo } from '@/features/advertisers/logo'
 
 export default function Advertisers() {
   const { canEdit, isAdmin, isViewer } = useAuth()
@@ -185,7 +186,7 @@ export default function Advertisers() {
                       <Avatar
                         name={a.name}
                         color={a.color}
-                        src={a.logo}
+                        src={advertiserLogo(a)}
                         size="lg"
                       />
                       <div className="min-w-0">

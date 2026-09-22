@@ -89,6 +89,8 @@ export interface ContractStatusEntry {
  */
 export interface Contract {
   id: number
+  /** Чей договор. Только на чтение: бренд задаётся адресом создания. */
+  advertiserId: number
   number: string
   campaignName: string
   legalName: string
@@ -147,8 +149,13 @@ export interface Advertiser {
   legalName: string
   balance: string
   color: string
+  /** Логотип внешней ссылкой — для брендов, чей логотип лежит не у нас. */
   logo: string | null
+  /** Логотип, загруженный через `POST /files`. Пишется через `logoId`. */
+  logoFile: AttachedFile | null
   requisites: string
+  /** Сколько кампаний у бренда — считает сервер, без удалённых. */
+  campaignsCount: number
   /** Только для чтения: договоры правятся своими эндпоинтами. */
   contracts: Contract[]
   createdAt: string
@@ -170,7 +177,10 @@ export type AdvertiserInput = Partial<
     | 'logo'
     | 'requisites'
   >
->
+> & {
+  /** Логотип файлом: id из загрузчика. `null` — убрать логотип. */
+  logoId?: number | null
+}
 
 /**
  * Пользователь платформы глазами админа. Пароль только на запись: наружу
@@ -179,8 +189,12 @@ export type AdvertiserInput = Partial<
 export interface ManagedUser {
   id: number
   login: string
+  /** Склейка имени и фамилии — её собирает сервер. */
   name: string
+  firstName: string
+  lastName: string
   email: string
+  phone: string
   role: Role
   /** Заполнен у роли advertiser: чей бренд видит пользователь. */
   advertiserId: number | null
@@ -193,7 +207,17 @@ export interface ManagedUser {
 export type ManagedUserInput = Partial<
   Pick<
     ManagedUser,
-    'login' | 'name' | 'email' | 'role' | 'advertiserId' | 'isActive'
+    | 'login'
+    // `name` сервер собирает сам из имени и фамилии, но одиночное имя
+    // по-прежнему принимает — поле оставлено для совместимости.
+    | 'name'
+    | 'firstName'
+    | 'lastName'
+    | 'email'
+    | 'phone'
+    | 'role'
+    | 'advertiserId'
+    | 'isActive'
   >
 > & {
   /** Пустой пароль не отправляем — прежний останется как есть. */
@@ -232,9 +256,12 @@ export interface Campaign {
   impressions: number
   clicks: number
   conversions: number
+  /** Ролик внешней ссылкой — когда он лежит не у нас. */
   creativeUrl: string
   creativeName: string
   creativeAddedAt: string | null
+  /** Ролик, загруженный через `POST /files`. Пишется через `creativeId`. */
+  creative: AttachedFile | null
   contractNumber: string
   /** Снимок условий договора на момент создания. Только чтение. */
   package: string
@@ -268,7 +295,10 @@ export type CampaignInput = Partial<
     | 'creativeAddedAt'
     | 'contractNumber'
   >
->
+> & {
+  /** Ролик файлом: id из загрузчика. `null` — убрать ролик. */
+  creativeId?: number | null
+}
 
 /** Ответ загрузчика файлов: `POST /files`. */
 export interface StoredFile {

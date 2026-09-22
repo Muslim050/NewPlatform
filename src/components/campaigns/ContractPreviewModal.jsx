@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/Button'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { ContractTile } from '@/components/campaigns/CampaignPreviewModal.jsx'
 import { cn } from '@/lib/cn.js'
+import { advertiserLogo } from '@/features/advertisers/logo'
 
 // Пилюля статуса договора — та же форма, что у статуса кампании.
 const PILLS = {
@@ -150,7 +151,7 @@ export function ContractPreviewModal({ contract, advertiser, onClose }) {
       open={!!contract}
       onClose={onClose}
       icon={FolderOpen}
-      logo={advertiser?.logo}
+      logo={advertiserLogo(advertiser)}
       title={contract ? `Договор ${contract.number}` : 'Договор'}
       description={advertiser?.name || 'Карточка договора'}
       size="lg"

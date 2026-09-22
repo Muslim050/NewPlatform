@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/cn.js'
-import { useFileSrc } from '@/features/files/queries'
+import { fileHref } from '@/features/files/download'
 
 // Сколько держим модалку в DOM после закрытия — ровно на время анимации.
 const CLOSE_MS = 180
@@ -27,9 +27,7 @@ export function Modal({
   footer,
   size = 'md',
 }) {
-  // Ссылка на логотип может вести в наше хранилище — оттуда файл отдаётся
-  // только с токеном, поэтому адрес для `<img>` получаем блобом.
-  const logoSrc = useFileSrc(typeof logo === 'string' ? logo : null)
+  const logoSrc = fileHref(typeof logo === 'string' ? logo : null)
 
   // Размонтируем сами, по таймеру: AnimatePresence в связке с порталом
   // доигрывала анимацию закрытия, но оставляла оверлей в DOM — он перекрывал
