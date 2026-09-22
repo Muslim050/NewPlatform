@@ -30,6 +30,7 @@ import { DropdownMenu } from '@/components/ui/DropdownMenu.jsx'
 import { AdvertiserForm } from '@/components/forms/AdvertiserForm.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import Users from '@/pages/Users.jsx'
+import Presence from '@/pages/Presence.jsx'
 import { cn } from '@/lib/cn.js'
 import { advertiserLogo } from '@/features/advertisers/logo'
 
@@ -84,7 +85,8 @@ export default function Advertisers() {
     })
   }
 
-  // Разделы соседние: бренды и те, кто от них ходит в платформу.
+  // Разделы соседние: бренды, те, кто от них ходит в платформу, и кто
+  // из них сидит в ней прямо сейчас.
   const tabs = canManageUsers ? (
     <SegmentTabs
       className="mb-5"
@@ -93,11 +95,13 @@ export default function Advertisers() {
       items={[
         { value: 'advertisers', label: 'Рекламодатели' },
         { value: 'users', label: 'Пользователи' },
+        { value: 'online', label: 'Кто в сети' },
       ]}
     />
   ) : null
 
   if (tab === 'users' && canManageUsers) return <Users tabs={tabs} />
+  if (tab === 'online' && canManageUsers) return <Presence tabs={tabs} />
 
   // Пока брендов нет, показываем только ожидание: панель с поиском и
   // пустыми вкладками рядом с лоадером выглядит недособранной.

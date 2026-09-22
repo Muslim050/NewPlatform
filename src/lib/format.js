@@ -56,6 +56,58 @@ export function formatDateShort(value) {
 /** Дата в формате дд.мм.гггг — тот же вид, что и у formatDate. */
 export const formatDateNumeric = formatDate
 
+/** Форма слова по числу: 1 минута, 2 минуты, 5 минут. */
+function plural(n, one, few, many) {
+  const mod100 = n % 100
+  if (mod100 >= 11 && mod100 <= 14) return many
+  const mod10 = n % 10
+  if (mod10 === 1) return one
+  if (mod10 >= 2 && mod10 <= 4) return few
+  return many
+}
+
+/** Сколько времени прошло, без «назад»: «17 минут», «2 часа», «3 дня». */
+export function formatDuration(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+
+  const minutes = Math.max(0, Math.floor((Date.now() - d.getTime()) / 60000))
+  if (minutes < 1) return 'меньше минуты'
+  if (minutes < 60)
+    return `${minutes} ${plural(minutes, 'минуту', 'минуты', 'минут')}`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} ${plural(hours, 'час', 'часа', 'часов')}`
+
+  const days = Math.floor(hours / 24)
+  return `${days} ${plural(days, 'день', 'дня', 'дней')}`
+}
+
+/**
+ * Сколько времени прошло: «только что», «5 минут назад», «вчера». Дальше
+ * недели относительный счёт читается хуже даты — показываем дату.
+ */
+export function formatSince(value) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+
+  const minutes = Math.floor((Date.now() - d.getTime()) / 60000)
+  if (minutes < 1) return 'только что'
+  if (minutes < 60)
+    return `${minutes} ${plural(minutes, 'минуту', 'минуты', 'минут')} назад`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24)
+    return `${hours} ${plural(hours, 'час', 'часа', 'часов')} назад`
+
+  const days = Math.floor(hours / 24)
+  if (days === 1) return 'вчера'
+  if (days < 7) return `${days} ${plural(days, 'день', 'дня', 'дней')} назад`
+  return formatDate(value)
+}
+
 /** Метки последних N дней в формате дд.мм. */
 export function lastNDates(n) {
   const out = []
