@@ -26,27 +26,6 @@ export function useCampaigns() {
   })
 }
 
-/**
- * Сколько кампаний у каждого бренда — одной картой на весь экран брендов.
- * Считаем из того же списка, что и на странице кампаний: счётчика в самом
- * бренде нет, а спрашивать `/campaigns?advertiserId=…` на карточку — это
- * запрос на бренд. Как только на бэкенде появится `campaignsCount`, хук уйдёт.
- */
-export function useCampaignCountsByAdvertiser() {
-  const query = useCampaigns()
-
-  const counts = new Map<number, number>()
-  for (const campaign of query.data ?? []) {
-    if (campaign.advertiserId === null) continue
-    counts.set(
-      campaign.advertiserId,
-      (counts.get(campaign.advertiserId) ?? 0) + 1,
-    )
-  }
-
-  return { ...query, data: counts }
-}
-
 export interface SaveCampaignInput {
   /** Пусто — заводим заявку. */
   id?: number

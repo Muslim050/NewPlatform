@@ -16,7 +16,6 @@ import {
   useDeleteAdvertiser,
   useUpdateAdvertiserStatus,
 } from '@/features/advertisers/queries'
-import { useCampaignCountsByAdvertiser } from '@/features/campaigns/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { useConfirm } from '@/components/ui/Confirm.jsx'
 import { ADV_STATUS } from '@/lib/metrics.js'
@@ -40,8 +39,6 @@ export default function Advertisers() {
   const canManageUsers = isAdmin && !isViewer
   const [tab, setTab] = useState('advertisers')
   const { data, isPending, isError, error, refetch } = useAdvertisers()
-  // Счётчики кампаний — одним запросом на весь список, а не на карточку.
-  const { data: campaignCounts } = useCampaignCountsByAdvertiser()
   const { mutate: deleteAdvertiser } = useDeleteAdvertiser()
   const { mutate: updateStatus } = useUpdateAdvertiserStatus()
   const toast = useToast()
@@ -240,10 +237,7 @@ export default function Advertisers() {
                       label="Договоров"
                       value={a.contracts?.length ?? 0}
                     />
-                    <Metric
-                      label="Кампаний"
-                      value={campaignCounts?.get(a.id) ?? 0}
-                    />
+                    <Metric label="Кампаний" value={a.campaignsCount ?? 0} />
                   </div>
                 </Card>
               </motion.div>

@@ -17,6 +17,7 @@ const emptyForm = {
   lastName: '',
   login: '',
   email: '',
+  phone: '',
   role: DEFAULT_ROLE,
   advertiserId: '',
   isActive: true,
@@ -24,25 +25,29 @@ const emptyForm = {
 }
 
 /**
- * Пользователь с сервера → состояние формы. Пароль наружу не приходит.
- *
- * Фамилии в API нет — имя приходит одной строкой, поэтому делим её по
- * первому пробелу, а при сохранении склеиваем обратно. Уйдёт, когда
- * на бэкенде появятся отдельные поля (см. docs/backend.md, п. 3.6).
+ * Имя и фамилия записи. Сервер ведёт их отдельными полями и сам собирает
+ * из них `name`; у записей, заведённых до появления этих полей, заполнено
+ * только склеенное имя — его делим по первому пробелу, как раньше.
  */
-const formFrom = (user) => {
-  const [firstName = '', ...rest] = (user.name ?? '').trim().split(/\s+/)
-  return {
-    firstName,
-    lastName: rest.join(' '),
-    login: user.login,
-    email: user.email ?? '',
-    role: user.role,
-    advertiserId: user.advertiserId ? String(user.advertiserId) : '',
-    isActive: user.isActive,
-    password: '',
+const nameParts = (user) => {
+  if (user.firstName || user.lastName) {
+    return { firstName: user.firstName ?? '', lastName: user.lastName ?? '' }
   }
+  const [firstName = '', ...rest] = (user.name ?? '').trim().split(/\s+/)
+  return { firstName, lastName: rest.join(' ') }
 }
+
+/** Пользователь с сервера → состояние формы. Пароль наружу не приходит. */
+const formFrom = (user) => ({
+  ...nameParts(user),
+  login: user.login,
+  email: user.email ?? '',
+  phone: user.phone ?? '',
+  role: user.role,
+  advertiserId: user.advertiserId ? String(user.advertiserId) : '',
+  isActive: user.isActive,
+  password: '',
+})
 
 /**
  * Карточка пользователя платформы. Заводим здесь только рекламодателей —
@@ -83,11 +88,11 @@ export function UserForm({ open, onClose, initial }) {
 
     const user = {
       login: form.login.trim(),
-      // Пока имя на сервере одно поле — склеиваем.
-      name: [form.firstName.trim(), form.lastName.trim()]
-        .filter(Boolean)
-        .join(' '),
+      // `name` не отправляем: сервер собирает его из имени и фамилии сам.
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
       email: form.email.trim(),
+      phone: form.phone.trim(),
       role: form.role,
       // Связка есть только у рекламодателя — у остальных ролей её снимаем.
       advertiserId:
@@ -155,14 +160,24 @@ export function UserForm({ open, onClose, initial }) {
           </Field>
         </div>
 
-        <Field label="Email" error={errors.email}>
-          <Input
-            type="email"
-            value={form.email}
-            onChange={(e) => set('email', e.target.value)}
-            placeholder="name@setanta.uz"
-          />
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Email" error={errors.email}>
+            <Input
+              type="email"
+              value={form.email}
+              onChange={(e) => set('email', e.target.value)}
+              placeholder="name@setanta.uz"
+            />
+          </Field>
+          <Field label="Телефон" error={errors.phone}>
+            <Input
+              type="tel"
+              value={form.phone}
+              onChange={(e) => set('phone', e.target.value)}
+              placeholder="+998 90 123-45-67"
+            />
+          </Field>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Логин" required error={errors.login}>

@@ -47,7 +47,7 @@ export default function Users({ tabs = null }) {
   // пользователей немного, и поиска по логину хватает.
   const query = q.trim().toLowerCase()
   const filtered = users.filter((u) =>
-    `${u.login} ${u.name} ${u.email} ${brandName(u.advertiserId)}`
+    `${u.login} ${u.name} ${u.email} ${u.phone} ${brandName(u.advertiserId)}`
       .toLowerCase()
       .includes(query),
   )
@@ -139,7 +139,7 @@ export default function Users({ tabs = null }) {
               <tr className="border-b border-line text-left text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
                 <Th className="w-10">№</Th>
                 <Th>Пользователь</Th>
-                <Th>Email</Th>
+                <Th>Контакты</Th>
                 <Th>Роль</Th>
                 <Th>Рекламодатель</Th>
                 <Th>Доступ</Th>
@@ -174,8 +174,23 @@ export default function Users({ tabs = null }) {
                       </span>
                     </span>
                   </Td>
+                  {/* Почта и телефон — одной колонкой: их читают вместе,
+                      а отдельный столбец увёл бы таблицу в прокрутку. */}
                   <Td className="text-ink-soft">
-                    {u.email || <span className="text-ink-muted">—</span>}
+                    {u.email || u.phone ? (
+                      <span className="min-w-0">
+                        {u.email && (
+                          <span className="block truncate">{u.email}</span>
+                        )}
+                        {u.phone && (
+                          <span className="block truncate text-[11px] text-ink-muted tnum">
+                            {u.phone}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-ink-muted">—</span>
+                    )}
                   </Td>
                   <Td>
                     <Badge tone={ROLE_TONE[u.role]} dot>
