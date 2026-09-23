@@ -19,6 +19,9 @@ export const NAV = [
     label: 'Обзор',
     icon: LayoutDashboard,
     roles: ['admin', 'viewer'],
+    // Временно скрыт из меню: раздел живёт на демо-данных, показывать его
+    // площадке и наблюдателю пока рано. Страница работает по прямой ссылке.
+    hidden: true,
   },
   {
     to: '/app/contracts',
