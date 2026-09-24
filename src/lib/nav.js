@@ -27,7 +27,7 @@ export const NAV = [
     to: '/app/contracts',
     label: 'Contract Overview',
     icon: FileText,
-    roles: ['admin'],
+    roles: ['admin', 'viewer'],
   },
   {
     to: '/app/advertisers',

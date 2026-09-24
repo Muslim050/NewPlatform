@@ -83,7 +83,9 @@ const campaignStatsRoute = createRoute({
 const contractsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'contracts',
-  beforeLoad: requireRoles(['admin']),
+  // Наблюдатель раздел видит, но ничего в нём не правит: суммы и статусы
+  // закрыты по canEdit внутри самой страницы.
+  beforeLoad: requireRoles(['admin', 'viewer']),
   component: ContractOverview,
 })
 
