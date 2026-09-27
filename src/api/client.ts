@@ -182,3 +182,29 @@ export async function request<T>(
 ): Promise<T> {
   return toResult<T>(await perform(path, options))
 }
+
+/**
+ * Имя файла из Content-Disposition. Кириллицу сервер кодирует как
+ * `filename*=utf-8''…`, латиницу отдаёт обычным `filename="…"`.
+ */
+function filenameFrom(disposition: string | null): string | null {
+  if (!disposition) return null
+  const encoded = disposition.match(/filename\*=utf-8''([^;]+)/i)
+  if (encoded) return decodeURIComponent(encoded[1])
+  const plain = disposition.match(/filename="?([^";]+)"?/i)
+  return plain ? plain[1] : null
+}
+
+/**
+ * Файл, который отдаётся только с токеном, — например, выгрузка отчёта.
+ * Обычные файлы хранилища открыты по слагу и идут прямой ссылкой.
+ */
+export async function requestFile(
+  path: string,
+): Promise<{ blob: Blob; filename: string | null }> {
+  const response = await perform(path)
+  return {
+    blob: await response.blob(),
+    filename: filenameFrom(response.headers.get('Content-Disposition')),
+  }
+}

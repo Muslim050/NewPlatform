@@ -310,3 +310,97 @@ export interface StoredFile {
   mime: string
   addedAt: string
 }
+
+/* ------------------------------------------------------------------------ */
+/* Отчёт за месяц: файл статистики, разобранный сервером на семь листов.    */
+/* ------------------------------------------------------------------------ */
+
+/** Месяц отчёта: `2026-01`. */
+export type ReportPeriod = string
+
+/** Код листа — в порядке исходного файла. */
+export type ReportSheetCode =
+  'ss1uzb' | 'ss2uzb' | 'live1' | 'live2' | 'promo1' | 'promo2' | 'social'
+
+/**
+ * Форма листа. Таблицу выбирают по ней, а не по коду: логов выходов четыре,
+ * эфиров два, соцсеть одна.
+ */
+export type ReportSheetKind = 'spot_log' | 'live_event' | 'social'
+
+/** Выход ролика. `date` — ISO, `time` — `HH:MM:SS`, как в файле. */
+export interface SpotLogRow {
+  item: string
+  date: string
+  time: string
+}
+
+/** Прямой эфир, в который вставлен ролик. */
+export interface LiveEventRow {
+  date: string
+  time: string
+  tournament: string
+  event: string
+}
+
+export type SocialNetwork = 'instagram' | 'telegram'
+
+/** Публикация в соцсети. */
+export interface SocialRow {
+  network: SocialNetwork
+  link: string
+  impressions: number
+}
+
+interface ReportSheetBase {
+  code: ReportSheetCode
+  title: string
+  /** Своя у каждого листа: правка одного не мешает сохранить другой. */
+  version: number
+}
+
+export type ReportSheet =
+  | (ReportSheetBase & { kind: 'spot_log'; rows: SpotLogRow[] })
+  | (ReportSheetBase & { kind: 'live_event'; rows: LiveEventRow[] })
+  | (ReportSheetBase & {
+      kind: 'social'
+      rows: SocialRow[]
+      /** Сумма показов по сети — считает сервер, обратно не отправляется. */
+      totals: Record<SocialNetwork, number>
+    })
+
+/** Загрузка файла отчёта. Видна только площадке. */
+export interface ReportImport {
+  id: number
+  period: ReportPeriod
+  at: string
+  by: string
+  file: AttachedFile | null
+  /** Сколько строк пришло в каждый лист. */
+  rowCounts: Partial<Record<ReportSheetCode, number>>
+}
+
+/** Отчёт за месяц целиком — всегда семь листов. */
+export interface Report {
+  id: number
+  contractId: number
+  period: ReportPeriod
+  updatedAt: string
+  sheets: ReportSheet[]
+  /** `null` у наблюдателя и рекламодателя: кто загружал, им не показываем. */
+  lastImport: ReportImport | null
+}
+
+/** Месяц, за который отчёт загружен. */
+export interface ReportMonth {
+  period: ReportPeriod
+  updatedAt: string
+  lastImport: ReportImport | null
+}
+
+/** Сохранение листа: весь список строк в нужном порядке. */
+export interface ReportSheetInput {
+  /** Без неё сохранение пройдёт без проверки и может затереть чужую правку. */
+  version?: number
+  rows: SpotLogRow[] | LiveEventRow[] | SocialRow[]
+}
