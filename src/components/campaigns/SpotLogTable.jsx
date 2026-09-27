@@ -12,21 +12,20 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card.jsx'
 import { useAuth } from '@/features/auth/useAuth'
 import { useToast } from '@/components/ui/Toast.jsx'
-import { SPOT_LOG_SEED } from '@/lib/spotLogSeed.js'
 
 const STORAGE_KEY = 'setanta.campaign.spot-logs.v1'
 const HEADER_CELLS = ['item name', 'date', 'time']
 
-// Демо-выходы для вкладок из шаблона отчёта: пустая таблица ничего не показывает.
-const seedRows = (logKey) =>
-  (SPOT_LOG_SEED[logKey] ?? []).map((row) => ({ ...row }))
-
+/**
+ * Лог из браузера. Таблица осталась только у категории OTT: логи выходов и
+ * промо приходят листами из файла отчёта (ReportSheetTable).
+ */
 function loadRows(logKey) {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-    return Array.isArray(saved[logKey]) ? saved[logKey] : seedRows(logKey)
+    return Array.isArray(saved[logKey]) ? saved[logKey] : []
   } catch {
-    return seedRows(logKey)
+    return []
   }
 }
 
@@ -331,4 +330,3 @@ export function SpotLogTable({ logKey, sheetName, title, subtitle }) {
 }
 
 // Выгрузка всей статистики читает лог теми же правилами, что таблица.
-export { loadRows as loadSpotLogRows }

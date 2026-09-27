@@ -37,6 +37,8 @@ import { Loader } from '@/components/ui/Loader.jsx'
 import { Progress } from '@/components/ui/Progress.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { MediaReport } from '@/components/campaigns/MediaReport.jsx'
+import { MONTHS_FULL } from '@/components/campaigns/MonthTabs.jsx'
+import { useReportMonths } from '@/features/reports/queries'
 import { advertiserLogo } from '@/features/advertisers/logo'
 
 const METRICS = {
@@ -59,6 +61,92 @@ function MetricCard({ icon: Icon, label, value, hint }) {
       </p>
       <p className="mt-1 text-[12px] text-ink-muted">{hint}</p>
     </Card>
+  )
+}
+
+/** Текущий месяц: `2026-09`. */
+function currentPeriod() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+/**
+ * Месяцы периода кампании — до текущего включительно: отчёт за месяц,
+ * который ещё не наступил, загрузить нельзя.
+ */
+function periodsOf(startDate, endDate) {
+  if (!startDate) return []
+  const now = currentPeriod()
+  const end = (endDate || startDate).slice(0, 7)
+  const stop = end < now ? end : now
+  const periods = []
+  let [year, month] = startDate.slice(0, 7).split('-').map(Number)
+  // Страховка от кривых дат: кампаний длиннее пяти лет не бывает.
+  while (periods.length < 60) {
+    const period = `${year}-${String(month).padStart(2, '0')}`
+    if (period > stop) break
+    periods.push(period)
+    month += 1
+    if (month > 12) {
+      month = 1
+      year += 1
+    }
+  }
+  return periods
+}
+
+/** `2026-01` → «Январь 2026». */
+const periodTitle = (period) => {
+  const [year, month] = period.split('-')
+  return `${MONTHS_FULL[Number(month) - 1]} ${year}`
+}
+
+/**
+ * Отчёт на карточке кампании. Отчёт ведётся по договору и месяцу, а у
+ * кампании месяцев бывает несколько, — поэтому над ним переключатель по
+ * месяцам её периода. Открываем последний, за который файл уже загружен.
+ */
+function CampaignReport({ campaign, contract }) {
+  const periods = periodsOf(campaign.startDate, campaign.endDate)
+  const { data: months } = useReportMonths(contract?.id)
+  const loaded = new Set((months ?? []).map((item) => item.period))
+  const fallback =
+    [...periods].reverse().find((period) => loaded.has(period)) ??
+    periods[periods.length - 1]
+  const [picked, setPicked] = useState(null)
+  const period = periods.includes(picked) ? picked : fallback
+
+  if (!period) {
+    return (
+      <p className="rounded-2xl border border-dashed border-line bg-surface px-4 py-3 text-[13px] text-ink-muted">
+        Период кампании ещё не начался — отчёт появится с первым месяцем.
+      </p>
+    )
+  }
+
+  return (
+    <>
+      {periods.length > 1 && (
+        <SegmentTabs
+          className="mb-4"
+          value={period}
+          onChange={setPicked}
+          items={periods.map((item) => ({
+            value: item,
+            label: periodTitle(item),
+            statusHint: loaded.has(item)
+              ? 'файл статистики загружен'
+              : 'файл статистики не загружен',
+          }))}
+        />
+      )}
+      <MediaReport
+        key={`${contract?.id ?? 'none'}-${period}`}
+        contractId={contract?.id}
+        period={period}
+        emptyHint="У кампании не указан договор — отчёт из файла статистики ведётся по договору."
+      />
+    </>
   )
 }
 
@@ -157,7 +245,7 @@ export default function CampaignStats() {
       </section>
 
       {hasMediaTables ? (
-        <MediaReport scopeId={campaign.contractNumber || campaign.id} />
+        <CampaignReport campaign={campaign} contract={contract} />
       ) : (
         <>
           <section className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-linear-to-br from-surface via-[#fffdf5] to-indigo-100 p-5 shadow-lift sm:p-6">

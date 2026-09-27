@@ -94,6 +94,25 @@
     );
 
   --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* Зона загрузки отчёта: парение иконки и бегущая по краю рамка. */
+  --animate-float: float 3.2s ease-in-out infinite;
+  --animate-glow: glow 2.8s linear infinite;
+
+  @keyframes glow {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
 
   @keyframes fade-up {
     0% {
@@ -285,5 +304,13 @@
     50% {
       box-shadow: 0 0 0 6px rgba(229, 72, 77, 0);
     }
+  }
+}
+
+/* Кто попросил систему уменьшить движение — тому декоративные петли не нужны. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-glow {
+    animation: none;
   }
 }
