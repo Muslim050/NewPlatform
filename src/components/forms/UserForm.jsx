@@ -6,6 +6,8 @@ import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button'
 import { Field, Input, Select } from '@/components/ui/Field'
+import { PhoneInput } from '@/components/ui/PhoneInput.jsx'
+import { PHONE_LENGTH, formatPhone, phoneDigits } from '@/lib/phone.js'
 
 // Через платформу заводят только рекламодателей — роль не спрашиваем.
 // У уже заведённой площадки или наблюдателя роль берётся из его карточки
@@ -17,6 +19,7 @@ const emptyForm = {
   lastName: '',
   login: '',
   email: '',
+  // Цифры номера без кода +998 — маска в поле собирает из них вид.
   phone: '',
   role: DEFAULT_ROLE,
   advertiserId: '',
@@ -42,7 +45,7 @@ const formFrom = (user) => ({
   ...nameParts(user),
   login: user.login,
   email: user.email ?? '',
-  phone: user.phone ?? '',
+  phone: phoneDigits(user.phone),
   role: user.role,
   advertiserId: user.advertiserId ? String(user.advertiserId) : '',
   isActive: user.isActive,
@@ -78,6 +81,8 @@ export function UserForm({ open, onClose, initial }) {
     if (!form.login.trim()) err.login = 'Укажите логин'
     if (form.email.trim() && !form.email.includes('@'))
       err.email = 'Некорректный email'
+    if (form.phone && form.phone.length < PHONE_LENGTH)
+      err.phone = 'Номер неполный: после +998 нужно 9 цифр'
     // Пароль обязателен только у нового: у существующего пустое поле значит
     // «оставить прежний».
     if (!editing && !form.password) err.password = 'Задайте пароль'
@@ -92,7 +97,7 @@ export function UserForm({ open, onClose, initial }) {
       firstName: form.firstName.trim(),
       lastName: form.lastName.trim(),
       email: form.email.trim(),
-      phone: form.phone.trim(),
+      phone: formatPhone(form.phone),
       role: form.role,
       // Связка есть только у рекламодателя — у остальных ролей её снимаем.
       advertiserId:
@@ -170,11 +175,9 @@ export function UserForm({ open, onClose, initial }) {
             />
           </Field>
           <Field label="Телефон" error={errors.phone}>
-            <Input
-              type="tel"
+            <PhoneInput
               value={form.phone}
-              onChange={(e) => set('phone', e.target.value)}
-              placeholder="+998 90 123-45-67"
+              onChange={(digits) => set('phone', digits)}
             />
           </Field>
         </div>
