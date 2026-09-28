@@ -1,20 +1,12 @@
 import { useEffect, useState } from 'react'
-import {
-  Check,
-  Download,
-  FileText,
-  Film,
-  Image as ImageIcon,
-  Plus,
-  Trash2,
-} from 'lucide-react'
+import { Check, FileText, Image as ImageIcon, Plus, Trash2 } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import {
   partialSaveOf,
   useSaveAdvertiser,
 } from '@/features/advertisers/queries'
 import { contractFileInput } from '@/features/contracts/files'
-import { downloadFile, fileHref } from '@/features/files/download'
+import { fileHref } from '@/features/files/download'
 import { useToast } from '@/components/ui/Toast.jsx'
 import { Modal } from '@/components/ui/Modal.jsx'
 import { Button } from '@/components/ui/Button'
@@ -23,7 +15,6 @@ import { MultiSelect } from '@/components/ui/MultiSelect.jsx'
 import { FilePicker } from '@/components/ui/FilePicker.jsx'
 import { SegmentTabs } from '@/components/ui/Tabs.jsx'
 import { ADV_STATUS, LEAGUES, PACKAGES } from '@/lib/metrics.js'
-import { formatDateTime } from '@/lib/format.js'
 import { uid } from '@/lib/id.js'
 import { cn } from '@/lib/cn.js'
 
@@ -609,44 +600,6 @@ export function AdvertiserForm({ open, onClose, initial }) {
                   onPick={(file) => setContract(contract.id, { file })}
                 />
               </Field>
-            </div>
-
-            {/* Название рекламной кампании и ролик заполняет рекламодатель
-                в своей карточке договора — здесь только показываем. */}
-            <div className="rounded-2xl border border-line bg-paper/40 p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
-                От рекламодателя
-              </p>
-              <p className="mt-2 text-[13px]">
-                <span className="text-ink-muted">Рекламная кампания: </span>
-                <span className="font-medium text-ink">
-                  {contract.campaignName || 'не заполнена'}
-                </span>
-              </p>
-              {contract.creative ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => downloadFile(contract.creative)}
-                    className="mt-2 flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
-                  >
-                    <Film size={16} className="shrink-0 text-indigo-800" />
-                    <span className="min-w-0 flex-1 truncate">
-                      {contract.creative.name}
-                    </span>
-                    <Download size={15} className="shrink-0 text-ink-muted" />
-                  </button>
-                  {contract.creative.addedAt && (
-                    <p className="mt-1 text-[11px] text-ink-muted tnum">
-                      Ролик добавлен {formatDateTime(contract.creative.addedAt)}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p className="mt-2 text-[13px] text-ink-muted">
-                  Ролик не загружен
-                </p>
-              )}
             </div>
 
             {/* Юр. лицо и сроки оплаты берём из карточки бренда и договора —
