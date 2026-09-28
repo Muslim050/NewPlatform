@@ -1,4 +1,4 @@
-import { Clock, MonitorSmartphone, Users as UsersIcon } from 'lucide-react'
+import { Clock, Users as UsersIcon } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
 import { useUsers } from '@/features/users/queries'
 import { useAdvertisers } from '@/features/advertisers/queries'
@@ -55,11 +55,7 @@ function OnlineCard({ user, brand, presence }) {
         </div>
       </div>
 
-      <div className="mt-3 space-y-1.5 border-t border-line pt-3">
-        <p className="flex items-center gap-2 text-[12px] text-ink-soft">
-          <MonitorSmartphone size={14} className="shrink-0 text-ink-muted" />
-          <span className="truncate">{presence.section}</span>
-        </p>
+      <div className="mt-3 border-t border-line pt-3">
         <p className="flex items-center gap-2 text-[12px] text-ink-soft">
           <Clock size={14} className="shrink-0 text-ink-muted" />
           <span className="truncate">
