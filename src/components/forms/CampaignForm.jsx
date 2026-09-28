@@ -112,6 +112,11 @@ export function CampaignForm({ open, onClose, initial }) {
   )
   // Рекламодателю ролик приходит из договора — он его не правит и не грузит.
   const creativeLocked = isAdvertiser && !!selectedContract?.creative
+  // Ролик заявки. Если поле заблокировано, а своего ролика у кампании нет,
+  // берём ролик договора: иначе заявка с другим названием осталась бы без
+  // ролика, а загрузить свой рекламодатель не может — поле закрыто.
+  const creative =
+    form.creative ?? (creativeLocked ? selectedContract.creative : null)
 
   useEffect(() => {
     if (!open) return
@@ -137,7 +142,10 @@ export function CampaignForm({ open, onClose, initial }) {
   }
 
   /** Выбрали или убрали ролик. Загрузчик отдаёт `{ id, name, url, addedAt }`. */
-  const pickCreative = (file) => setForm((f) => ({ ...f, creative: file }))
+  const pickCreative = (file) => {
+    setForm((f) => ({ ...f, creative: file }))
+    setErrors((e) => ({ ...e, creative: undefined }))
+  }
 
   const submit = () => {
     const err = {}
@@ -147,6 +155,9 @@ export function CampaignForm({ open, onClose, initial }) {
     if (form.startDate && form.endDate && form.endDate < form.startDate) {
       err.endDate = 'Окончание должно быть позже начала'
     }
+    // Без ролика заявку не заводим: площадка иначе принимает в работу
+    // кампанию, которую нечем показывать в эфире.
+    if (!creative) err.creative = 'Загрузите рекламный ролик'
     setErrors(err)
     if (Object.keys(err).length) return
 
@@ -158,7 +169,7 @@ export function CampaignForm({ open, onClose, initial }) {
       // Условия договора сервер проставляет сам по его номеру: пакет, лиги,
       // юр. лицо, срок и дату оплаты отправлять не нужно.
       contractNumber: form.contractNumber.trim(),
-      ...creativeInput(form.creative),
+      ...creativeInput(creative),
     }
     // Статус ведёт площадка, и только у существующей заявки: новая всегда
     // заводится как «Отправлен».
@@ -332,6 +343,8 @@ export function CampaignForm({ open, onClose, initial }) {
 
           <Field
             label="Рекламный ролик"
+            required
+            error={errors.creative}
             hint={
               creativeLocked
                 ? 'Ролик приходит из выбранного договора'
@@ -340,9 +353,9 @@ export function CampaignForm({ open, onClose, initial }) {
           >
             <FilePicker
               kind="creative"
-              name={form.creative?.name}
-              url={form.creative?.url}
-              addedAt={form.creative?.addedAt}
+              name={creative?.name}
+              url={creative?.url}
+              addedAt={creative?.addedAt}
               accept="video/*"
               icon={Film}
               emptyLabel="Загрузить ролик"
