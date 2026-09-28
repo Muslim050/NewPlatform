@@ -27,7 +27,9 @@ import {
 import { useScopedCampaigns } from '@/lib/useScope.js'
 import {
   CONTRACT_PAYMENT,
+  PAYMENT_NONE,
   PAYMENT_OPTIONS,
+  paymentTone,
   statusLabel,
   timeProgress,
 } from '@/lib/metrics.js'
@@ -443,10 +445,13 @@ export default function Campaigns() {
   const activePeriod =
     activeMonth != null ? periodKey(activeYear, activeMonth) : null
   const periodEntry = activePeriod ? statusByPeriod[activePeriod] : null
-  const paymentStatus =
-    (periodEntry?.status ?? selectedContract?.paymentStatus) === 'paid'
-      ? 'paid'
-      : 'awaiting'
+  // null — статус ещё не ставили: карточка нейтральная, без «ожидает оплату».
+  const paymentStatus = paymentTone(
+    periodEntry?.status ?? selectedContract?.paymentStatus,
+  )
+  const paymentMeta = paymentStatus
+    ? CONTRACT_PAYMENT[paymentStatus]
+    : PAYMENT_NONE
   // Когда поставили этот статус. У договоров без даты берём свежую запись
   // истории с тем же статусом: смену могли оформить задним числом, и наверху
   // списка окажется чужая.
@@ -460,28 +465,34 @@ export default function Campaigns() {
         null))
 
   /**
-   * Вкладки договоров помечаем неоплаченностью: статус берём тот же, что
+   * Вкладки договоров красим статусом оплаты: статус берём тот же, что
    * покажет карточка после выбора, — месяца, если он открыт, иначе
-   * договора. Выбранную вкладку SegmentTabs не красит: там подложка выбора.
+   * договора. Оплаченный — зелёный, ждёт денег — красный, без статуса —
+   * обычный жёлтый выбор.
    */
   const contractTabs = contracts.map((item) => {
-    const status =
+    const tone = paymentTone(
       (activePeriod ? item.statusByPeriod[activePeriod]?.status : null) ??
-      item.paymentStatus
-    const paid = status === 'paid'
+        item.paymentStatus,
+    )
     return {
       ...item,
-      // Оплаченный договор не красим: цветом помечаем только то, что ждёт
-      // денег, иначе ряд превращается в светофор и сигнал теряется.
-      status: paid ? undefined : 'awaiting',
-      statusHint: paid ? 'оплачен' : 'ожидает оплату',
+      status: tone ?? undefined,
+      statusHint:
+        tone === 'paid'
+          ? 'оплачен'
+          : tone === 'awaiting'
+            ? 'ожидает оплату'
+            : undefined,
     }
   })
 
   // Раскраска вкладок месяцев за показанный год.
   const monthStatuses = MONTHS.reduce((acc, month) => {
-    const entry = statusByPeriod[periodKey(activeYear, month)]
-    if (entry?.status) acc[month] = entry.status
+    const tone = paymentTone(
+      statusByPeriod[periodKey(activeYear, month)]?.status,
+    )
+    if (tone) acc[month] = tone
     return acc
   }, {})
 
@@ -752,14 +763,14 @@ export default function Campaigns() {
                 }
                 className={cn(
                   'group flex shrink-0 flex-col justify-center rounded-xl border px-3 py-1.5 text-left transition-colors focus-ring',
-                  CONTRACT_PAYMENT[paymentStatus].card,
+                  paymentMeta.card,
                 )}
               >
                 <span className="flex items-center gap-1.5">
                   <span
                     className={cn(
                       'text-[10px] font-semibold uppercase tracking-wider',
-                      CONTRACT_PAYMENT[paymentStatus].caption,
+                      paymentMeta.caption,
                     )}
                   >
                     Статус
@@ -780,7 +791,7 @@ export default function Campaigns() {
                       aria-hidden="true"
                       className={cn(
                         'ml-auto shrink-0 opacity-0 transition-opacity group-hover:opacity-100',
-                        CONTRACT_PAYMENT[paymentStatus].pencil,
+                        paymentMeta.pencil,
                       )}
                     />
                   )}
@@ -788,16 +799,16 @@ export default function Campaigns() {
                 <span
                   className={cn(
                     'mt-1 inline-flex w-full items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-medium',
-                    CONTRACT_PAYMENT[paymentStatus].badge,
+                    paymentMeta.badge,
                   )}
                 >
                   <span className="relative flex h-1.5 w-1.5">
-                    {CONTRACT_PAYMENT[paymentStatus].pulse && (
+                    {paymentMeta.pulse && (
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-70" />
                     )}
                     <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current opacity-80" />
                   </span>
-                  {CONTRACT_PAYMENT[paymentStatus].label}
+                  {paymentMeta.label}
                 </span>
               </button>
             </div>

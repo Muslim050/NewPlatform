@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { UserCog } from 'lucide-react'
+import { Eye, EyeOff, UserCog } from 'lucide-react'
 import { useSaveUser } from '@/features/users/queries'
 import { useAdvertisers } from '@/features/advertisers/queries'
 import { useToast } from '@/components/ui/Toast.jsx'
@@ -64,11 +64,14 @@ export function UserForm({ open, onClose, initial }) {
   const editing = !!initial
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
+  const [passwordShown, setPasswordShown] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setForm(initial ? formFrom(initial) : emptyForm)
     setErrors({})
+    // Открыли снова — пароль опять скрыт.
+    setPasswordShown(false)
     // Зависимости — по id: после сохранения список обновится, и форма иначе
     // сбросила бы несохранённые правки сама на себя.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,13 +202,26 @@ export function UserForm({ open, onClose, initial }) {
               editing ? 'Пусто — прежний пароль останется как есть.' : undefined
             }
           >
-            <Input
-              type="password"
-              value={form.password}
-              onChange={(e) => set('password', e.target.value)}
-              placeholder={editing ? '••••••' : 'Не короче 8 символов'}
-              autoComplete="new-password"
-            />
+            <div className="relative">
+              <Input
+                type={passwordShown ? 'text' : 'password'}
+                value={form.password}
+                onChange={(e) => set('password', e.target.value)}
+                placeholder={editing ? '••••••' : 'Не короче 8 символов'}
+                autoComplete="new-password"
+                // Место под кнопку: иначе длинный пароль уезжает под неё.
+                className="pr-11"
+              />
+              <button
+                type="button"
+                onClick={() => setPasswordShown((shown) => !shown)}
+                aria-label={passwordShown ? 'Скрыть пароль' : 'Показать пароль'}
+                title={passwordShown ? 'Скрыть пароль' : 'Показать пароль'}
+                className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-ink-muted transition-colors hover:text-ink focus-ring"
+              >
+                {passwordShown ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </Field>
         </div>
 

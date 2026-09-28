@@ -27,6 +27,7 @@ import {
   CONTRACT_PAYMENT,
   CONTRACT_STATUS,
   PAYMENT_OPTIONS,
+  paymentTone,
 } from '@/lib/metrics.js'
 import {
   formatDateNumeric,
@@ -161,7 +162,9 @@ export default function ContractOverview() {
     const period = periodKey(activeYear, m)
     const statuses = rows
       .filter(({ contract }) => inMonth(contract, activeYear, m))
-      .map(({ contract }) => contract.paymentStatusByPeriod?.[period]?.status)
+      .map(({ contract }) =>
+        paymentTone(contract.paymentStatusByPeriod?.[period]?.status),
+      )
       .filter(Boolean)
     if (statuses.length) {
       acc[m] = statuses.includes('awaiting') ? 'awaiting' : 'paid'
@@ -764,7 +767,8 @@ function MoneyCell({ budget, spent, pacing, editable, onOpen }) {
  * площадка ставит её тем же поповером, что и в кампаниях.
  */
 function PaymentPill({ status, editable, onOpen }) {
-  const meta = status ? CONTRACT_PAYMENT[status] : null
+  const tone = paymentTone(status)
+  const meta = tone ? CONTRACT_PAYMENT[tone] : null
   const label = meta?.label ?? 'Нет отметки'
   const shell = cn(
     'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-semibold',

@@ -88,6 +88,28 @@ export const CONTRACT_PAYMENT = {
   },
 }
 
+/**
+ * Карточка «Статус», пока статус оплаты не ставили: ничего не подсвечиваем
+ * и неоплаченным договор не называем.
+ */
+export const PAYMENT_NONE = {
+  label: 'Нет отметки',
+  card: 'border-line bg-surface hover:border-indigo-200 hover:bg-indigo-50/50',
+  badge: 'bg-ink/6 text-ink-muted',
+  caption: 'text-ink-muted',
+  pencil: 'text-ink-muted',
+  pulse: false,
+}
+
+/**
+ * Статус оплаты с сервера → оформление: `paid` — зелёный, пусто — без
+ * подсветки (null), любое другое значение — красный «ожидает оплату».
+ */
+export function paymentTone(status) {
+  if (!status) return null
+  return status === 'paid' ? 'paid' : 'awaiting'
+}
+
 /** Варианты для поповера смены статуса оплаты. */
 export const PAYMENT_OPTIONS = [
   {

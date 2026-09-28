@@ -10,20 +10,32 @@ const TONES = {
   soft: 'bg-indigo-100 ring-1 ring-inset ring-indigo-300',
 }
 
-// Заливка вкладки статусом — только у невыбранной: у выбранной подложка
-// занята жёлтым, иначе непонятно, какая вкладка открыта. Красим только то,
-// что требует внимания; «всё в порядке» остаётся нейтральным.
+// Заливка вкладки статусом: зелёная — оплачено, красная — ждёт денег.
 const STATUS_TONES = {
+  paid: 'bg-success/10 text-success ring-1 ring-inset ring-success/25 hover:bg-success/15',
   awaiting:
     'bg-danger/10 text-danger ring-1 ring-inset ring-danger/25 hover:bg-danger/15',
+}
+
+// Выбранная вкладка со статусом — в его же цвете вместо жёлтого, но плотнее
+// и с обводкой: так видно и статус, и какая вкладка открыта.
+const STATUS_ACTIVE = {
+  paid: {
+    pill: 'bg-success/20 ring-2 ring-inset ring-success/50',
+    text: 'text-success',
+  },
+  awaiting: {
+    pill: 'bg-danger/15 ring-2 ring-inset ring-danger/45',
+    text: 'text-danger',
+  },
 }
 
 /**
  * Сегментированный переключатель.
  * items: [{ value, label, count?, status?, statusHint? }], value, onChange,
- * tone: accent | soft. `status` (awaiting) красит невыбранную вкладку,
- * `statusHint` объясняет её состояние словами — цвет один смысл нести не
- * может, и он же остаётся подсказкой у вкладок без заливки.
+ * tone: accent | soft. `status` (paid | awaiting) красит вкладку в цвет
+ * статуса, `statusHint` объясняет её состояние словами — цвет один смысл
+ * нести не может, и он же остаётся подсказкой у вкладок без заливки.
  */
 export function SegmentTabs({
   items,
@@ -50,6 +62,7 @@ export function SegmentTabs({
       {items.map((it) => {
         const active = it.value === value
         const status = !active ? STATUS_TONES[it.status] : null
+        const activeStatus = active ? STATUS_ACTIVE[it.status] : null
         return (
           <button
             key={it.value}
@@ -65,14 +78,17 @@ export function SegmentTabs({
             className={cn(
               'relative shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-[13px] font-medium transition-colors focus-ring',
               active
-                ? 'text-ink'
+                ? (activeStatus?.text ?? 'text-ink')
                 : (status ?? 'text-ink-soft hover:bg-indigo-50 hover:text-ink'),
             )}
           >
             {active && (
               <motion.span
                 layoutId={layoutId}
-                className={cn('absolute inset-0 rounded-lg', TONES[tone])}
+                className={cn(
+                  'absolute inset-0 rounded-lg',
+                  activeStatus?.pill ?? TONES[tone],
+                )}
                 transition={{ type: 'spring', stiffness: 380, damping: 32 }}
               />
             )}
