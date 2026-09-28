@@ -94,24 +94,61 @@ function periodLabel(period) {
   return name ? `${name.toLowerCase()} ${year}` : period
 }
 
-/** Ошибки разбора файла: заголовок — общее сообщение, ниже построчно. */
+// Файл за другой месяц сервер описывает одной строкой в details. Отдельного
+// кода у неё нет, поэтому узнаём по тексту (docs/backend.md, п. 3.26).
+const WRONG_PERIOD = /^Файл не за выбранный месяц/
+
+/**
+ * Ошибки разбора файла. Файл не за тот месяц — частый случай: выбрали не ту
+ * вкладку месяца или не тот файл. Разбор по строкам тут ничего не даёт,
+ * поэтому — короткое предупреждение. Остальное — списком «лист · строка ·
+ * колонка».
+ */
 function ImportErrors({ error, onClose }) {
+  // Помним последнюю ошибку: пока окно закрывается, error уже null, и без
+  // этого содержимое успевало бы смениться на другой вид.
+  const [last, setLast] = useState(error)
+  if (error && error !== last) setLast(error)
+  const shown = error ?? last
+  const wrongPeriod = (shown?.details ?? []).some((detail) =>
+    WRONG_PERIOD.test(detail.message),
+  )
+
+  const footer = (
+    <Button variant="primary" onClick={onClose}>
+      Понятно
+    </Button>
+  )
+
+  if (wrongPeriod) {
+    return (
+      <Modal
+        open={!!error}
+        onClose={onClose}
+        logo={
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger/10 text-danger">
+            <AlertTriangle size={20} />
+          </span>
+        }
+        title="Важно"
+        description="Файл не соответствует выбранному месяцу. Проверьте файл перед загрузкой."
+        footer={footer}
+      />
+    )
+  }
+
   return (
     <Modal
       open={!!error}
       onClose={onClose}
       icon={AlertTriangle}
       title="Файл не принят"
-      description={error?.message}
+      description={shown?.message}
       size="lg"
-      footer={
-        <Button variant="primary" onClick={onClose}>
-          Понятно
-        </Button>
-      }
+      footer={footer}
     >
       <ul className="max-h-[420px] divide-y divide-line overflow-auto rounded-2xl border border-line">
-        {(error?.details ?? []).map((detail, index) => {
+        {(shown?.details ?? []).map((detail, index) => {
           // Место ошибки: лист · строка · колонка — чего нет, то пропускаем.
           const place = [
             detail.sheet,
