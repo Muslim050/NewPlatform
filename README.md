@@ -94,14 +94,20 @@ src/router.tsx    — дерево маршрутов TanStack Router; дост�
                     проверяется в beforeLoad, то есть до рендера страницы
 ```
 
-Бэкенд: <https://setanta.pythonanywhere.com>, схема — `/api/v1/schema`,
-Swagger — `/api/v1/docs`.
+Бэкенд у каждой среды свой, схема — `/api/v1/schema`, Swagger — `/api/v1/docs`:
+
+| Ветка     | Проект Vercel     | Бэкенд                                      |
+| --------- | ----------------- | ------------------------------------------- |
+| `dev`     | `setantadev`      | <https://setantatest.pythonanywhere.com>    |
+| `preProd` | `setanta-preprod` | <https://setantastaging.pythonanywhere.com> |
+| `master`  | `setanta-prod`    | <https://setanta.pythonanywhere.com>        |
 
 **CORS.** Сервер не отдаёт `Access-Control-Allow-Origin`, поэтому напрямую из
 браузера к нему не достучаться. Запросы идут на собственный origin, а дальше их
 переправляет прокси: `server.proxy` в `vite.config.js` для разработки и `rewrites`
-в `vercel.json` для продакшена. Когда на бэкенде настроят CORS, прокси можно убрать
-и указать адрес в `VITE_API_URL`.
+в `vercel.ts` на Vercel. Адрес бэкенда оба берут из `API_PROXY_TARGET` — на Vercel
+он задан в Environment Variables каждого проекта. Когда на бэкенде настроят CORS,
+прокси можно убрать и указать адрес в `VITE_API_URL`.
 
 **На API переведены вход и рекламодатели.** Остальные разделы по-прежнему читают
 демо-данные из `localStorage` — см. раздел «CRUD» ниже.

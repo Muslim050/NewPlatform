@@ -5,7 +5,7 @@ import type { RefreshResponse, TokenPair } from './types'
 /**
  * Адрес бэкенда. По умолчанию пуст — запросы идут на собственный origin,
  * откуда их переправляет прокси: в разработке это server.proxy из
- * vite.config.js, в продакшене — rewrite из vercel.json. Так сделано
+ * vite.config.js, на Vercel — rewrite из vercel.ts. Так сделано
  * потому, что бэкенд не отдаёт CORS-заголовки.
  *
  * VITE_API_URL позволяет обратиться к серверу напрямую — это заработает,
