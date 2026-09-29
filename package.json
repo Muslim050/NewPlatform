@@ -32,7 +32,6 @@
     "@tanstack/eslint-plugin-query": "^5.102.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
-    "@vercel/config": "^0.7.2",
     "@vitejs/plugin-react": "^6.1.0",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",

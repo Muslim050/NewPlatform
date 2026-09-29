@@ -57,7 +57,7 @@ export default tseslint.config(
 
   // Конфиги и скрипты сборки живут в Node.
   {
-    files: ['*.config.{js,ts}', 'vite.config.{js,ts}', 'vercel.ts'],
+    files: ['*.config.{js,ts}', 'vite.config.{js,ts}'],
     languageOptions: { globals: globals.node },
   },
 

@@ -104,10 +104,11 @@ src/router.tsx    — дерево маршрутов TanStack Router; дост�
 
 **CORS.** Сервер не отдаёт `Access-Control-Allow-Origin`, поэтому напрямую из
 браузера к нему не достучаться. Запросы идут на собственный origin, а дальше их
-переправляет прокси: `server.proxy` в `vite.config.js` для разработки и `rewrites`
-в `vercel.ts` на Vercel. Адрес бэкенда оба берут из `API_PROXY_TARGET` — на Vercel
-он задан в Environment Variables каждого проекта. Когда на бэкенде настроят CORS,
-прокси можно убрать и указать адрес в `VITE_API_URL`.
+переправляет прокси. Локально это `server.proxy` в `vite.config.js`, адрес — из
+`API_PROXY_TARGET` в `.env`. На Vercel — правило «API Proxy» в Routing rules
+каждого проекта (`vercel routes`): оно главнее `vercel.json` и применяется без
+передеплоя. В `vercel.json` остаётся только SPA-fallback. Когда на бэкенде
+настроят CORS, прокси можно убрать и указать адрес в `VITE_API_URL`.
 
 **На API переведены вход и рекламодатели.** Остальные разделы по-прежнему читают
 демо-данные из `localStorage` — см. раздел «CRUD» ниже.

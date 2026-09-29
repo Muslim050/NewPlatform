@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => ({
     proxy: {
       '/api': {
         // Куда проксировать /api в разработке. На Vercel ту же роль играет
-        // rewrite из vercel.ts с адресом своей среды.
+        // правило «API Proxy» в Routing rules проекта.
         target:
           loadEnv(mode, process.cwd(), '').API_PROXY_TARGET ||
           'https://setanta.pythonanywhere.com',
