@@ -341,6 +341,21 @@ export interface LiveEventRow {
   time: string
   tournament: string
   event: string
+  /**
+   * Выходы ролика в эфире — длительность в секундах; null — выхода не было
+   * («-» в файле). В отчётах до появления полей их нет вовсе.
+   */
+  pre?: number | null
+  mid1?: number | null
+  mid2?: number | null
+  post?: number | null
+  /** Просмотры эфира. */
+  views?: number | null
+  /**
+   * Бренды блока «Total ads spots»: `brand1`…`brand8`, колонки заводят
+   * руками. Заведённая колонка есть в каждой строке, пустая — ''.
+   */
+  [brand: `brand${number}`]: string | undefined
 }
 
 export type SocialNetwork = 'instagram' | 'telegram'

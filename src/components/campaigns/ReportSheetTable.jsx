@@ -9,10 +9,64 @@ import { Card } from '@/components/ui/Card.jsx'
 import { formatNumber } from '@/lib/format.js'
 import { cn } from '@/lib/cn.js'
 
+// Блок выходов ролика в эфире — так он подписан в файле.
+const SPOTS_GROUP = 'Live ads spots for 1 brand'
+
+// Бренды, чьи ролики шли в эфире, — блок справа, как в файле. Колонки
+// заводят руками, не больше восьми.
+const BRANDS_GROUP = 'Total ads spots'
+const MAX_BRANDS = 8
+const brandKey = (n) => `brand${n}`
+
+/** Колонки брендов 1…count. `brand` — номер бренда. */
+const brandColumns = (count) =>
+  Array.from({ length: count }, (_, i) => ({
+    key: brandKey(i + 1),
+    label: `Brand ${i + 1}`,
+    type: 'text',
+    brand: i + 1,
+    group: BRANDS_GROUP,
+  }))
+
+/**
+ * Сколько колонок брендов заведено: по самой дальней. Заведённая колонка
+ * есть в каждой строке — хотя бы пустой строкой.
+ */
+const countBrands = (rows) =>
+  rows.reduce((max, row) => {
+    for (let n = MAX_BRANDS; n > max; n -= 1) {
+      if (row[brandKey(n)] !== undefined) return n
+    }
+    return max
+  }, 0)
+
+/** Строка с полями брендов 1…count: недостающие — пустые. */
+const withBrands = (row, count) => {
+  const next = { ...row }
+  for (let n = 1; n <= count; n += 1) {
+    if (next[brandKey(n)] === undefined) next[brandKey(n)] = ''
+  }
+  return next
+}
+
+/** Выход ролика в эфире: секунды, пусто — выхода не было («-» в файле). */
+const spot = (key, label) => ({
+  key,
+  label,
+  type: 'number',
+  spot: true,
+  nullable: true,
+  group: SPOTS_GROUP,
+})
+
 /**
  * Колонки по форме листа. Таблицу выбираем по `kind`, а не по коду листа:
  * логов выходов четыре, эфиров два, соцсеть одна — форм всего три.
  * `accent` — дата и время выхода, их красим так же, как в файле.
+ * `group` — общая подпись над колонками во второй строке шапки.
+ * `nullable` — пустое число остаётся пустым, а не становится нулём.
+ * `width` — своя ширина текстовой колонки; без неё колонка тянется.
+ * Колонки брендов у эфиров добавляются к этим отдельно — см. brandColumns.
  */
 const COLUMNS = {
   spot_log: [
@@ -24,7 +78,19 @@ const COLUMNS = {
     { key: 'date', label: 'Date', type: 'date', accent: true },
     { key: 'time', label: 'Time', type: 'time', accent: true },
     { key: 'tournament', label: 'Tournament', type: 'text' },
-    { key: 'event', label: 'Event', type: 'text' },
+    // Event уже, чтобы место досталось блоку выходов.
+    { key: 'event', label: 'Event', type: 'text', width: 'w-[220px]' },
+    spot('pre', 'pre'),
+    spot('mid1', 'mid'),
+    spot('mid2', 'mid'),
+    spot('post', 'post'),
+    {
+      key: 'views',
+      label: 'Views',
+      type: 'number',
+      nullable: true,
+      group: SPOTS_GROUP,
+    },
   ],
   social: [
     { key: 'link', label: 'Ссылка', type: 'text' },
@@ -35,9 +101,51 @@ const COLUMNS = {
 /** Пустая строка для «Добавить строку» — по форме листа. */
 const EMPTY_ROW = {
   spot_log: () => ({ item: '', date: '', time: '' }),
-  live_event: () => ({ date: '', time: '', tournament: '', event: '' }),
+  live_event: () => ({
+    date: '',
+    time: '',
+    tournament: '',
+    event: '',
+    pre: null,
+    mid1: null,
+    mid2: null,
+    post: null,
+    views: null,
+  }),
   social: (network) => ({ network, link: '', impressions: 0 }),
 }
+
+// Без скрытых колонок. Постоянный массив, чтобы не сбивать мемоизацию.
+const NO_COLUMNS = []
+
+/**
+ * Соседние элементы с одинаковым ключом — одной ячейкой шапки: так группа
+ * встаёт над своими колонками, а две «mid» сливаются в одну, как в файле.
+ * Ключ null не сливается ни с чем.
+ */
+const mergeSpans = (columns, keyOf) =>
+  columns.reduce((spans, column) => {
+    const last = spans[spans.length - 1]
+    const key = keyOf(column)
+    if (last && key !== null && keyOf(last.column) === key) last.span += 1
+    else spans.push({ column, span: 1 })
+    return spans
+  }, [])
+
+/** Класс ячейки шапки по колонке. */
+const headClass = (column, span = 1) =>
+  cn(
+    'border-l border-black/10 px-3',
+    column.accent
+      ? 'w-[130px] bg-[#ff665f]/90 text-center'
+      : column.spot
+        ? cn('text-center', span > 1 ? 'w-32' : 'w-16')
+        : column.brand
+          ? 'min-w-[140px] text-center'
+          : column.type === 'number'
+            ? 'w-[140px] text-right'
+            : cn('text-left', column.width),
+  )
 
 // Соцсети в листе идут блоками: сначала Instagram, потом Telegram.
 const NETWORK_ORDER = ['instagram', 'telegram']
@@ -65,10 +173,27 @@ function display(column, value) {
   return value
 }
 
-/** Число из поля: пустое — ноль, всё лишнее отбрасываем. */
-const toCount = (value) => {
+/**
+ * Число из поля: всё лишнее отбрасываем. Пустое — ноль, а у необязательных
+ * колонок остаётся пустым (null).
+ */
+const toCount = (value, nullable = false) => {
   const digits = String(value ?? '').replace(/[^\d]/g, '')
-  return digits ? Number(digits) : 0
+  if (!digits) return nullable ? null : 0
+  return Number(digits)
+}
+
+/** Значение числовой ячейки в поле правки. */
+const editValue = (column, value) =>
+  column.nullable && (value === null || value === undefined)
+    ? ''
+    : formatNumber(value)
+
+// Блоки красим, как в файле: выходы — красным (как дата и время в шапке),
+// бренды — зелёным.
+const GROUP_CELL = {
+  [SPOTS_GROUP]: 'border-white/50 bg-[#ff665f]/90',
+  [BRANDS_GROUP]: 'border-white/50 bg-[#84c450]/90',
 }
 
 /**
@@ -82,16 +207,33 @@ const EditRow = memo(function EditRow({
   errors,
   onChange,
   onRemove,
+  onInsert,
 }) {
   return (
-    <tr className={index % 2 ? 'bg-paper/35' : 'bg-surface'}>
-      <td className="px-2 py-1.5 text-center text-[11px] text-ink-muted tnum">
+    <tr className={cn('group', index % 2 ? 'bg-paper/35' : 'bg-surface')}>
+      <td className="relative px-2 py-1.5 text-center text-[11px] text-ink-muted tnum">
         {index + 1}
+        {/* «+» на нижней границе строки: вставляет пустую строку под ней. */}
+        <button
+          type="button"
+          onClick={() => onInsert(index)}
+          aria-label={`Добавить строку после ${index + 1}`}
+          title="Добавить строку ниже"
+          className="absolute -bottom-2.5 left-1/2 z-[5] flex size-5 -translate-x-1/2 items-center justify-center rounded-full bg-indigo-500 text-ink opacity-0 shadow-sm transition-opacity group-hover:opacity-100 hover:scale-110 focus-visible:opacity-100 focus-ring"
+        >
+          <Plus size={12} strokeWidth={3} />
+        </button>
       </td>
       {columns.map((column) => {
         const error = errors?.[column.key]
         return (
-          <td key={column.key} className="border-l border-line px-1.5 py-1">
+          <td
+            key={column.key}
+            className={cn(
+              'border-l border-line px-1.5 py-1',
+              GROUP_CELL[column.group],
+            )}
+          >
             <input
               type={
                 column.type === 'number'
@@ -105,15 +247,16 @@ const EditRow = memo(function EditRow({
               inputMode={column.type === 'number' ? 'numeric' : undefined}
               value={
                 column.type === 'number'
-                  ? formatNumber(row[column.key])
+                  ? editValue(column, row[column.key])
                   : (row[column.key] ?? '')
               }
+              placeholder={column.nullable ? '—' : undefined}
               onChange={(e) =>
                 onChange(
                   index,
                   column.key,
                   column.type === 'number'
-                    ? toCount(e.target.value)
+                    ? toCount(e.target.value, column.nullable)
                     : e.target.value,
                 )
               }
@@ -121,6 +264,7 @@ const EditRow = memo(function EditRow({
               title={error}
               className={cn(
                 'w-full rounded-lg border bg-surface px-2 py-1 text-[13px] text-ink outline-hidden transition-colors tnum focus:ring-2',
+                (column.spot || column.brand) && 'text-center',
                 error
                   ? 'border-danger focus:border-danger focus:ring-danger/20'
                   : 'border-line focus:border-indigo-400 focus:ring-indigo-200',
@@ -151,6 +295,11 @@ const EditRow = memo(function EditRow({
  *
  * У соцсети лист один на обе сети, а вкладок две: `network` показывает
  * только строки своей сети, а при сохранении вторая сеть уходит нетронутой.
+ *
+ * `onSave(rows)` — свой способ сохранить вместо сервера: так таблицу берут
+ * разделы, которых в файле отчёта нет (OTT живёт в браузере).
+ * `hiddenColumns` — ключи колонок, которых в этом разделе нет (у OTT — post).
+ * Передавайте постоянным массивом: от него зависит мемоизация строк.
  */
 export function ReportSheetTable({
   sheet,
@@ -159,6 +308,9 @@ export function ReportSheetTable({
   network,
   title,
   subtitle,
+  onSave,
+  emptyHint = 'В загруженном файле этот лист пустой.',
+  hiddenColumns = NO_COLUMNS,
 }) {
   const { canEdit, isAdvertiser } = useAuth()
   // Загружать и править отчёт может только площадка.
@@ -166,8 +318,9 @@ export function ReportSheetTable({
   const toast = useToast()
   const { mutate: saveSheet, isPending: saving } = useSaveReportSheet()
 
-  const columns = COLUMNS[sheet.kind]
   const isSocial = sheet.kind === 'social'
+  // Бренды «Total ads spots» заводят только у эфиров: Live spot и OTT.
+  const isLive = sheet.kind === 'live_event'
 
   // Строки этой вкладки: у соцсети — только своей сети.
   const rows = useMemo(
@@ -184,6 +337,17 @@ export function ReportSheetTable({
   const [cellErrors, setCellErrors] = useState({})
   const editing = draft !== null
   const shown = editing ? draft : rows
+
+  const brandCount = isLive ? countBrands(shown) : 0
+  const columns = useMemo(
+    () => [
+      ...COLUMNS[sheet.kind].filter(
+        (column) => !hiddenColumns.includes(column.key),
+      ),
+      ...brandColumns(brandCount),
+    ],
+    [sheet.kind, brandCount, hiddenColumns],
+  )
 
   // Сменили лист или месяц — незаконченную правку не тащим за собой.
   useEffect(() => {
@@ -209,8 +373,22 @@ export function ReportSheetTable({
     setCellErrors({})
   }, [])
 
+  const insertAfter = useCallback(
+    (index) => {
+      setDraft((current) => [
+        ...current.slice(0, index + 1),
+        withBrands(EMPTY_ROW[sheet.kind](network), countBrands(current)),
+        ...current.slice(index + 1),
+      ])
+      // Индексы ниже вставки съехали — ошибки к ним уже не относятся.
+      setCellErrors({})
+    },
+    [sheet.kind, network],
+  )
+
   const startEditing = () => {
-    setDraft(rows.map((row) => ({ ...row })))
+    const count = countBrands(rows)
+    setDraft(rows.map((row) => withBrands(row, count)))
     setCellErrors({})
   }
 
@@ -220,7 +398,35 @@ export function ReportSheetTable({
   }
 
   const addRow = () =>
-    setDraft((current) => [...current, EMPTY_ROW[sheet.kind](network)])
+    setDraft((current) => [
+      ...current,
+      withBrands(EMPTY_ROW[sheet.kind](network), countBrands(current)),
+    ])
+
+  /** Новая колонка бренда — пустая ячейка в каждой строке. */
+  const addBrand = () =>
+    setDraft((current) => {
+      const count = countBrands(current)
+      if (count >= MAX_BRANDS) return current
+      return current.map((row) => withBrands(row, count + 1))
+    })
+
+  /** Убрать колонку бренда: колонки правее съезжают на её место. */
+  const removeBrand = (n) => {
+    setDraft((current) => {
+      const count = countBrands(current)
+      return current.map((row) => {
+        const next = { ...row }
+        for (let k = n; k < count; k += 1) {
+          next[brandKey(k)] = row[brandKey(k + 1)] ?? ''
+        }
+        delete next[brandKey(count)]
+        return next
+      })
+    })
+    // Ошибки привязаны к колонкам — после сдвига они уже не о тех ячейках.
+    setCellErrors({})
+  }
 
   /**
    * Весь лист в порядке файла. У соцсети сети идут блоками — правленая
@@ -256,6 +462,19 @@ export function ReportSheetTable({
   }
 
   const save = () => {
+    if (onSave) {
+      try {
+        onSave(draft)
+      } catch {
+        toast.error('Не удалось сохранить таблицу')
+        return
+      }
+      setDraft(null)
+      setCellErrors({})
+      toast.success(`${title}: таблица сохранена`)
+      return
+    }
+
     const { all, offset } = buildRows(draft)
     saveSheet(
       {
@@ -296,6 +515,20 @@ export function ReportSheetTable({
     ? shown.reduce((sum, row) => sum + (Number(row.impressions) || 0), 0)
     : 0
 
+  // Шапка в две строки, если у колонок есть общая подпись группы.
+  const grouped = columns.some((column) => column.group)
+  // Итог по выходам, как под таблицей в файле: сколько эфиров с выходом
+  // в каждой колонке и сколько выходов всего. Колонки выходов идут подряд.
+  const firstSpot = columns.findIndex((column) => column.spot)
+  const spotCounts = columns
+    .filter((column) => column.spot)
+    .map((column) => ({
+      key: column.key,
+      count: shown.filter((row) => Number(row[column.key]) > 0).length,
+    }))
+  const spotsTotal = spotCounts.reduce((sum, { count }) => sum + count, 0)
+  const afterSpots = columns.length - firstSpot - spotCounts.length
+
   return (
     <Card className="relative overflow-hidden">
       <div className="flex flex-col gap-4 border-b border-line bg-linear-to-br from-surface via-indigo-50 to-indigo-100 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -317,6 +550,26 @@ export function ReportSheetTable({
                   <Plus size={15} />
                   Добавить строку
                 </Button>
+                {isLive && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={addBrand}
+                    disabled={!draft.length || brandCount >= MAX_BRANDS}
+                    title={
+                      !draft.length
+                        ? 'Сначала добавьте строку'
+                        : brandCount >= MAX_BRANDS
+                          ? `Не больше ${MAX_BRANDS} брендов`
+                          : 'Добавить колонку бренда в Total ads spots'
+                    }
+                  >
+                    <Plus size={15} />
+                    {brandCount
+                      ? `Добавить бренд · ${brandCount}/${MAX_BRANDS}`
+                      : 'Total ads spots'}
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="secondary"
@@ -374,24 +627,67 @@ export function ReportSheetTable({
         <table className="w-full border-collapse text-sm">
           <thead className="sticky top-0 z-10">
             <tr className="bg-indigo-500 text-[11px] font-semibold uppercase tracking-wider text-ink">
-              <th className="w-12 px-2 py-3 text-center">№</th>
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className={cn(
-                    'border-l border-black/10 px-3 py-3',
-                    column.accent
-                      ? 'w-[130px] bg-[#ff665f]/90 text-center'
-                      : column.type === 'number'
-                        ? 'w-[160px] text-right'
-                        : 'text-left',
-                  )}
-                >
-                  {column.label}
-                </th>
-              ))}
-              {editing && <th className="w-10" />}
+              <th
+                rowSpan={grouped ? 2 : undefined}
+                className="w-12 px-2 py-3 text-center"
+              >
+                №
+              </th>
+              {mergeSpans(columns, (column) => column.group ?? null).map(
+                ({ column, span }) =>
+                  column.group ? (
+                    <th
+                      key={column.group}
+                      colSpan={span}
+                      className="border-b border-l border-black/10 px-3 py-2 text-center"
+                    >
+                      {column.group}
+                    </th>
+                  ) : (
+                    <th
+                      key={column.key}
+                      rowSpan={grouped ? 2 : undefined}
+                      className={cn(headClass(column), 'py-3')}
+                    >
+                      {column.label}
+                    </th>
+                  ),
+              )}
+              {editing && (
+                <th rowSpan={grouped ? 2 : undefined} className="w-10" />
+              )}
             </tr>
+            {grouped && (
+              <tr className="bg-indigo-500 text-[11px] font-semibold uppercase tracking-wider text-ink">
+                {mergeSpans(
+                  columns.filter((column) => column.group),
+                  (column) => column.label,
+                ).map(({ column, span }) => (
+                  <th
+                    key={column.key}
+                    colSpan={span}
+                    className={cn(headClass(column, span), 'py-2')}
+                  >
+                    {column.brand && editing ? (
+                      <span className="inline-flex items-center gap-1">
+                        {column.label}
+                        <button
+                          type="button"
+                          onClick={() => removeBrand(column.brand)}
+                          aria-label={`Убрать колонку ${column.label}`}
+                          title="Убрать колонку"
+                          className="rounded p-0.5 opacity-60 transition-opacity hover:bg-black/10 hover:opacity-100 focus-ring"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ) : (
+                      column.label
+                    )}
+                  </th>
+                ))}
+              </tr>
+            )}
           </thead>
           <tbody className="divide-y divide-line">
             {!shown.length && (
@@ -410,7 +706,7 @@ export function ReportSheetTable({
                   <p className="mt-1 text-[13px] text-ink-muted">
                     {editing
                       ? 'Добавьте строку или отмените правку.'
-                      : 'В загруженном файле этот лист пустой.'}
+                      : emptyHint}
                   </p>
                 </td>
               </tr>
@@ -425,6 +721,7 @@ export function ReportSheetTable({
                     errors={cellErrors[index]}
                     onChange={change}
                     onRemove={remove}
+                    onInsert={insertAfter}
                   />
                 ))
               : shown.map((row, index) => (
@@ -444,7 +741,11 @@ export function ReportSheetTable({
                         className={cn(
                           'border-l border-line px-3 py-2 text-[13px] text-ink',
                           column.accent && 'text-center tnum',
-                          column.type === 'number' && 'text-right tnum',
+                          column.spot
+                            ? 'text-center tnum'
+                            : column.type === 'number' && 'text-right tnum',
+                          column.brand && 'text-center',
+                          GROUP_CELL[column.group],
                           column.key === 'link' && 'max-w-0 truncate',
                         )}
                         title={column.key === 'link' ? row.link : undefined}
@@ -466,6 +767,48 @@ export function ReportSheetTable({
                   </tr>
                 ))}
           </tbody>
+          {firstSpot >= 0 && shown.length > 0 && (
+            <tfoot className="sticky bottom-0 z-10 bg-paper text-[13px] font-semibold text-ink tnum">
+              <tr className="border-t border-line">
+                <td
+                  colSpan={firstSpot + 1}
+                  className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wider text-ink-muted"
+                >
+                  Эфиров с выходом
+                </td>
+                {spotCounts.map(({ key, count }) => (
+                  <td
+                    key={key}
+                    className="border-l border-line px-2 py-2 text-center"
+                  >
+                    {formatNumber(count)}
+                  </td>
+                ))}
+                <td
+                  colSpan={afterSpots + (editing ? 1 : 0)}
+                  className="border-l border-line"
+                />
+              </tr>
+              <tr className="border-t border-line">
+                <td
+                  colSpan={firstSpot + 1}
+                  className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wider text-ink-muted"
+                >
+                  Всего выходов
+                </td>
+                <td
+                  colSpan={spotCounts.length}
+                  className="border-l border-line px-2 py-2 text-center"
+                >
+                  {formatNumber(spotsTotal)}
+                </td>
+                <td
+                  colSpan={afterSpots + (editing ? 1 : 0)}
+                  className="border-l border-line"
+                />
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 

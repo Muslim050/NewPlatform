@@ -27,7 +27,7 @@ export const CATEGORY_PRESETS = [
   {
     name: 'OTT',
     kind: 'log',
-    hint: 'Логи выходов Live spot и Preroll',
+    hint: 'Эфиры Live spot и Preroll',
     channels: [
       { id: 'ott_live', label: 'Live spot' },
       { id: 'ott_preroll', label: 'Preroll' },

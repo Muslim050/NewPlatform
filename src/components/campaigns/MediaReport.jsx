@@ -27,7 +27,7 @@ import { formatDateTime } from '@/lib/format.js'
 import { cn } from '@/lib/cn.js'
 import { MONTHS_FULL } from './MonthTabs.jsx'
 import { CampaignTabs, useCampaignTabs } from './CampaignMediaTabs.jsx'
-import { SpotLogTable } from './SpotLogTable.jsx'
+import { OttSheetTable } from './OttSheetTable.jsx'
 import { ReportSheetTable } from './ReportSheetTable.jsx'
 import { Materialize, TableGenerating } from './ReportUploadEffects.jsx'
 import {
@@ -349,9 +349,9 @@ function ReportFileBar({ contractId, period, months, report, onImported }) {
               : `Обновлён ${formatDateTime(report.data.updatedAt)}`
             : canUpload
               ? `Файл статистики за ${month} ещё не загружен`
-              : // Загружает только площадка — иначе пустая плашка без кнопки
-                // выглядит как поломка.
-                `Файл статистики за ${month} ещё не загружен. Загрузить его может администратор`
+              : // Загружает только площадка: остальным говорим, что отчёт
+                // в работе, — иначе пустая плашка без кнопки выглядит как поломка.
+                'Отчёт в процессе формирования!'
 
   // Месяц без файла — здесь загрузка главное, что можно сделать. Даём ей
   // целую зону, а не кнопку на краю плашки: на широком экране кнопку там
@@ -691,12 +691,13 @@ export function MediaReport({
                   subtitle={`Лист «${sheet.title}» · ${periodLabel(period)}`}
                 />
               ) : current?.kind === 'log' ? (
-                <SpotLogTable
-                  key={tab}
-                  logKey={tab}
-                  sheetName={current.label}
-                  title={current.label}
-                  subtitle={`${current.group} · выходы роликов`}
+                <OttSheetTable
+                  key={`${contractId}-${period}-${tab}`}
+                  contractId={contractId}
+                  period={period}
+                  channelId={tab}
+                  title={`${current.group} — ${current.label}`}
+                  subtitle={`${current.group} · ${periodLabel(period)}`}
                 />
               ) : null}
             </motion.div>
