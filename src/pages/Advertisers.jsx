@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import {
   Search,
@@ -266,24 +267,56 @@ const STATUS_DOTS = {
   muted: 'bg-ink-muted',
 }
 
-/** Бейдж статуса, который по клику превращается в выбор из двух значений. */
+const MENU_WIDTH = 176
+
+/**
+ * Бейдж статуса, который по клику превращается в выбор значения.
+ * Меню рисуется порталом с position: fixed — иначе карточка его обрежет.
+ */
 function StatusMenu({ value, brand, onPick }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
+  // Прямоугольник бейджа, пока меню открыто; null — меню закрыто.
+  const [anchor, setAnchor] = useState(null)
+  const buttonRef = useRef(null)
+  const menuRef = useRef(null)
+  const open = anchor !== null
   const current = ADV_STATUS[value] ?? ADV_STATUS.active
 
   useEffect(() => {
-    const close = (e) =>
-      ref.current && !ref.current.contains(e.target) && setOpen(false)
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
-  }, [])
+    if (!open) return
+    const onDown = (e) => {
+      if (
+        buttonRef.current?.contains(e.target) ||
+        menuRef.current?.contains(e.target)
+      )
+        return
+      setAnchor(null)
+    }
+    const onKey = (e) => e.key === 'Escape' && setAnchor(null)
+    // Держимся за бейдж: страница может проехать под меню.
+    const track = () => {
+      if (!buttonRef.current?.isConnected) return setAnchor(null)
+      setAnchor(buttonRef.current.getBoundingClientRect())
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    window.addEventListener('scroll', track, true)
+    window.addEventListener('resize', track)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', track, true)
+      window.removeEventListener('resize', track)
+    }
+  }, [open])
 
   return (
-    <span className="relative shrink-0" ref={ref}>
+    <span className="shrink-0">
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() =>
+          setAnchor(open ? null : buttonRef.current.getBoundingClientRect())
+        }
         title={`Статус бренда ${brand}`}
         aria-label={`Изменить статус бренда ${brand}`}
         aria-expanded={open}
@@ -295,37 +328,51 @@ function StatusMenu({ value, brand, onPick }) {
         </Badge>
       </button>
 
-      {open && (
-        <span className="absolute left-0 top-full z-20 mt-1 flex w-44 flex-col overflow-hidden rounded-xl border border-line bg-surface p-1.5 text-left shadow-lift">
-          {Object.entries(ADV_STATUS).map(([key, meta]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => {
-                setOpen(false)
-                onPick(key)
-              }}
-              className={cn(
-                'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
-                key === value
-                  ? 'bg-ink/5 text-ink'
-                  : 'text-ink-soft hover:bg-ink/5 hover:text-ink',
-              )}
-            >
-              <span
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              // Прижимаем к левому краю бейджа, но не даём уехать за экран.
+              left: Math.min(
+                Math.max(12, anchor.left),
+                window.innerWidth - MENU_WIDTH - 12,
+              ),
+              top: anchor.bottom + 4,
+              width: MENU_WIDTH,
+            }}
+            className="fixed z-50 flex flex-col overflow-hidden rounded-xl border border-line bg-surface p-1.5 text-left shadow-lift"
+          >
+            {Object.entries(ADV_STATUS).map(([key, meta]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setAnchor(null)
+                  onPick(key)
+                }}
                 className={cn(
-                  'h-1.5 w-1.5 shrink-0 rounded-full',
-                  STATUS_DOTS[meta.tone],
+                  'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
+                  key === value
+                    ? 'bg-ink/5 text-ink'
+                    : 'text-ink-soft hover:bg-ink/5 hover:text-ink',
                 )}
-              />
-              {meta.label}
-              {key === value && (
-                <Check size={14} className="ml-auto shrink-0" />
-              )}
-            </button>
-          ))}
-        </span>
-      )}
+              >
+                <span
+                  className={cn(
+                    'h-1.5 w-1.5 shrink-0 rounded-full',
+                    STATUS_DOTS[meta.tone],
+                  )}
+                />
+                {meta.label}
+                {key === value && (
+                  <Check size={14} className="ml-auto shrink-0" />
+                )}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </span>
   )
 }
