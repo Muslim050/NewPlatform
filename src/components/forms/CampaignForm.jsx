@@ -13,8 +13,9 @@ import { Field, Input, Select } from '@/components/ui/Field'
 import { FilePicker } from '@/components/ui/FilePicker.jsx'
 import { absoluteUrl } from '@/api/endpoints/files'
 import { Logo } from '@/components/Logo'
-import { STATUS, leagueLabel, statusLabel } from '@/lib/metrics.js'
+import { PACKAGES, STATUS, leagueLabel, statusLabel } from '@/lib/metrics.js'
 import { formatDate } from '@/lib/format.js'
+import { cn } from '@/lib/cn.js'
 
 /**
  * Статусы, которых нет в выборе: оплату ведёт договор — помесячно и своим
@@ -80,6 +81,10 @@ const creativeInput = (creative) => {
   }
 }
 
+/** Срок договора одной строкой: «01.01.2026 — 31.12.2026». */
+const contractTerm = (contract) =>
+  [contract?.start, contract?.end].filter(Boolean).map(formatDate).join(' — ')
+
 /** Кампания с сервера → состояние формы. */
 const formFrom = (campaign) => ({
   name: campaign.name,
@@ -97,6 +102,8 @@ export function CampaignForm({ open, onClose, initial }) {
   const { user, isAdmin, isAdvertiser } = useAuth()
   const toast = useToast()
   const editing = !!initial
+  // Статус ведёт площадка и только у заведённой заявки.
+  const showStatus = isAdmin && editing
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
 
@@ -322,9 +329,23 @@ export function CampaignForm({ open, onClose, initial }) {
           </Field>
         </div>
 
+        {/* Пакет и лиги ведёт площадка в договоре: сервер снимает их с него
+            сам и на запись у кампании закрывает. Здесь только показываем. */}
         <div className="grid gap-4 sm:grid-cols-2">
-          {/* Лиги ведёт площадка в договоре: сервер снимает их с него сам и
-              на запись у кампании закрывает. Здесь только показываем. */}
+          <Field
+            label="Пакет"
+            hint={
+              selectedContract ? undefined : 'Появится из выбранного договора.'
+            }
+          >
+            <Input
+              value={PACKAGES[selectedContract?.package]?.label ?? ''}
+              placeholder="Из договора"
+              disabled
+              readOnly
+            />
+          </Field>
+
           <Field
             label="Лиги"
             hint={
@@ -335,6 +356,23 @@ export function CampaignForm({ open, onClose, initial }) {
               value={(selectedContract?.leagues ?? [])
                 .map(leagueLabel)
                 .join(', ')}
+              placeholder="Из договора"
+              disabled
+              readOnly
+            />
+          </Field>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Срок договора менять отсюда нельзя — он живёт в карточке бренда. */}
+          <Field
+            label="Срок договора"
+            hint={
+              selectedContract ? undefined : 'Появится из выбранного договора.'
+            }
+          >
+            <Input
+              value={contractTerm(selectedContract)}
               placeholder="Из договора"
               disabled
               readOnly
@@ -367,85 +405,56 @@ export function CampaignForm({ open, onClose, initial }) {
           </Field>
         </div>
 
-        {/* Срок договора менять отсюда нельзя — он живёт в карточке бренда. */}
-        <div>
-          <p className="mb-2 text-[13px] font-medium text-ink-soft">
-            Срок договора
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Начало">
-              <Input
-                value={
-                  selectedContract?.start
-                    ? formatDate(selectedContract.start)
-                    : ''
-                }
-                placeholder="Из договора"
-                disabled
-                readOnly
-              />
-            </Field>
-            <Field label="Окончание">
-              <Input
-                value={
-                  selectedContract?.end ? formatDate(selectedContract.end) : ''
-                }
-                placeholder="Из договора"
-                disabled
-                readOnly
-              />
-            </Field>
-          </div>
-        </div>
-
-        {/* Скан договора: скачивание закрыто токеном, поэтому не ссылка,
-            а кнопка — файл тянем транспортом и отдаём блобом. */}
-        <Field label="Файл договора">
-          {selectedContract?.file?.url ? (
-            <button
-              type="button"
-              onClick={() => downloadFile(selectedContract.file)}
-              className="flex w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2.5 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
-            >
-              <FileText size={16} className="shrink-0 text-indigo-800" />
-              <span className="min-w-0 flex-1 truncate">
-                {selectedContract.file.name}
-              </span>
-              <span className="flex shrink-0 items-center gap-1.5 text-ink-muted">
-                <Download size={15} />
-                Скачать договор
-              </span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-2 rounded-xl border border-dashed border-line px-3 py-2.5 text-[13px] text-ink-muted">
-              <FileText size={16} className="shrink-0" />
-              {selectedContract ? 'К договору не приложен' : 'Из договора'}
-            </div>
-          )}
-        </Field>
-
-        {/* Статус ведёт площадка и только у заведённой заявки. */}
-        {isAdmin && editing && (
-          <Field label="Статус">
-            <Select
-              value={form.status}
-              onChange={(e) => set('status', e.target.value)}
-            >
-              {Object.entries(STATUS)
-                // Скрытый статус оставляем, если он уже стоит у кампании:
-                // иначе select показал бы первый вариант и сохранение молча
-                // сменило бы статус заявки.
-                .filter(
-                  ([k]) => !HIDDEN_STATUS.includes(k) || k === form.status,
-                )
-                .map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v.label}
-                  </option>
-                ))}
-            </Select>
+        {/* Файл договора и статус — в одну строку; без статуса файл на всю ширину. */}
+        <div className={cn('grid gap-4', showStatus && 'sm:grid-cols-2')}>
+          {/* Скан договора: скачивание закрыто токеном, поэтому не ссылка,
+              а кнопка — файл тянем транспортом и отдаём блобом. */}
+          <Field label="Файл договора">
+            {selectedContract?.file?.url ? (
+              <button
+                type="button"
+                onClick={() => downloadFile(selectedContract.file)}
+                className="flex h-11 w-full items-center gap-2 rounded-xl border border-line bg-surface px-3 text-left text-[13px] font-medium text-ink transition-colors hover:border-indigo-300 hover:bg-indigo-50 focus-ring"
+              >
+                <FileText size={16} className="shrink-0 text-indigo-800" />
+                <span className="min-w-0 flex-1 truncate">
+                  {selectedContract.file.name}
+                </span>
+                <span className="flex shrink-0 items-center gap-1.5 text-ink-muted">
+                  <Download size={15} />
+                  Скачать договор
+                </span>
+              </button>
+            ) : (
+              <div className="flex h-11 items-center gap-2 rounded-xl border border-dashed border-line px-3 text-[13px] text-ink-muted">
+                <FileText size={16} className="shrink-0" />
+                {selectedContract ? 'К договору не приложен' : 'Из договора'}
+              </div>
+            )}
           </Field>
-        )}
+
+          {showStatus && (
+            <Field label="Статус">
+              <Select
+                value={form.status}
+                onChange={(e) => set('status', e.target.value)}
+              >
+                {Object.entries(STATUS)
+                  // Скрытый статус оставляем, если он уже стоит у кампании:
+                  // иначе select показал бы первый вариант и сохранение молча
+                  // сменило бы статус заявки.
+                  .filter(
+                    ([k]) => !HIDDEN_STATUS.includes(k) || k === form.status,
+                  )
+                  .map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v.label}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
+          )}
+        </div>
       </div>
     </Modal>
   )
