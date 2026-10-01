@@ -435,7 +435,7 @@ export function AdvertiserForm({ open, onClose, initial }) {
             />
           </Field>
 
-          {/* Тот же статус, что в плитке бренда: активен или расторгнут. */}
+          {/* Тот же статус, что в плитке бренда: активен или завершен. */}
           <Field label="Статус">
             <Select
               value={form.status}
